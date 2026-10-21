@@ -34,12 +34,20 @@ _Avoid_: Stampa, report
 
 ### Calcolo
 
+**Rapporto**:
+Legame tra una persona e l'ente per un titolo di compenso (lavoro dipendente, mandato elettivo, co.co.co., LSU/LPU, incarico); una persona può averne più di uno. Le aggregazioni per persona (conguaglio, CU) sono viste.
+_Avoid_: Dipendente, matricola, posizione
+
+**Istituto**:
+Elemento retributivo o trattenuta definito da norma o contratto, con riferimento; i codici esterni (SICO, UniEmens, codice tributo, piano dei conti) sono mappature datate dell'istituto.
+_Avoid_: Voce, codice voce
+
 **Fatto**:
 Evento registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto.
 _Avoid_: Movimento, variazione anagrafica
 
 **Importo**:
-Unità del modello: valore riferito a persona, istituto e periodo di competenza, con eventuale data di pagamento e derivazione (regola, parametri, fatti). Ricalcolabile finché non entra in un esito.
+Unità del modello: valore riferito a rapporto, istituto e periodo di competenza, con eventuale data di pagamento e derivazione (regola, parametri, fatti). Ricalcolabile finché non entra in un esito. Può derivare da altri importi (es. imponibili), senza cicli.
 _Avoid_: Voce, riga di cedolino
 
 **Esito**:
