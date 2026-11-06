@@ -34,9 +34,9 @@ Il motore distingue i recuperi così:
 - **In servizio:** l'importo negativo è detratto dalla base del periodo (nota di prassi 2).
 - **Su cessato:** periodo fuori servizio, con un servizio terminato prima del mese.
 - **Fuori servizio senza un servizio precedente:** il calcolo si ferma.
-- **Mese negativo in servizio:** se la base del periodo resta negativa, il calcolo si ferma.
+- **Mese negativo in servizio:** se la base del periodo resta negativa, il calcolo si ferma. *Superato dall'ADR 0018 quando il ticket del codice sarà chiuso: la parte eccedente si riporta ai mesi successivi (Manuale INPS 2017, pp. 20 e 33).*
 
-Restano fuori le riduzioni INADEL ed ENPAS, che riguardano il TFS e ricadono già nel suo fermo. Restano fuori anche il massimale, che ha un fermo proprio, e le sentenze e transazioni. Queste ultime oggi non si riconoscono dai fatti: un recupero da sentenza verrebbe trattato come in servizio o su cessato. Serve un fatto o un tipo di atto che le distingua.
+Restano fuori le riduzioni INADEL ed ENPAS, che riguardano il TFS e ricadono già nel suo fermo. Restano fuori anche il massimale, che ha un fermo proprio, e le sentenze e transazioni. Queste ultime oggi non si riconoscono dai fatti: un recupero da sentenza verrebbe trattato come in servizio o su cessato. Serve un fatto o un tipo di atto che le distingua. *Definito dall'ADR 0018: è la causa del pagamento tardivo, e la vista dà un quadro fermo finché INPS non chiarisce.*
 
 ## Fermi
 
