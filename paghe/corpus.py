@@ -125,7 +125,8 @@ class Regola:
             raise ErroreCorpus(f"Regola {self.istituto}: versione non valida")
         if self.al is not None and self.al < self.dal:
             raise ErroreCorpus(f"Regola {self.istituto}: vigenza invertita")
-        riferimenti(self.formula)
+        if riferimenti(self.formula).fisco:
+            raise ErroreCorpus(f"Regola {self.istituto}: `fisco.` vale solo per le formule di [[ritenuta]]")
 
     def _controlla_maturazione(self) -> None:
         soggetto = f"Regola {self.istituto}"
@@ -236,6 +237,143 @@ class RegoleDenuncia:
     conguaglio_annuo: tuple[str, ...] = ()
 
 
+def _vigenze_sovrapposte(voci, soggetto: str) -> None:
+    for indice, voce in enumerate(voci):
+        for altra in voci[indice + 1 :]:
+            if (altra.al is None or voce.dal <= altra.al) and (voce.al is None or altra.dal <= voce.al):
+                raise ErroreCorpus(f"{soggetto}: vigenze sovrapposte")
+
+
+def _vigente(voci, giorno: date):
+    return next((voce for voce in voci if voce.dal <= giorno and (voce.al is None or giorno <= voce.al)), None)
+
+
+@dataclass(frozen=True)
+class CassaAllargata:
+    """Se per la categoria vale la cassa allargata (somme pagate entro il 12 gennaio all'anno prima), con date e fonte."""
+
+    dal: date
+    vale: bool
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, "Cassa allargata")
+        if type(self.vale) is not bool:
+            raise ErroreCorpus("Cassa allargata: `vale` è vero o falso")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus("Cassa allargata: vigenza invertita")
+
+
+@dataclass(frozen=True)
+class CategoriaReddito:
+    """Categoria logica del modello, senza articoli nel nome (ADR 0015). Dichiara la cassa allargata."""
+
+    nome: str
+    cassa_allargata: tuple[CassaAllargata, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.nome, str) or not self.nome.strip():
+            raise ErroreCorpus("Categoria di reddito: il nome è obbligatorio")
+        _vigenze_sovrapposte(self.cassa_allargata, f"Categoria {self.nome}: cassa allargata")
+
+    def cassa_allargata_al(self, giorno: date) -> CassaAllargata | None:
+        return _vigente(self.cassa_allargata, giorno)
+
+
+@dataclass(frozen=True)
+class DichiarazioneReddito:
+    """L'istituto dichiara la categoria di reddito, con date e fonte (ADR 0015)."""
+
+    istituto: str
+    categoria: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, f"Reddito {self.istituto}")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"Reddito {self.istituto}: vigenza invertita")
+
+
+PERIODI_FISCALI = frozenset({"imponibile", "periodi"})
+
+
+@dataclass(frozen=True)
+class RegolaRitenuta:
+    """Ritenuta del pagamento (ADR 0019), con scaglioni annui ragguagliati al periodo di paga.
+
+    Le due formule leggono parametri e due valori che dà il motore: `fisco.imponibile`, il reddito del
+    periodo di paga (o dell'anno, nel conguaglio), e `fisco.periodi`, i periodi di paga dell'anno
+    (12 per il mese, 1 per il conguaglio). `detrazione` si applica solo con la dichiarazione del
+    sostituito che chiede `detrazione_richiesta`. La regola copre solo le `categorie` elencate.
+    """
+
+    istituto: str
+    versione: int
+    dal: date
+    riferimento: str
+    imposta: str
+    detrazione: str
+    categorie: tuple[str, ...]
+    detrazione_richiesta: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Ritenuta {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if type(self.versione) is not int or self.versione < 1:
+            raise ErroreCorpus(f"{soggetto}: versione non valida")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if not self.categorie:
+            raise ErroreCorpus(f"{soggetto}: categorie obbligatorie")
+        if not self.detrazione_richiesta.strip():
+            raise ErroreCorpus(f"{soggetto}: detrazione_richiesta obbligatoria")
+        for formula in (self.imposta, self.detrazione):
+            letti = riferimenti(formula)
+            if letti.fatti or letti.importi or letti.basi:
+                raise ErroreCorpus(f"{soggetto}: la formula legge solo parametri e fisco, non fatti, importi o basi")
+            ignoti = letti.fisco - PERIODI_FISCALI
+            if ignoti:
+                raise ErroreCorpus(f"{soggetto}: fisco ignoto {sorted(ignoti)}; ammessi {sorted(PERIODI_FISCALI)}")
+
+    @property
+    def parametri(self) -> frozenset[str]:
+        return riferimenti(self.imposta).parametri | riferimenti(self.detrazione).parametri
+
+
+@dataclass(frozen=True)
+class RegolaConguaglio:
+    """Conguaglio fiscale (ADR 0019): le formule della ritenuta sull'imponibile fiscale dell'anno, con un solo periodo."""
+
+    istituto: str
+    versione: int
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Conguaglio {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if type(self.versione) is not int or self.versione < 1:
+            raise ErroreCorpus(f"{soggetto}: versione non valida")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+
+
+@dataclass(frozen=True)
+class RegoleFiscali:
+    categorie: tuple[CategoriaReddito, ...] = ()
+    redditi: tuple[DichiarazioneReddito, ...] = ()
+    ritenute: tuple[RegolaRitenuta, ...] = ()
+    conguagli: tuple[RegolaConguaglio, ...] = ()
+
+    def __bool__(self) -> bool:
+        return bool(self.categorie or self.redditi or self.ritenute or self.conguagli)
+
+
 class Corpus:
     """Insieme coerente e immutabile; la versione è l'impronta del contenuto."""
 
@@ -250,8 +388,10 @@ class Corpus:
         fermi: tuple[Fermo, ...] = (),
         denuncia: RegoleDenuncia | None = None,
         reale: bool = False,
+        fiscale: RegoleFiscali | None = None,
     ):
         self.reale = reale
+        self.fiscale = fiscale or RegoleFiscali()
         self.fermi = tuple(fermi)
         self.denuncia = denuncia or RegoleDenuncia()
         self.fatto_servizio = fatto_servizio
@@ -272,6 +412,7 @@ class Corpus:
         self._convalida()
         self._convalida_cassa()
         self._convalida_denuncia()
+        self._convalida_fiscale()
         if reale:
             self._rifiuta_fittizi()
         self.versione = self._impronta()
@@ -282,6 +423,11 @@ class Corpus:
         elenco += [(f"Base {b.nome}", b.riferimento) for b in self._basi.values()]
         elenco += [(f"Concorso {c.istituto} -> {c.base}", c.riferimento) for c in self._concorsi]
         elenco += [(f"Fermo {f.fatto}", f.riferimento) for f in self.fermi]
+        fiscale = self.fiscale
+        elenco += [(f"Categoria {c.nome}", v.riferimento) for c in fiscale.categorie for v in c.cassa_allargata]
+        elenco += [(f"Reddito {r.istituto}", r.riferimento) for r in fiscale.redditi]
+        elenco += [(f"Ritenuta {r.istituto}", r.riferimento) for r in fiscale.ritenute]
+        elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         return elenco
 
     def _rifiuta_fittizi(self) -> None:
@@ -303,6 +449,40 @@ class Corpus:
                 raise ErroreCorpus(f"Conguaglio annuo: {istituto} non è una regola sul mese")
         if (regole.persona or massimale or regole.conguaglio_annuo) and not self._basi:
             raise ErroreCorpus("[denuncia] richiede almeno una base imponibile")
+
+    def _convalida_fiscale(self) -> None:
+        fiscale = self.fiscale
+        nomi = [categoria.nome for categoria in fiscale.categorie]
+        if len(set(nomi)) != len(nomi):
+            raise ErroreCorpus("Categorie di reddito con lo stesso nome")
+        for indice, dichiarazione in enumerate(fiscale.redditi):
+            soggetto = f"Reddito {dichiarazione.istituto}"
+            if dichiarazione.istituto not in self._regole:
+                raise ErroreCorpus(f"{soggetto}: istituto senza regola")
+            if dichiarazione.categoria not in nomi:
+                raise ErroreCorpus(f"{soggetto}: categoria ignota {dichiarazione.categoria}")
+            for altra in fiscale.redditi[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], soggetto)
+        for gruppo, soggetto in ((fiscale.ritenute, "Ritenuta"), (fiscale.conguagli, "Conguaglio")):
+            for indice, regola in enumerate(gruppo):
+                if regola.istituto in self._regole:
+                    raise ErroreCorpus(f"{soggetto} {regola.istituto}: lo stesso istituto ha anche una regola")
+                for altra in gruppo[indice + 1 :]:
+                    if altra.istituto == regola.istituto:
+                        _vigenze_sovrapposte([regola, altra], f"{soggetto} {regola.istituto}")
+        if {r.istituto for r in fiscale.ritenute} & {c.istituto for c in fiscale.conguagli}:
+            raise ErroreCorpus("Ritenuta e conguaglio non possono avere lo stesso istituto")
+        for regola in fiscale.ritenute:
+            soggetto = f"Ritenuta {regola.istituto}"
+            ignoti = regola.parametri - self._parametri.keys()
+            if ignoti:
+                raise ErroreCorpus(f"{soggetto}: parametri ignoti {sorted(ignoti)}")
+            for categoria in regola.categorie:
+                if categoria not in nomi:
+                    raise ErroreCorpus(f"{soggetto}: categoria ignota {categoria}")
+        if fiscale.conguagli and not fiscale.ritenute:
+            raise ErroreCorpus("Il conguaglio legge le formule della ritenuta: manca [[ritenuta]]")
 
     def _convalida(self) -> None:
         dipendenze: dict[str, set[str]] = {}
@@ -458,6 +638,28 @@ class Corpus:
                 "massimale": [massimale.base, massimale.parametro] if massimale else None,
                 "conguaglio_annuo": sorted(self.denuncia.conguaglio_annuo),
             }
+        if self.fiscale:
+            fiscale = self.fiscale
+            contenuto["fiscale"] = {
+                "categorie": sorted(
+                    [c.nome, sorted([v.dal.isoformat(), v.al.isoformat() if v.al else "", v.vale, v.riferimento]
+                                    for v in c.cassa_allargata)]
+                    for c in fiscale.categorie
+                ),
+                "redditi": sorted(
+                    [r.istituto, r.categoria, r.dal.isoformat(), r.al.isoformat() if r.al else "", r.riferimento]
+                    for r in fiscale.redditi
+                ),
+                "ritenute": sorted(
+                    [r.istituto, r.versione, r.dal.isoformat(), r.al.isoformat() if r.al else "", r.riferimento,
+                     r.imposta, r.detrazione, sorted(r.categorie), r.detrazione_richiesta]
+                    for r in fiscale.ritenute
+                ),
+                "conguagli": sorted(
+                    [c.istituto, c.versione, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.riferimento]
+                    for c in fiscale.conguagli
+                ),
+            }
         testo = json.dumps(contenuto, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(testo.encode("utf-8")).hexdigest()[:16]
 
@@ -476,6 +678,22 @@ class Corpus:
             if (concorso.istituto, concorso.base) == (istituto, base) and concorso.copre(giorno):
                 return concorso
         return None
+
+    def categoria_reddito(self, nome: str) -> CategoriaReddito:
+        for categoria in self.fiscale.categorie:
+            if categoria.nome == nome:
+                return categoria
+        raise ErroreCorpus(f"Categoria di reddito ignota: {nome}")
+
+    def reddito(self, istituto: str, giorno: date) -> DichiarazioneReddito | None:
+        """Categoria dichiarata dall'istituto alla data; None se non ne dichiara."""
+        return _vigente([r for r in self.fiscale.redditi if r.istituto == istituto], giorno)
+
+    def regola_ritenuta(self, giorno: date) -> RegolaRitenuta | None:
+        return _vigente(self.fiscale.ritenute, giorno)
+
+    def regola_conguaglio(self, giorno: date) -> RegolaConguaglio | None:
+        return _vigente(self.fiscale.conguagli, giorno)
 
     def regola_iniziata(self, istituto: str, giorno: date) -> bool:
         """Vero se l'istituto ha già una regola decorrente a quella data, anche se oggi scaduta."""
@@ -541,6 +759,7 @@ class Corpus:
                 for voce in dati.get("fermo", [])
             )
             denuncia = _denuncia_da_toml(dati.get("denuncia", {}))
+            fiscale = _fiscale_da_toml(dati)
         except (tomllib.TOMLDecodeError, KeyError, TypeError, AttributeError) as errore:
             raise ErroreCorpus(f"Corpus TOML non valido: {errore!r}") from errore
         periodo = dati.get("periodo_dichiarato", {})
@@ -554,6 +773,7 @@ class Corpus:
             fermi=fermi,
             denuncia=denuncia,
             reale=reale,
+            fiscale=fiscale,
         )
 
     @classmethod
@@ -590,6 +810,59 @@ def _denuncia_da_toml(voce: dict) -> RegoleDenuncia:
         massimale=Massimale(massimale["base"], massimale["parametro"]) if massimale else None,
         conguaglio_annuo=tuple(voce.get("conguaglio_annuo", ())),
     )
+
+
+def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
+    categorie = tuple(
+        CategoriaReddito(
+            voce["nome"],
+            tuple(
+                CassaAllargata(
+                    _data(cassa["dal"], "dal"),
+                    cassa["vale"],
+                    cassa["riferimento"],
+                    _data(cassa["al"], "al") if "al" in cassa else None,
+                )
+                for cassa in voce.get("cassa_allargata", [])
+            ),
+        )
+        for voce in dati.get("categoria_reddito", [])
+    )
+    redditi = tuple(
+        DichiarazioneReddito(
+            voce["istituto"],
+            voce["categoria"],
+            _data(voce["dal"], "dal"),
+            voce["riferimento"],
+            _data(voce["al"], "al") if "al" in voce else None,
+        )
+        for voce in dati.get("reddito", [])
+    )
+    ritenute = tuple(
+        RegolaRitenuta(
+            istituto=voce["istituto"],
+            versione=voce["versione"],
+            dal=_data(voce["dal"], "dal"),
+            riferimento=voce["riferimento"],
+            imposta=voce["imposta"],
+            detrazione=voce["detrazione"],
+            categorie=tuple(voce["categorie"]),
+            detrazione_richiesta=voce["detrazione_richiesta"],
+            al=_data(voce["al"], "al") if "al" in voce else None,
+        )
+        for voce in dati.get("ritenuta", [])
+    )
+    conguagli = tuple(
+        RegolaConguaglio(
+            voce["istituto"],
+            voce["versione"],
+            _data(voce["dal"], "dal"),
+            voce["riferimento"],
+            _data(voce["al"], "al") if "al" in voce else None,
+        )
+        for voce in dati.get("conguaglio", [])
+    )
+    return RegoleFiscali(categorie, redditi, ritenute, conguagli)
 
 
 def _concorsi_da_toml(voce: dict) -> list[Concorso]:

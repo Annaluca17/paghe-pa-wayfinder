@@ -41,6 +41,10 @@ class ConcorsoParziale(ErroreCalcolo):
     """Un istituto concorre in parte a una base: il caso non è ancora modellato."""
 
 
+class RedditoMancante(ErroreCalcolo):
+    """Manca la categoria di reddito o l'anno d'imposta di un importo: il calcolo fiscale si ferma (ADR 0015, 0019)."""
+
+
 class VistaFerma(ErrorePaghe):
     """La vista non si serializza: mancano dati, serve un quadro non prodotto o è una bozza (ADR 0008)."""
 

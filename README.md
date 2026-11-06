@@ -22,6 +22,8 @@ python -m paghe
 pip install pytest lxml openpyxl
 ```
 
+Il fisco del lavoro dipendente (`paghe/fisco.py`, ADR 0015 e 0019): categoria di reddito e anno d'imposta congelati nell'esito (`attribuisci_reddito`), imponibile fiscale per persona e anno, ritenuta del pagamento e conguaglio per persona, con la proiezione come avviso. Le regole fiscali stanno nel corpus (`[[categoria_reddito]]`, `[[reddito]]`, `[[ritenuta]]`, `[[conguaglio]]`) e i test usano parametri `fittizio:`: i valori reali attendono il ticket #47.
+
 La vista ListaPosPA (`lista_pos_pa`) e la sua serializzazione (`paghe.uniemens.in_xml`) sono descritte nell'ADR 0008; un esempio fittizio, trasmissibile e valido sullo schema, è in `docs/esempi/` (ADR 0011). Lo schema XSD UniEmens 4.33.1 e l'Appendice G v15 si scaricano dalla scheda INPS «Trasmissione UniEmens per enti e amministrazioni» e non stanno nel repo: i test che li usano li cercano in `PAGHE_XSD_UNIEMENS` (file `.xsd`) e `PAGHE_APPENDICE_G` (file `.xlsx`), altrimenti vengono saltati.
 
 ```bash

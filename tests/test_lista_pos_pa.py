@@ -62,10 +62,13 @@ def assumi(registro, area="istruttori", dal=date(2026, 1, 1), al=None, regime="3
     }
     if regime is not None:
         fatti["regime_fine_servizio"] = (regime, al)
+    if "codice_fiscale" in fatti and "codice_fiscale" not in senza:
+        registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1980, 1, 1))
+    registro.collega_rapporto(R, "PERSONA-1", dal)
     return {
         tipo: registro.registra_codice(R, tipo, valore, dal, fine)
         for tipo, (valore, fine) in fatti.items()
-        if tipo not in senza
+        if tipo not in senza and tipo != "codice_fiscale"
     }
 
 

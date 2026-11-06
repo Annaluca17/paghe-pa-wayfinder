@@ -12,6 +12,17 @@ from .corpus import (
     RegoleDenuncia,
     VigenzaParametro,
 )
+from .fisco import (
+    Avviso,
+    FiscaleDelPagamento,
+    ImponibileFiscale,
+    anno_imposta,
+    attribuisci_reddito,
+    calcola_fiscale,
+    conguaglio_per_differenza,
+    imponibile_fiscale,
+    proiezione_conguaglio,
+)
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
@@ -20,6 +31,15 @@ from .tempo import Mese, Periodo
 
 __all__ = [
     "Atto",
+    "Avviso",
+    "FiscaleDelPagamento",
+    "ImponibileFiscale",
+    "anno_imposta",
+    "attribuisci_reddito",
+    "calcola_fiscale",
+    "conguaglio_per_differenza",
+    "imponibile_fiscale",
+    "proiezione_conguaglio",
     "Base",
     "Concorso",
     "ConcorsoLetto",

@@ -29,6 +29,8 @@ class Fatto:
     registrato_il: datetime
     atto: Atto | None = None
     categoriale: bool = False
+    # `rapporto` o `persona`: il campo `rapporto` porta l'identificativo del soggetto (ADR 0012).
+    soggetto: str = "rapporto"
 
     def copre(self, giorno: date) -> bool:
         return self.valido_dal <= giorno and (self.valido_al is None or giorno <= self.valido_al)
@@ -44,6 +46,7 @@ class Fatto:
             "registrato_il": istante_in_testo(self.registrato_il),
             "atto": {"riferimento": self.atto.riferimento, "data": self.atto.data.isoformat()} if self.atto else None,
             "categoriale": self.categoriale,
+            "soggetto": self.soggetto,
         }
 
     @classmethod
@@ -60,6 +63,7 @@ class Fatto:
             registrato_il=datetime.fromisoformat(dati["registrato_il"]),
             atto=Atto(atto["riferimento"], date.fromisoformat(atto["data"])) if atto else None,
             categoriale=categoriale,
+            soggetto=dati.get("soggetto", "rapporto"),
         )
 
 
@@ -111,6 +115,10 @@ class Derivazione:
     concorsi: tuple[ConcorsoLetto, ...] = ()
 
 
+# Importi calcolati sul pagato, non sulla competenza: ritenuta e conguaglio fiscale (ADR 0019).
+MATURAZIONI_FISCALI = frozenset({"ritenuta", "conguaglio"})
+
+
 @dataclass(frozen=True)
 class Importo:
     rapporto: str
@@ -120,6 +128,9 @@ class Importo:
     derivazione: Derivazione
     esiti_confrontati: tuple[int, ...] = ()
     data_pagamento: date | None = None
+    # Attribuzione fiscale, congelata nell'esito pagato (ADR 0015, 0019).
+    anno_imposta: int | None = None
+    categoria_reddito: str | None = None
 
     @property
     def chiave(self) -> tuple[str, str, Periodo]:
@@ -127,7 +138,13 @@ class Importo:
 
     def in_dizionario(self) -> dict:
         d = self.derivazione
+        fiscale = {}
+        if self.anno_imposta is not None:
+            fiscale["anno_imposta"] = self.anno_imposta
+        if self.categoria_reddito is not None:
+            fiscale["categoria_reddito"] = self.categoria_reddito
         return {
+            **fiscale,
             "rapporto": self.rapporto,
             "istituto": self.istituto,
             "periodo": str(self.periodo),
@@ -178,6 +195,8 @@ class Importo:
             valore=Decimal(dati["valore"]),
             esiti_confrontati=tuple(dati["esiti_confrontati"]),
             data_pagamento=date.fromisoformat(pagato) if pagato else None,
+            anno_imposta=dati.get("anno_imposta"),
+            categoria_reddito=dati.get("categoria_reddito"),
             derivazione=Derivazione(
                 istituto=d["istituto"],
                 maturazione=d["maturazione"],

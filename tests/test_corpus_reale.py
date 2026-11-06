@@ -25,7 +25,8 @@ def reale():
 
 def assumi(registro, area, dal=date(2026, 1, 1), al=None):
     fatti = [
-        registro.registra_codice(R, "codice_fiscale", CF, dal),
+        registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1980, 1, 1)),
+        registro.collega_rapporto(R, "PERSONA-1", dal),
         registro.registra_codice(R, "tipo_impiego", "1", dal, al),
         registro.registra_codice(R, "area", area, dal, al),
     ]
@@ -162,7 +163,7 @@ def test_recupero_su_cessato_per_cessazione_retroattiva(registro, reale, orologi
     paga(registro, orologio, stipendi(registro, reale, Mese(2026, 10)), date(2026, 10, 27))
 
     orologio.vai(11, 3)
-    for fatto in fatti[1:]:
+    for fatto in fatti[2:]:  # dopo il codice fiscale e il legame con la persona
         registro.annulla_fatto(fatto.id, "cessazione comunicata in ritardo")
     registro.registra_codice(R, "tipo_impiego", "1", date(2026, 1, 1), date(2026, 10, 15))
     registro.registra_codice(R, "area", "istruttori", date(2026, 1, 1), date(2026, 10, 15))
