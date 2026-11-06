@@ -25,7 +25,9 @@ Riferimento: `prassi:immedia:nota:2026-11-06;3`. Fonte: decisioni dell'operatore
 
 **Decisione dell'operatore (scelta (a) nel ticket #29).** Il recupero dopo la cessazione è un importo negativo nella base del mese in cui viene pagato, in un periodo fuori servizio. La vista ListaPosPA della parte 3 non lo espone: si ferma e indica il quadro necessario.
 
-**Da verificare.** Il quadro sarebbe V1 causale 7, codice motivo 7, con il periodo che precede la sospensione. Viene dal vault, da una pagina PassWeb sui pensionamenti, e non è stato riscontrato su una fonte INPS primaria.
+**Riscontrato il 06/11/2026 (norma certa, istruzione INPS).** Il codice motivo 7 è «Recupero competenze dipendente cessato» (Allegato tecnico UniEmens 4.33.1, p. 254). Il codice motivo si compila solo con la causale 7 (documento tecnico 4.33, p. 204). Il quadro è quindi il V1 causale 7, codice motivo 7. Le due fonti vengono dallo stesso istituto.
+
+**Da verificare.** Il periodo da valorizzare, cioè quello che precede la sospensione, e il codice cessazione 32 vengono ancora solo dal vault, da una pagina PassWeb sui pensionamenti.
 
 Il motore distingue i recuperi così:
 
@@ -40,14 +42,14 @@ Restano fuori le riduzioni INADEL ed ENPAS, che riguardano il TFS e ricadono gi�
 
 **Scelta di progetto.** La prima fetta si ferma e nomina il caso quando trova:
 
-- **regime di fine servizio (TFS o TFR):** contribuzione non modellata. Ferma la denuncia, ma lascia calcolare gli importi;
+- **regime di fine servizio (TFS o TFR):** contribuzione non modellata. Dall'ADR 0008 non ferma la denuncia: rende la ListaPosPA una bozza non trasmissibile;
 - **part-time e retribuzione ridotta:** il riproporzionamento non è modellato. Fermano anche il calcolo;
 - **aspettativa sindacale:** la retribuzione virtuale del Fondo Credito (Circ. INPS 6/2014 § 19) non è modellata;
 - **più rapporti della stessa persona nell'anno**, riconosciuti dal codice fiscale: l'1% e il massimale si calcolano per persona;
 - **superamento del massimale annuo**, sommando la base CPDEL da gennaio al mese. Il fermo scatta per chiunque, anche per chi non è soggetto al massimale, perché la data di prima iscrizione non è un fatto del modello;
 - **conguaglio annuo dell'1%** a dicembre o nel mese di cessazione, se nell'anno il contributo aggiuntivo è stato diverso da zero. Se il contributo non è mai scattato, la somma dei dodici mesi resta sotto la prima fascia annua: 12 × 4.685 = 56.220, meno di 56.224.
 
-Un fermo con un fatto assente non scatta. Il regime di fine servizio è un dato obbligatorio della ListaPosPA: la vista della parte 3 dovrà richiederlo.
+Un fermo con un fatto assente non scatta. Il regime di fine servizio è un dato obbligatorio della ListaPosPA: la vista lo chiede (ADR 0008).
 
 ## Soglie annuali
 

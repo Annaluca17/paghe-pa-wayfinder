@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- BOZZA NON TRASMISSIBILE, rapporto RAPPORTO-1: contribuzione TFS o TFR, non modellata: bozza non trasmissibile (prassi:inps:circolare:2014-01-16;6 + prassi:immedia:nota:2026-11-06;3) -->
+<DenunceMensili>
+  <DatiMittente Tipo="1">
+    <CFPersonaMittente>VRDLGU75B12F205B</CFPersonaMittente>
+    <RagSocMittente>UFFICIO PERSONALE DI FANTASIA</RagSocMittente>
+    <CFMittente>01234567897</CFMittente>
+    <CFSoftwarehouse>98765432103</CFSoftwarehouse>
+  </DatiMittente>
+  <Azienda>
+    <AnnoMeseDenuncia>2026-09</AnnoMeseDenuncia>
+    <CFAzienda>01234567897</CFAzienda>
+    <RagSocAzienda>COMUNE DI FANTASIA</RagSocAzienda>
+    <ListaPosPA>
+      <PRGAZIENDA>00000</PRGAZIENDA>
+      <CFRappresentanteFirmatario>BNCGNN70C03L219U</CFRappresentanteFirmatario>
+      <PosPA>
+        <D0_DenunciaIndividuale>
+          <CFLavoratore>RSSMRA80A01H501U</CFLavoratore>
+          <Cognome>ROSSI</Cognome>
+          <Nome>MARIO</Nome>
+          <DatiSedeLavoro>
+            <CodiceComune>H501</CodiceComune>
+            <CAP>00100</CAP>
+          </DatiSedeLavoro>
+          <E0_PeriodoNelMese>
+            <GiornoInizio>2026-09-01</GiornoInizio>
+            <GiornoFine>2026-09-30</GiornoFine>
+            <InquadramentoLavPA>
+              <TipoImpiego>1</TipoImpiego>
+              <TipoServizio>4</TipoServizio>
+              <Contratto>RALN</Contratto>
+              <Qualifica>0FZEQF</Qualifica>
+              <RegimeFineServizio>3</RegimeFineServizio>
+            </InquadramentoLavPA>
+            <Gestioni>
+              <GestPensionistica>
+                <CodGestione>2</CodGestione>
+                <Imponibile>2828,29</Imponibile>
+                <Contributo>923,44</Contributo>
+              </GestPensionistica>
+              <GestCredito>
+                <CodGestione>9</CodGestione>
+                <Imponibile>2828,29</Imponibile>
+                <Contributo>9,90</Contributo>
+              </GestCredito>
+            </Gestioni>
+          </E0_PeriodoNelMese>
+          <V1_PeriodoPrecedente CausaleVariazione="5">
+            <GiornoInizio>2026-08-24</GiornoInizio>
+            <GiornoFine>2026-08-31</GiornoFine>
+            <InquadramentoLavPA>
+              <TipoImpiego>1</TipoImpiego>
+              <TipoServizio>4</TipoServizio>
+              <Contratto>RALN</Contratto>
+              <Qualifica>0FZEQF</Qualifica>
+              <RegimeFineServizio>3</RegimeFineServizio>
+            </InquadramentoLavPA>
+          </V1_PeriodoPrecedente>
+        </D0_DenunciaIndividuale>
+      </PosPA>
+    </ListaPosPA>
+  </Azienda>
+</DenunceMensili>

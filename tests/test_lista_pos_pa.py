@@ -155,10 +155,16 @@ def test_l_1_per_cento_va_in_contrib1percento_e_non_nel_contributo(registro, rea
     assumi(registro, "operatori_esperti")
     mesi = (Mese(2026, 9), Mese(2026, 10), Mese(2026, 11))
     paga(registro, orologio, stipendi(registro, reale, *mesi), date(2026, 11, 27))
-    quadro, = lista_pos_pa(registro, reale, R, Mese(2026, 11)).quadri
+    quadro, settembre, ottobre = lista_pos_pa(registro, reale, R, Mese(2026, 11)).quadri
+    assert quadro.tipo == "E0"
     assert quadro.pensionistica.imponibile == Decimal("5472.36")
     assert quadro.pensionistica.contributo == Decimal("1786.73")
     assert quadro.contrib_1_per_cento == Decimal("7.87")
+    # Settembre e ottobre, pagati a novembre, si dichiarano solo giuridici (nota di prassi 2).
+    assert [(q.tipo, q.causale, q.periodo) for q in (settembre, ottobre)] == [
+        ("V1", "5", Mese(2026, 9).periodo),
+        ("V1", "5", Mese(2026, 10).periodo),
+    ]
 
 
 def test_i_quadri_portano_gli_importi_da_cui_derivano(registro, reale, orologio):
@@ -206,7 +212,9 @@ def test_tfs_e_tfr_non_fermano_la_denuncia_ma_rendono_la_vista_una_bozza(registr
     assert not vista.trasmissibile
     with pytest.raises(VistaFerma, match="bozza"):
         in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11))
-    assert "<GestPrevidenziale>" not in in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True)
+    xml = in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True)
+    assert "<GestPrevidenziale>" not in xml
+    assert "<!-- BOZZA NON TRASMISSIBILE" in xml
 
 
 # --- V1 causale 5 solo giuridico ---------------------------------------------------------------

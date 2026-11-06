@@ -22,7 +22,7 @@ Scelto perché l'1% si calcola sul totale del mese e si espone sull'ultimo perio
 
 - Una regola sul mese legge solo basi e altre regole sul mese, e nessun'altra regola la legge. La base del mese è la somma delle basi dei periodi, con le date di pagamento dei loro importi.
 - Il fermo è per presenza del fatto, non per valore. Se il fatto manca il fermo non scatta: la vista della parte 3 deve chiedere i dati obbligatori della ListaPosPA.
-- Il fermo di TFS e TFR blocca la denuncia di quasi ogni dipendente reale, finché quelle contribuzioni non sono modellate. Gli importi si calcolano comunque.
+- Il fermo di TFS e TFR blocca la denuncia di quasi ogni dipendente reale, finché quelle contribuzioni non sono modellate. Gli importi si calcolano comunque. *Superato dall'ADR 0008: il fermo ha ora ambito `vista` e rende la ListaPosPA una bozza non trasmissibile.*
 - `[denuncia]` dichiara il fatto che identifica la persona (il codice fiscale), la base e il parametro del massimale e le regole sul mese con conguaglio annuo. Se il codice fiscale manca, la denuncia si ferma.
 - Massimale e conguaglio ricalcolano le denunce dei mesi precedenti dello stesso anno, senza controllarne a loro volta i cumuli.
 - Recuperi: in servizio e su cessato sono casi modellati; mese negativo in servizio e recupero fuori servizio senza un servizio precedente fermano la denuncia (nota di prassi 3). Le sentenze e le transazioni non si distinguono ancora dai fatti.

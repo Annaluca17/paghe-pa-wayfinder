@@ -110,6 +110,22 @@ _Avoid_: Elaborazione chiusa, storico cedolini
 Aggregazione di importi in una forma richiesta (cedolino, ListaPosPA, F24EP, proposta di movimento contabile); non è fonte di verità.
 _Avoid_: Stampa, tabulato
 
+**Quadro**:
+Elemento della ListaPosPA che dichiara un periodo: E0 per il mese corrente, V1 con una causale per un periodo precedente. Lo produce la vista dalla denuncia, mai il calcolo.
+_Avoid_: Periodo dichiarato (che è l'intervallo, non l'elemento del tracciato)
+
+**Quadro fermo**:
+Quadro necessario che la vista non produce, perché il caso non è nella fetta, come il V1 causale 7. Nomina il quadro e conserva gli importi calcolati.
+_Avoid_: Errore di esportazione
+
+**Dato mancante**:
+Dato obbligatorio del tracciato che il registro non ha, come il regime di fine servizio o il codice di cessazione: la vista lo chiede, non lo stima.
+_Avoid_: Default, valore di comodo
+
+**Bozza non trasmissibile**:
+Vista completa nei dati, ma con un caso dichiarato dal corpus come non modellato, come TFS e TFR. Si serializza solo se richiesto, con l'avvertenza in testa.
+_Avoid_: Anteprima, test
+
 **Regola**:
 Logica di calcolo generale, versionata, con riferimento normativo obbligatorio.
 _Avoid_: Formula, voce calcolata
