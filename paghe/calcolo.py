@@ -13,7 +13,7 @@ from decimal import ROUND_HALF_UP, Decimal, localcontext
 from typing import Callable
 
 from .corpus import Corpus, Regola
-from .errori import ErroreCalcolo, FattoMancante
+from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante
 from .formula import PRECISIONE, riferimenti, valuta
 from .modello import Derivazione, Esito, Fatto, Importo, ParametroLetto, Quota, TipoEsito
 from .registro import Registro
@@ -62,6 +62,30 @@ class _Lettore:
         fatti[fatto.id] = fatto
         return fatto.valore
 
+    def soddisfa(self, regola: Regola, fatto: Fatto) -> bool:
+        """`applica_se = "tipo=codice"` vale solo per un fatto categoriale con quel codice."""
+        codice = regola.codice_condizione
+        if codice is None:
+            return True
+        if not fatto.categoriale:
+            raise ErroreCalcolo(
+                f"Rapporto {self.rapporto}, istituto {regola.istituto}: il fatto {fatto.tipo} non è un codice, "
+                f"la condizione {regola.applica_se} non si può verificare"
+            )
+        return fatto.valore == codice
+
+    def controlla_fermi(self, periodo: Mese | Periodo, ambiti: set[str]) -> None:
+        """Un fatto dichiarato come fermo nel periodo chiede un caso non modellato (ADR 0005)."""
+        for fermo in self.corpus.fermi:
+            if fermo.ambito not in ambiti:
+                continue
+            presenti = [f for f in self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al) if f]
+            if presenti:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
+                    f"(fatto {fermo.fatto} dal {presenti[0].valido_dal}; {fermo.riferimento})"
+                )
+
     def parametro(self, nome: str, periodo: Periodo) -> ParametroLetto:
         vigenza = self.corpus.parametro(nome).vigenza_per(periodo)
         return ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento)
@@ -75,8 +99,8 @@ class _Lettore:
         """None se la regola non si applica (`applica_se` senza fatto, importi letti assenti)."""
         fatti: dict[int, Fatto] = {}
         if regola.applica_se is not None:
-            condizione = self.fatto(regola.applica_se, periodo)
-            if condizione is None:
+            condizione = self.fatto(regola.fatto_condizione, periodo)
+            if condizione is None or not self.soddisfa(regola, condizione):
                 return None
             fatti[condizione.id] = condizione
 
@@ -158,7 +182,7 @@ class _Calcolo:
         righe: dict[int, Importo] = {}
         for indice, frazione in enumerate(self.frazioni):
             regola = self.corpus.regola_per(istituto, frazione)
-            if regola is None or regola.maturazione in ("periodo", "annuale"):
+            if regola is None or regola.maturazione in ("periodo", "mese", "annuale"):
                 continue
 
             def leggi(nome: str, posizione: int = indice, tratto: Periodo = frazione) -> list[Importo]:
@@ -266,7 +290,9 @@ def calcola(
 ) -> tuple[Importo, ...]:
     """Stato completo del mese; funzione pura di registro, corpus e istante. Esclude gli annuali."""
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
-    calcolo = _Calcolo(_Lettore(registro, corpus, rapporto, istante), competenza)
+    lettore = _Lettore(registro, corpus, rapporto, istante)
+    lettore.controlla_fermi(competenza, {"calcolo"})
+    calcolo = _Calcolo(lettore, competenza)
     importi: list[Importo] = []
     for istituto in corpus.istituti():
         importi.extend(calcolo.righe_frazione(istituto).values())
@@ -287,8 +313,13 @@ def calcola_annuale(
     intero_anno = Periodo(date(anno, 1, 1), date(anno, 12, 31))
     importi = []
     for regola_tipo in corpus.regole_annuali():
-        vigenti = registro.vigenti_per_giorno(rapporto, regola_tipo.applica_se, intero_anno, istante)
-        giorni = [giorno for giorno, fatto in zip(intero_anno.giorni(), vigenti) if fatto is not None]
+        lettore.controlla_fermi(intero_anno, {"calcolo"})
+        vigenti = registro.vigenti_per_giorno(rapporto, regola_tipo.fatto_condizione, intero_anno, istante)
+        giorni = [
+            giorno
+            for giorno, fatto in zip(intero_anno.giorni(), vigenti)
+            if fatto is not None and lettore.soddisfa(regola_tipo, fatto)
+        ]
         if not giorni:
             continue
         ultimo = Periodo(giorni[-1], giorni[-1])

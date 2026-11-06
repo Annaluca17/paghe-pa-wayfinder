@@ -1,0 +1,407 @@
+# Corpus reale: CPDEL e Fondo Credito di un dipendente del comparto Funzioni Locali.
+# Ticket #29, parte 2. Si carica con Corpus.carica(percorso, reale=True), che rifiuta i
+# riferimenti fittizi (ADR 0003). Copertura: competenze e pagamenti dal 01/01/2026.
+#
+# Stato delle fonti (riscontro nel ticket #29):
+#   norma certa           aliquote CPDEL e Fondo Credito, aliquota aggiuntiva 1%, prima fascia
+#                         2026, tab. B e C del CCNL 28/10/2026
+#   da verificare         massimale 2026: letto nella Circ. INPS 6/2026 § 6, la seconda fonte
+#                         è solo una fonte secondaria; qui serve solo a fermare la denuncia.
+#                         Art. 74 c. 4 CCNL 16/11/2022 ancora vigente dopo i CCNL del 2026
+#   prassi-interpretazione  tabellare mensile, divisore del mese parziale, arrotondamento delle
+#                         quote CPDEL, 1% sull'ultimo periodo: note di prassi 1, 2 e 3
+
+[periodo_dichiarato]
+servizio = "tipo_impiego"
+# ADR 0005: aprono un periodo i cambi di questi codici. Il servizio è sempre compreso.
+fatti = [
+    "tipo_servizio",
+    "contratto",
+    "qualifica",
+    "part_time",
+    "regime_fine_servizio",
+    "percentuale_retribuzione",
+    "aspettativa_sindacale",
+    "altra_amministrazione",
+]
+
+[denuncia]
+persona = "codice_fiscale"
+massimale = { base = "cpdel", parametro = "massimale_annuo" }
+conguaglio_annuo = ["contributo_aggiuntivo"]
+
+# Fermi: casi che la prima fetta non modella (ADR 0005, nota di prassi 3).
+
+[[fermo]]
+fatto = "regime_fine_servizio"
+caso = "contribuzione TFS o TFR, non modellata"
+ambito = "denuncia"
+riferimento = "prassi:inps:circolare:2014-01-16;6 + prassi:immedia:nota:2026-11-06;3"
+
+[[fermo]]
+fatto = "part_time"
+caso = "part-time, riproporzionamento non modellato"
+ambito = "calcolo"
+riferimento = "prassi:immedia:nota:2026-11-06;3"
+
+[[fermo]]
+fatto = "aspettativa_sindacale"
+caso = "retribuzione virtuale per il Fondo Credito, non modellata"
+ambito = "denuncia"
+riferimento = "prassi:inps:circolare:2014-01-16;6~par19 + prassi:immedia:nota:2026-11-06;3"
+
+[[fermo]]
+fatto = "percentuale_retribuzione"
+caso = "retribuzione ridotta, non modellata"
+ambito = "calcolo"
+riferimento = "prassi:immedia:nota:2026-11-06;3"
+
+# Basi imponibili (ADR 0005)
+
+[[base]]
+nome = "cpdel"
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par2"
+
+[[base]]
+nome = "fondo_credito"
+riferimento = "prassi:inps:circolare:2014-01-16;6~par19"
+
+# Aliquote, in punti percentuali
+
+[[parametro]]
+nome = "aliquota_cpdel_ente"
+[[parametro.vigenza]]
+dal = 2007-01-01
+valore = "23.80"
+riferimento = "urn:nir:stato:legge:2006-12-27;296~art1-com769 + prassi:inpdap:nota.operativa:2007-01-23;2"
+
+[[parametro]]
+nome = "aliquota_cpdel_lavoratore"
+[[parametro.vigenza]]
+dal = 2007-01-01
+valore = "8.85"
+riferimento = "urn:nir:stato:legge:2006-12-27;296~art1-com769 + prassi:inpdap:nota.operativa:2007-01-23;2"
+
+[[parametro]]
+nome = "aliquota_fondo_credito"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.35"
+riferimento = "urn:nir:stato:legge:1996-12-23;662~art1-com242 + prassi:inps:circolare:2014-01-16;6~par19"
+
+[[parametro]]
+nome = "aliquota_aggiuntiva"
+[[parametro.vigenza]]
+dal = 1993-01-01
+valore = "1"
+riferimento = "urn:nir:stato:decreto.legge:1992-09-19;384~art3ter + prassi:inps:circolare:2026-01-30;6~par5"
+
+# Soglie annuali INPS: valgono per l'anno, oltre il calcolo si ferma.
+
+[[parametro]]
+nome = "prima_fascia_mensile"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "4685.00"
+riferimento = "prassi:inps:circolare:2026-01-30;6~par5"
+
+[[parametro]]
+nome = "massimale_annuo"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "122295.00"
+riferimento = "prassi:inps:circolare:2026-01-30;6~par6 + urn:nir:stato:legge:1995-08-08;335~art2-com18"
+
+# Mese parziale (nota di prassi 1)
+
+[[parametro]]
+nome = "divisore_giornaliero"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "26"
+riferimento = "ccnl:S105:2022-11-16~art74-com4 + prassi:immedia:nota:2026-11-06;1"
+
+# Stipendio tabellare annuo, tab. B CCNL 28/10/2026, per 12 mensilità più la tredicesima
+
+[[parametro]]
+nome = "tabellare_annuo_funzionari"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "26304.27"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "26776.35"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+
+[[parametro]]
+nome = "tabellare_annuo_istruttori"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "24235.55"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "24670.31"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+
+[[parametro]]
+nome = "tabellare_annuo_operatori_esperti"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "21559.19"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "21945.59"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+
+[[parametro]]
+nome = "tabellare_annuo_operatori"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "20690.51"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "21060.47"
+riferimento = "ccnl:S105:2026-10-28~tabB"
+
+# Indennità di comparto mensile, tab. C CCNL 28/10/2026, per 12 mensilità.
+# L'incremento dal 01/07/2027 dipende, per i Comuni, dal decreto di riparto (art. 36-bis c. 3):
+# non è modellato, quindi la vigenza si chiude il 30/06/2027.
+
+[[parametro]]
+nome = "comparto_mensile_funzionari"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2027-06-30
+valore = "36.33"
+riferimento = "ccnl:S105:2026-10-28~tabC"
+
+[[parametro]]
+nome = "comparto_mensile_istruttori"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2027-06-30
+valore = "32.06"
+riferimento = "ccnl:S105:2026-10-28~tabC"
+
+[[parametro]]
+nome = "comparto_mensile_operatori_esperti"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2027-06-30
+valore = "27.52"
+riferimento = "ccnl:S105:2026-10-28~tabC"
+
+[[parametro]]
+nome = "comparto_mensile_operatori"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2027-06-30
+valore = "22.68"
+riferimento = "ccnl:S105:2026-10-28~tabC"
+
+# Tabellare: mensile = arrotonda(annuo / 12, 2), nota di prassi 3. A giorni, nota di prassi 1.
+
+[[regola]]
+istituto = "tabellare_funzionari"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(parametro.tabellare_annuo_funzionari / 12, 2)"
+maturazione = "giorni"
+applica_se = "area=funzionari"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "tabellare_istruttori"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(parametro.tabellare_annuo_istruttori / 12, 2)"
+maturazione = "giorni"
+applica_se = "area=istruttori"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "tabellare_operatori_esperti"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(parametro.tabellare_annuo_operatori_esperti / 12, 2)"
+maturazione = "giorni"
+applica_se = "area=operatori_esperti"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "tabellare_operatori"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(parametro.tabellare_annuo_operatori / 12, 2)"
+maturazione = "giorni"
+applica_se = "area=operatori"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "comparto_funzionari"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabC + prassi:immedia:nota:2026-11-06;1"
+formula = "parametro.comparto_mensile_funzionari"
+maturazione = "giorni"
+applica_se = "area=funzionari"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "comparto_istruttori"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabC + prassi:immedia:nota:2026-11-06;1"
+formula = "parametro.comparto_mensile_istruttori"
+maturazione = "giorni"
+applica_se = "area=istruttori"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "comparto_operatori_esperti"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabC + prassi:immedia:nota:2026-11-06;1"
+formula = "parametro.comparto_mensile_operatori_esperti"
+maturazione = "giorni"
+applica_se = "area=operatori_esperti"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "comparto_operatori"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-10-28~tabC + prassi:immedia:nota:2026-11-06;1"
+formula = "parametro.comparto_mensile_operatori"
+maturazione = "giorni"
+applica_se = "area=operatori"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+# Contributi. Totale e quota del lavoratore arrotondati, quota dell'ente per differenza
+# (ricerca #15, proposta B3; nota di prassi 3).
+
+[[regola]]
+istituto = "cpdel_totale"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:2006-12-27;296~art1-com769 + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(base.cpdel * (parametro.aliquota_cpdel_ente + parametro.aliquota_cpdel_lavoratore) / 100, 2)"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "cpdel_lavoratore"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:2006-12-27;296~art1-com769 + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(base.cpdel * parametro.aliquota_cpdel_lavoratore / 100, 2)"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "cpdel_ente"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:2006-12-27;296~art1-com769 + prassi:immedia:nota:2026-11-06;3"
+formula = "importo.cpdel_totale - importo.cpdel_lavoratore"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "fondo_credito"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1996-12-23;662~art1-com242 + prassi:inps:circolare:2014-01-16;6~par19"
+formula = "arrotonda(base.fondo_credito * parametro.aliquota_fondo_credito / 100, 2)"
+maturazione = "periodo"
+
+# 1% sul totale del mese oltre la prima fascia mensile, sull'ultimo periodo (nota di prassi 2).
+
+[[regola]]
+istituto = "contributo_aggiuntivo"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:1992-09-19;384~art3ter + prassi:inps:circolare:2026-01-30;6~par5 + prassi:immedia:nota:2026-11-06;2"
+formula = "arrotonda(max(base.cpdel - parametro.prima_fascia_mensile, 0) * parametro.aliquota_aggiuntiva / 100, 2)"
+maturazione = "mese"
+
+# Concorsi: tabellare e comparto entrano per intero in entrambe le basi.
+
+[[concorso]]
+istituto = "tabellare_funzionari"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tabellare_istruttori"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tabellare_operatori_esperti"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tabellare_operatori"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "comparto_funzionari"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "comparto_istruttori"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "comparto_operatori_esperti"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "comparto_operatori"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"

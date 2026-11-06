@@ -39,3 +39,7 @@ class ConcorsoMancante(ErroreCalcolo):
 
 class ConcorsoParziale(ErroreCalcolo):
     """Un istituto concorre in parte a una base: il caso non è ancora modellato."""
+
+
+class CasoNonModellato(ErroreCalcolo):
+    """Situazione reale non ancora modellata come caso: il calcolo si ferma e la nomina (ADR 0005)."""

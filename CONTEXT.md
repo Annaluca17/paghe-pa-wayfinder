@@ -82,6 +82,18 @@ _Avoid_: Flag imponibile
 Regola che legge una base o un'altra regola di cassa. Si sceglie alla data di pagamento, con i parametri vigenti in quel giorno, e produce importi solo nella denuncia.
 _Avoid_: Contributo per competenza
 
+**Regola sul mese**:
+Regola di cassa che legge il totale del mese delle basi, non il singolo periodo dichiarato, e si espone sull'ultimo periodo, come il contributo dell'1%.
+_Avoid_: Contributo mensile (quando si intende un contributo per periodo)
+
+**Recupero**:
+Importo negativo pagato che entra in una base. Modellati i casi in servizio, detratto dal periodo, e su cessato, in un periodo fuori servizio; gli altri fermano il calcolo.
+_Avoid_: Trattenuta (la trattenuta è un istituto)
+
+**Fermo**:
+Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato.
+_Avoid_: Blocco, errore generico
+
 **Caso**:
 Situazione reale modellata con i suoi fatti, la sua regola, il riferimento e un esempio verificato. Finché un caso non è modellato, il calcolo si ferma e lo nomina.
 _Avoid_: Eccezione, formula generica
