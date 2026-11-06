@@ -4,25 +4,48 @@ La base somma ciò che risulta pagato nel mese: legge le righe degli esiti pagat
 loro data di pagamento, non ricalcola la competenza. Un arretrato entra così nel mese in
 cui è pagato e il mese originario non cambia. Regole di cassa, parametri e concorsi si
 scelgono alla data di pagamento.
+
+Le regole sul mese leggono il totale del mese e si espongono sull'ultimo periodo (nota di
+prassi 2). I recuperi in servizio e su cessato sono casi modellati; gli altri, e i cumuli
+per persona e per anno che la prima fetta non calcola, fermano la denuncia e li nominano.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from .calcolo import _Calcolo, _Lettore
 from .corpus import Base, Corpus, Regola
-from .errori import ConcorsoMancante, ConcorsoParziale, ErroreCalcolo, ErroreCorpus, ValiditaNonUniforme
+from .errori import (
+    CasoNonModellato,
+    ConcorsoMancante,
+    ConcorsoParziale,
+    ErroreCalcolo,
+    ErroreCorpus,
+    FattoMancante,
+    ValiditaNonUniforme,
+)
 from .formula import valuta
 from .modello import ConcorsoLetto, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
 from .registro import Registro
 from .tempo import Mese, Periodo, in_utc
 
 FORMULA_BASE = "somma degli importi pagati nel periodo"
+FORMULA_BASE_MESE = "somma delle basi dei periodi del mese"
 # Derivano dagli importi pagati: non sono retribuzione e non concorrono a una base.
-MATURAZIONI_DERIVATE = {"periodo", "cassa"}
+MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa"}
+IN_SERVIZIO = "in servizio"
+SU_CESSATO = "su cessato"
+
+
+@dataclass(frozen=True)
+class Recupero:
+    """Importo negativo entrato in una base: caso `in servizio` o `su cessato` (ADR 0005, nota di prassi 2)."""
+
+    caso: str
+    importo: Importo
 
 
 @dataclass(frozen=True)
@@ -33,6 +56,7 @@ class PeriodoDenuncia:
     in_servizio: bool
     basi: tuple[Importo, ...] = ()
     contributi: tuple[Importo, ...] = ()
+    recuperi: tuple[Recupero, ...] = ()
 
     def base(self, nome: str) -> Importo | None:
         return next((riga for riga in self.basi if riga.istituto == f"base.{nome}"), None)
@@ -93,6 +117,73 @@ def _periodo_della_riga(riga: Importo, periodi: list[Periodo], mese: Mese) -> Pe
     )
 
 
+def _date_di_pagamento(base: Importo) -> set[date]:
+    """La base del mese somma le basi dei periodi: le date stanno un livello sotto."""
+    if base.derivazione.maturazione == "mese":
+        return {giorno for riga in base.derivazione.importi for giorno in _date_di_pagamento(riga)}
+    return {riga.data_pagamento for riga in base.derivazione.importi}
+
+
+def _basi_del_mese(periodi: list[PeriodoDenuncia], corpus: Corpus, istante: datetime) -> tuple[Importo, ...]:
+    """Totale del mese per ogni base, letto dalle regole sul mese (nota di prassi 2)."""
+    risultato = []
+    for base in corpus.basi():
+        righe = [riga for periodo in periodi if (riga := periodo.base(base.nome)) is not None]
+        if not righe:
+            continue
+        risultato.append(
+            Importo(
+                rapporto=righe[0].rapporto,
+                istituto=f"base.{base.nome}",
+                periodo=Periodo(periodi[0].periodo.dal, periodi[-1].periodo.al),
+                valore=sum((riga.valore for riga in righe), Decimal(0)),
+                derivazione=Derivazione(
+                    istituto=f"base.{base.nome}",
+                    maturazione="mese",
+                    regola_versione=1,
+                    riferimento=base.riferimento,
+                    formula=FORMULA_BASE_MESE,
+                    versione_corpus=corpus.versione,
+                    noto_al=istante,
+                    parametri=(),
+                    fatti=(),
+                    importi=tuple(righe),
+                ),
+            )
+        )
+    return tuple(risultato)
+
+
+def _recuperi(
+    registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, periodo: PeriodoDenuncia, istante: datetime
+) -> tuple[Recupero, ...]:
+    """Classifica gli importi negativi entrati nelle basi; i casi non modellati fermano la denuncia."""
+    if periodo.in_servizio:
+        negative = [base for base in periodo.basi if base.valore < 0]
+        if negative:
+            raise CasoNonModellato(
+                f"Rapporto {rapporto}: caso non modellato, mese negativo nel periodo {periodo.periodo} "
+                f"(base {negative[0].istituto} = {negative[0].valore})"
+            )
+    righe: list[Importo] = []
+    for base in periodo.basi:
+        for riga in base.derivazione.importi:
+            if riga.valore < 0 and riga not in righe:
+                righe.append(riga)
+    if not righe:
+        return ()
+    if periodo.in_servizio:
+        caso = IN_SERVIZIO
+    else:
+        servizio = registro.fatti_noti(rapporto, corpus.fatto_servizio, istante)
+        if not any(fatto.valido_dal < mese.primo_giorno for fatto in servizio):
+            raise CasoNonModellato(
+                f"Rapporto {rapporto}: caso non modellato, recupero fuori servizio senza servizio precedente in {mese}"
+            )
+        caso = SU_CESSATO
+    return tuple(Recupero(caso, riga) for riga in righe)
+
+
 def _base_del_periodo(
     base: Base, righe: list[_RigaPagata], periodo: Periodo, corpus: Corpus, istante: datetime
 ) -> Importo | None:
@@ -149,8 +240,11 @@ class _Contributi:
         self.corpus = lettore.corpus
         self.periodo = periodo
         self.basi = {riga.istituto.removeprefix("base."): riga for riga in basi}
-        self.date = sorted({riga.data_pagamento for base in basi for riga in base.derivazione.importi})
+        self.date = sorted({giorno for base in basi for giorno in _date_di_pagamento(base)})
         self._calcolati: dict[str, Importo | None] = {}
+
+    def tutti(self, istituti) -> tuple[Importo, ...]:
+        return tuple(importo for importo in (self.importo(nome) for nome in sorted(istituti)) if importo is not None)
 
     def _regola(self, istituto: str) -> Regola | None:
         regole = set()
@@ -230,10 +324,18 @@ def calcola_denuncia(
     noto_al: datetime | None = None,
 ) -> Denuncia:
     """Periodi dichiarati del mese con basi e contributi; funzione pura di registro, corpus e istante."""
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    denuncia = _denuncia(registro, corpus, rapporto, mese, istante)
+    if denuncia.periodi:
+        _controlla_cumuli(registro, corpus, denuncia, istante)
+    return denuncia
+
+
+def _denuncia(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime) -> Denuncia:
     if not corpus.basi():
         raise ErroreCorpus("Il corpus non dichiara alcuna base imponibile")
-    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
     lettore = _Lettore(registro, corpus, rapporto, istante)
+    lettore.controlla_fermi(mese, {"calcolo", "denuncia"})
     pagate, senza_data = _righe_pagate(registro, rapporto, mese, istante)
 
     servizio = registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, mese, istante)
@@ -253,20 +355,77 @@ def calcola_denuncia(
     for riga in pagate:
         gruppi[_periodo_della_riga(riga.importo, periodi, mese)].append(riga)
 
-    risultato = []
+    sul_periodo = corpus.istituti_di_cassa - corpus.istituti_sul_mese
+    risultato: list[PeriodoDenuncia] = []
     for periodo in periodi:
         basi = tuple(
             importo
             for importo in (_base_del_periodo(base, gruppi[periodo], periodo, corpus, istante) for base in corpus.basi())
             if importo is not None
         )
-        contributi: tuple[Importo, ...] = ()
-        if basi:
-            calcolo = _Contributi(lettore, periodo, basi)
-            contributi = tuple(
-                importo
-                for importo in (calcolo.importo(istituto) for istituto in sorted(corpus.istituti_di_cassa))
-                if importo is not None
-            )
-        risultato.append(PeriodoDenuncia(periodo, in_servizio, basi, contributi))
+        contributi = _Contributi(lettore, periodo, basi).tutti(sul_periodo) if basi else ()
+        dichiarato = PeriodoDenuncia(periodo, in_servizio, basi, contributi)
+        risultato.append(replace(dichiarato, recuperi=_recuperi(registro, corpus, rapporto, mese, dichiarato, istante)))
+
+    if corpus.istituti_sul_mese and any(periodo.basi for periodo in risultato):
+        ultimo = risultato[-1]
+        basi_mese = _basi_del_mese(risultato, corpus, istante)
+        del_mese = _Contributi(lettore, ultimo.periodo, basi_mese).tutti(corpus.istituti_sul_mese)
+        risultato[-1] = replace(ultimo, contributi=ultimo.contributi + del_mese)
     return Denuncia(rapporto, mese, tuple(risultato), senza_data)
+
+
+def _controlla_cumuli(registro: Registro, corpus: Corpus, denuncia: Denuncia, istante: datetime) -> None:
+    """Più rapporti, massimale e conguaglio annuo non sono modellati: se servono, la denuncia si ferma."""
+    regole = corpus.denuncia
+    rapporto, mese = denuncia.rapporto, denuncia.mese
+    anno = Periodo(date(mese.anno, 1, 1), date(mese.anno, 12, 31))
+    if regole.persona:
+        codici = registro.fatti_noti(rapporto, regole.persona, istante)
+        if not codici:
+            raise FattoMancante(f"Rapporto {rapporto}: manca il fatto {regole.persona}, serve per i cumuli per persona")
+        for altro in registro.rapporti_con_codice(regole.persona, str(codici[-1].valore), istante):
+            if altro != rapporto and any(registro.vigenti_per_giorno(altro, corpus.fatto_servizio, anno, istante)):
+                raise CasoNonModellato(
+                    f"Rapporto {rapporto}: caso non modellato, più rapporti della stessa persona nel {mese.anno} "
+                    f"(anche {altro}): l'1% e il massimale vanno calcolati per persona"
+                )
+    if not regole.massimale and not regole.conguaglio_annuo:
+        return
+    denunce = [_denuncia(registro, corpus, rapporto, Mese(mese.anno, numero), istante) for numero in range(1, mese.mese)]
+    denunce.append(denuncia)
+    massimale = regole.massimale
+    if massimale is not None:
+        totale = sum(
+            (riga.valore for d in denunce for p in d.periodi if (riga := p.base(massimale.base)) is not None),
+            Decimal(0),
+        )
+        vigenza = corpus.parametro(massimale.parametro).vigenza_per(Periodo(mese.ultimo_giorno, mese.ultimo_giorno))
+        if totale > vigenza.valore:
+            raise CasoNonModellato(
+                f"Rapporto {rapporto}: caso non modellato, superamento del massimale annuo nel {mese.anno} "
+                f"(base {massimale.base} da gennaio a {mese} = {totale}, massimale {vigenza.valore}; "
+                f"{vigenza.riferimento})"
+            )
+    if regole.conguaglio_annuo and _mese_di_conguaglio(registro, corpus, rapporto, mese, istante):
+        scattate = [
+            riga
+            for d in denunce
+            for p in d.periodi
+            for riga in p.contributi
+            if riga.istituto in regole.conguaglio_annuo and riga.valore != 0
+        ]
+        if scattate:
+            raise CasoNonModellato(
+                f"Rapporto {rapporto}: caso non modellato, conguaglio annuo di {scattate[0].istituto} in {mese} "
+                f"(già esposto nel periodo {scattate[0].periodo})"
+            )
+
+
+def _mese_di_conguaglio(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime) -> bool:
+    """Dicembre, o il mese in cui il servizio finisce."""
+    if mese.mese == 12:
+        return True
+    esteso = Periodo(mese.primo_giorno, mese.ultimo_giorno + timedelta(days=1))
+    servizio = registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, esteso, istante)
+    return any(servizio[indice] and not servizio[indice + 1] for indice in range(len(servizio) - 1))

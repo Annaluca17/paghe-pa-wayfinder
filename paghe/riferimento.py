@@ -40,6 +40,7 @@ _TIPI_NORMA = {
 _TIPI_REGIONALI = {"legge", "regolamento"}
 _TIPI_PRASSI = {
     "inps": {"circolare", "messaggio", "documento.tecnico"},
+    "inpdap": {"nota.operativa"},
     "immedia": {"nota"},
     "ade": {"circolare", "risoluzione", "risposta.interpello", "provvedimento", "comunicato.stampa", "istruzioni"},
 }

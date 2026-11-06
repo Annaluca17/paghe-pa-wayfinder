@@ -222,6 +222,22 @@ class Registro:
         ).fetchall()
         return [_fatto_da_riga(riga) for riga in righe]
 
+    def rapporti_con_codice(self, tipo: str, codice: str, noto_al: datetime) -> list[str]:
+        """Rapporti con un fatto categoriale di quel codice, come il codice fiscale della persona."""
+        limite = istante_in_testo(noto_al)
+        righe = self._db.execute(
+            """
+            SELECT DISTINCT f.rapporto FROM fatti AS f
+            WHERE f.tipo = ? AND f.valore = ? AND f.categoriale = 1 AND f.registrato_il <= ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM annullamenti AS a WHERE a.fatto_id = f.id AND a.registrato_il <= ?
+              )
+            ORDER BY f.rapporto
+            """,
+            (tipo, codice, limite, limite),
+        ).fetchall()
+        return [riga[0] for riga in righe]
+
     def vigenti_per_giorno(self, rapporto: str, tipo: str, periodo: Mese | Periodo, noto_al: datetime) -> list[Fatto | None]:
         """Per ogni giorno del periodo vale l'ultimo fatto registrato che lo copre."""
         noti = self.fatti_noti(rapporto, tipo, noto_al)

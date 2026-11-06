@@ -24,9 +24,13 @@ def _riferimento_obbligatorio(riferimento: str, soggetto: str) -> None:
         raise ErroreCorpus(f"{soggetto}: riferimento non valido, {motivo}")
 
 
-MATURAZIONI = {"giorni", "evento", "periodo", "annuale"}
+MATURAZIONI = {"giorni", "evento", "periodo", "mese", "annuale"}
+# Maturazioni che leggono le basi della denuncia: sul periodo dichiarato o sul totale del mese.
+MATURAZIONI_DI_CASSA = {"periodo", "mese"}
 CONTEGGI = {"lun_sab", "calendario"}
 MISURE = {"intero", "parziale", "escluso"}
+AMBITI_FERMO = {"calcolo", "denuncia"}
+FITTIZIO = "fittizio:"
 
 
 @dataclass(frozen=True)
@@ -34,10 +38,13 @@ class VigenzaParametro:
     dal: date
     valore: Decimal
     riferimento: str
+    al: date | None = None
 
 
 @dataclass(frozen=True)
 class Parametro:
+    """Un parametro annuale, come una soglia INPS, chiude l'ultima vigenza con `al`: oltre, il calcolo si ferma."""
+
     nome: str
     vigenze: tuple[VigenzaParametro, ...]
 
@@ -46,16 +53,23 @@ class Parametro:
             raise ErroreCorpus(f"Parametro {self.nome}: nessuna vigenza")
         for vigenza in self.vigenze:
             _riferimento_obbligatorio(vigenza.riferimento, f"Parametro {self.nome}")
+            if vigenza.al is not None and vigenza.al < vigenza.dal:
+                raise ErroreCorpus(f"Parametro {self.nome}: vigenza invertita")
         decorrenze = [vigenza.dal for vigenza in self.vigenze]
         if len(set(decorrenze)) != len(decorrenze):
             raise ErroreCorpus(f"Parametro {self.nome}: decorrenze duplicate")
-        object.__setattr__(self, "vigenze", tuple(sorted(self.vigenze, key=lambda v: v.dal)))
+        ordinate = tuple(sorted(self.vigenze, key=lambda v: v.dal))
+        if any(vigenza.al is not None for vigenza in ordinate[:-1]):
+            raise ErroreCorpus(f"Parametro {self.nome}: solo l'ultima vigenza può avere una fine")
+        object.__setattr__(self, "vigenze", ordinate)
 
     def _vigente(self, giorno: date) -> VigenzaParametro | None:
         trovata = None
         for vigenza in self.vigenze:
             if vigenza.dal <= giorno:
                 trovata = vigenza
+        if trovata is not None and trovata.al is not None and giorno > trovata.al:
+            return None
         return trovata
 
     def vigenza_per(self, competenza: Mese) -> VigenzaParametro:
@@ -89,8 +103,23 @@ class Regola:
     divisore: str | None = None
     decimali: int | None = None
 
+    @property
+    def fatto_condizione(self) -> str | None:
+        """Tipo di fatto di `applica_se`; nella forma `tipo=codice` vale solo se il codice coincide."""
+        return self.applica_se.split("=", 1)[0] if self.applica_se else None
+
+    @property
+    def codice_condizione(self) -> str | None:
+        if not self.applica_se or "=" not in self.applica_se:
+            return None
+        return self.applica_se.split("=", 1)[1]
+
     def __post_init__(self) -> None:
         _riferimento_obbligatorio(self.riferimento, f"Regola {self.istituto}")
+        if self.applica_se is not None and "=" in self.applica_se:
+            tipo, codice = self.applica_se.split("=", 1)
+            if not tipo.strip() or not codice.strip() or tipo != tipo.strip() or codice != codice.strip():
+                raise ErroreCorpus(f"Regola {self.istituto}: applica_se va scritto come tipo=codice")
         self._controlla_maturazione()
         if type(self.versione) is not int or self.versione < 1:
             raise ErroreCorpus(f"Regola {self.istituto}: versione non valida")
@@ -159,6 +188,48 @@ class Concorso:
         return (altro.al is None or self.dal <= altro.al) and (self.al is None or altro.dal <= self.al)
 
 
+@dataclass(frozen=True)
+class Fermo:
+    """Un fatto che chiede un caso non modellato: se c'è nel mese, il calcolo si ferma e lo nomina.
+
+    `calcolo` ferma anche gli importi per competenza; `denuncia` solo basi e contributi.
+    """
+
+    fatto: str
+    caso: str
+    ambito: str
+    riferimento: str
+
+    def __post_init__(self) -> None:
+        soggetto = f"Fermo {self.fatto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if not self.caso.strip():
+            raise ErroreCorpus(f"{soggetto}: il caso va nominato")
+        if self.ambito not in AMBITI_FERMO:
+            raise ErroreCorpus(f"{soggetto}: ambito obbligatorio, uno di {sorted(AMBITI_FERMO)}")
+
+
+@dataclass(frozen=True)
+class Massimale:
+    """Base annua sottoposta a massimale: il superamento nell'anno ferma la denuncia (ADR 0005)."""
+
+    base: str
+    parametro: str
+
+
+@dataclass(frozen=True)
+class RegoleDenuncia:
+    """Cumuli per persona e per anno che la prima fetta non modella: servono solo a fermarsi.
+
+    `persona` è il fatto categoriale che identifica la persona, come il codice fiscale.
+    `conguaglio_annuo` elenca le regole sul mese che l'anno può conguagliare.
+    """
+
+    persona: str | None = None
+    massimale: Massimale | None = None
+    conguaglio_annuo: tuple[str, ...] = ()
+
+
 class Corpus:
     """Insieme coerente e immutabile; la versione è l'impronta del contenuto."""
 
@@ -170,7 +241,13 @@ class Corpus:
         basi: tuple[Base, ...] = (),
         concorsi: tuple[Concorso, ...] = (),
         fatto_servizio: str | None = None,
+        fermi: tuple[Fermo, ...] = (),
+        denuncia: RegoleDenuncia | None = None,
+        reale: bool = False,
     ):
+        self.reale = reale
+        self.fermi = tuple(fermi)
+        self.denuncia = denuncia or RegoleDenuncia()
         self.fatto_servizio = fatto_servizio
         fatti_periodo = tuple(fatti_periodo_dichiarato)
         if fatto_servizio and fatto_servizio not in fatti_periodo:
@@ -188,7 +265,38 @@ class Corpus:
             self._regole.setdefault(regola.istituto, []).append(regola)
         self._convalida()
         self._convalida_cassa()
+        self._convalida_denuncia()
+        if reale:
+            self._rifiuta_fittizi()
         self.versione = self._impronta()
+
+    def _riferimenti(self) -> list[tuple[str, str]]:
+        elenco = [(f"Parametro {p.nome}", v.riferimento) for p in self._parametri.values() for v in p.vigenze]
+        elenco += [(f"Regola {r.istituto}", r.riferimento) for regole in self._regole.values() for r in regole]
+        elenco += [(f"Base {b.nome}", b.riferimento) for b in self._basi.values()]
+        elenco += [(f"Concorso {c.istituto} -> {c.base}", c.riferimento) for c in self._concorsi]
+        elenco += [(f"Fermo {f.fatto}", f.riferimento) for f in self.fermi]
+        return elenco
+
+    def _rifiuta_fittizi(self) -> None:
+        """Il corpus reale non ammette riferimenti `fittizio:` (ADR 0003)."""
+        for soggetto, riferimento in self._riferimenti():
+            if any(citazione.startswith(FITTIZIO) for citazione in riferimento.split(" + ")):
+                raise ErroreCorpus(f"{soggetto}: riferimento fittizio in un corpus reale: {riferimento!r}")
+
+    def _convalida_denuncia(self) -> None:
+        regole = self.denuncia
+        massimale = regole.massimale
+        if massimale is not None:
+            if massimale.base not in self._basi:
+                raise ErroreCorpus(f"Massimale: base ignota {massimale.base}")
+            if massimale.parametro not in self._parametri:
+                raise ErroreCorpus(f"Massimale: parametro ignoto {massimale.parametro}")
+        for istituto in regole.conguaglio_annuo:
+            if istituto not in self._regole or any(r.maturazione != "mese" for r in self._regole[istituto]):
+                raise ErroreCorpus(f"Conguaglio annuo: {istituto} non è una regola sul mese")
+        if (regole.persona or massimale or regole.conguaglio_annuo) and not self._basi:
+            raise ErroreCorpus("[denuncia] richiede almeno una base imponibile")
 
     def _convalida(self) -> None:
         dipendenze: dict[str, set[str]] = {}
@@ -222,8 +330,10 @@ class Corpus:
                 ignote = basi - self._basi.keys()
                 if ignote:
                     raise ErroreCorpus(f"Istituto {istituto}: basi ignote {sorted(ignote)}")
-                if basi and regola.maturazione != "periodo":
-                    raise ErroreCorpus(f"Regola {istituto}: solo una regola sul periodo dichiarato legge una base")
+                if basi and regola.maturazione not in MATURAZIONI_DI_CASSA:
+                    raise ErroreCorpus(
+                        f"Regola {istituto}: solo una regola sul periodo dichiarato o sul mese legge una base"
+                    )
                 if basi:
                     cassa.add(istituto)
         allargato = True
@@ -243,6 +353,7 @@ class Corpus:
                         f"Regola {istituto}: una regola di cassa non legge importi per competenza {sorted(letti.importi - cassa)}"
                     )
         self.istituti_di_cassa = frozenset(cassa)
+        self._convalida_mese(cassa)
         for indice, concorso in enumerate(self._concorsi):
             if concorso.istituto not in self._regole:
                 raise ErroreCorpus(f"Concorso: istituto senza regola {concorso.istituto}")
@@ -252,6 +363,27 @@ class Corpus:
                 if (altro.istituto, altro.base) == (concorso.istituto, concorso.base) and concorso.si_sovrappone(altro):
                     raise ErroreCorpus(f"Concorso {concorso.istituto} -> {concorso.base}: vigenze sovrapposte")
 
+    def _convalida_mese(self, cassa: set[str]) -> None:
+        """Una regola sul mese legge il totale del mese: solo basi e altre regole sul mese, mai il contrario."""
+        sul_mese = {
+            istituto for istituto, regole in self._regole.items() if any(r.maturazione == "mese" for r in regole)
+        }
+        for istituto in sul_mese:
+            if istituto not in cassa:
+                raise ErroreCorpus(f"Regola {istituto}: una regola sul mese deve leggere una base")
+        for istituto, regole in self._regole.items():
+            for regola in regole:
+                letti = riferimenti(regola.formula).importi
+                if regola.maturazione == "mese" and letti - sul_mese:
+                    raise ErroreCorpus(
+                        f"Regola {istituto}: una regola sul mese legge solo basi e regole sul mese, non {sorted(letti - sul_mese)}"
+                    )
+                if regola.maturazione != "mese" and letti & sul_mese:
+                    raise ErroreCorpus(
+                        f"Regola {istituto}: solo una regola sul mese legge {sorted(letti & sul_mese)}"
+                    )
+        self.istituti_sul_mese = frozenset(sul_mese)
+
     def _controlla_livelli(self, regola: Regola, importi: frozenset[str]) -> None:
         """Una frazione non legge il periodo dichiarato, che ne è la somma; l'annuale legge solo fatti e parametri."""
         for nome in importi:
@@ -260,7 +392,7 @@ class Corpus:
             for dipendenza in self._regole[nome]:
                 if dipendenza.maturazione == "annuale":
                     raise ErroreCorpus(f"Regola {regola.istituto}: non può leggere l'importo annuale {nome}")
-                if dipendenza.maturazione == "periodo" and regola.maturazione != "periodo":
+                if dipendenza.maturazione in MATURAZIONI_DI_CASSA and regola.maturazione not in MATURAZIONI_DI_CASSA:
                     raise ErroreCorpus(f"Regola {regola.istituto}: una frazione non legge il periodo dichiarato {nome}")
 
     @staticmethod
@@ -291,7 +423,10 @@ class Corpus:
             "parametri": [
                 {
                     "nome": parametro.nome,
-                    "vigenze": [[v.dal.isoformat(), str(v.valore), v.riferimento] for v in parametro.vigenze],
+                    "vigenze": [
+                        [v.dal.isoformat(), str(v.valore), v.riferimento, *([v.al.isoformat()] if v.al else [])]
+                        for v in parametro.vigenze
+                    ],
                 }
                 for _, parametro in sorted(self._parametri.items())
             ],
@@ -305,6 +440,15 @@ class Corpus:
                 key=lambda riga: (riga[0], riga[1]),
             ),
         }
+        if self.fermi:
+            contenuto["fermi"] = sorted([f.fatto, f.caso, f.ambito, f.riferimento] for f in self.fermi)
+        if self.denuncia != RegoleDenuncia():
+            massimale = self.denuncia.massimale
+            contenuto["denuncia"] = {
+                "persona": self.denuncia.persona,
+                "massimale": [massimale.base, massimale.parametro] if massimale else None,
+                "conguaglio_annuo": sorted(self.denuncia.conguaglio_annuo),
+            }
         testo = json.dumps(contenuto, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(testo.encode("utf-8")).hexdigest()[:16]
 
@@ -344,7 +488,7 @@ class Corpus:
             for regola in regole:
                 tipi |= riferimenti(regola.formula).fatti
                 if regola.applica_se and regola.maturazione != "annuale":
-                    tipi.add(regola.applica_se)
+                    tipi.add(regola.fatto_condizione)
         return tuple(sorted(tipi))
 
     def firma_giorno(self, giorno: date) -> tuple:
@@ -375,21 +519,36 @@ class Corpus:
         return presenti[0]
 
     @classmethod
-    def da_toml(cls, testo: str) -> "Corpus":
+    def da_toml(cls, testo: str, reale: bool = False) -> "Corpus":
+        """`reale` vero: il corpus produce importi veri e rifiuta i riferimenti fittizi (ADR 0003)."""
         try:
             dati = tomllib.loads(testo)
             parametri = tuple(_parametro_da_toml(voce) for voce in dati.get("parametro", []))
             regole = tuple(_regola_da_toml(voce) for voce in dati.get("regola", []))
             basi = tuple(Base(voce["nome"], voce["riferimento"]) for voce in dati.get("base", []))
             concorsi = tuple(concorso for voce in dati.get("concorso", []) for concorso in _concorsi_da_toml(voce))
-        except (tomllib.TOMLDecodeError, KeyError, TypeError) as errore:
+            fermi = tuple(
+                Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"]) for voce in dati.get("fermo", [])
+            )
+            denuncia = _denuncia_da_toml(dati.get("denuncia", {}))
+        except (tomllib.TOMLDecodeError, KeyError, TypeError, AttributeError) as errore:
             raise ErroreCorpus(f"Corpus TOML non valido: {errore!r}") from errore
         periodo = dati.get("periodo_dichiarato", {})
-        return cls(parametri, regole, tuple(periodo.get("fatti", ())), basi, concorsi, periodo.get("servizio"))
+        return cls(
+            parametri,
+            regole,
+            tuple(periodo.get("fatti", ())),
+            basi,
+            concorsi,
+            periodo.get("servizio"),
+            fermi=fermi,
+            denuncia=denuncia,
+            reale=reale,
+        )
 
     @classmethod
-    def carica(cls, percorso: str | Path) -> "Corpus":
-        return cls.da_toml(Path(percorso).read_text(encoding="utf-8"))
+    def carica(cls, percorso: str | Path, reale: bool = False) -> "Corpus":
+        return cls.da_toml(Path(percorso).read_text(encoding="utf-8"), reale=reale)
 
 
 def _data(valore: object, campo: str) -> date:
@@ -409,8 +568,18 @@ def _parametro_da_toml(voce: dict) -> Parametro:
             raise ErroreCorpus(f"Parametro {voce['nome']}: valore non numerico") from errore
         if not valore.is_finite():
             raise ErroreCorpus(f"Parametro {voce['nome']}: valore non finito")
-        vigenze.append(VigenzaParametro(_data(vigenza["dal"], "dal"), valore, vigenza["riferimento"]))
+        al = _data(vigenza["al"], "al") if "al" in vigenza else None
+        vigenze.append(VigenzaParametro(_data(vigenza["dal"], "dal"), valore, vigenza["riferimento"], al))
     return Parametro(voce["nome"], tuple(vigenze))
+
+
+def _denuncia_da_toml(voce: dict) -> RegoleDenuncia:
+    massimale = voce.get("massimale")
+    return RegoleDenuncia(
+        persona=voce.get("persona"),
+        massimale=Massimale(massimale["base"], massimale["parametro"]) if massimale else None,
+        conguaglio_annuo=tuple(voce.get("conguaglio_annuo", ())),
+    )
 
 
 def _concorsi_da_toml(voce: dict) -> list[Concorso]:

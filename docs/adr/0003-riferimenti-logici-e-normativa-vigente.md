@@ -17,4 +17,4 @@ Ogni regola e ogni parametro devono seguire la normativa vigente per il periodo 
 - Una regola fondata su una norma con fine vigenza nota deve avere `al` e un successore. È già il caso di TUIR e art. 23 D.P.R. 600/1973, abrogati dal 01/01/2027, mentre per il comparto il CCNL 2025-2027 è firmato dal 28/10/2026.
 - Il controllo è solo sintattico: l'esistenza dell'atto e la vigenza dell'articolo non sono ancora verificate in automatico. Quando esisterà, la verifica userà l'API di Normattiva, non il portale, e non bloccherà il calcolo.
 - Il comma è una notazione del progetto: Normattiva la usa nei propri link ma non la risolve.
-- Prima di un corpus reale, il caricamento dovrà poter rifiutare i riferimenti `fittizio:`.
+- Il caricamento di un corpus reale (`reale=True`) rifiuta i riferimenti `fittizio:` (ADR 0007).
