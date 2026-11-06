@@ -12,7 +12,7 @@ Wayfinding verso la specifica di un modello alternativo di elaborazione paghe pe
 
 ## Nucleo eseguibile
 
-Registro di fatti, importi con derivazione, esiti e differenze (ADR 0001 e 0002). Il corpus usato finora è **fittizio**: nessun valore è una norma reale. Serve Python 3.12 o successivo; il nucleo non ha dipendenze a runtime.
+Registro di fatti, importi con derivazione, esiti e differenze (ADR 0001 e 0002). La denuncia del mese (`calcola_denuncia`) somma nelle basi imponibili gli esiti pagati, con la loro data di pagamento (ADR 0006). Il corpus usato finora è **fittizio**: nessun valore è una norma reale. Serve Python 3.12 o successivo; il nucleo non ha dipendenze a runtime.
 
 ```bash
 python -m paghe

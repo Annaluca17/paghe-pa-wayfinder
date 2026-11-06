@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-from paghe import Atto, Mese, Registro, TipoEsito, calcola, emetti_esito
-from paghe.errori import ErroreRegistro, ValiditaNonUniforme
+from paghe import Atto, Corpus, Fatto, Mese, Registro, TipoEsito, calcola, emetti_esito
+from paghe.errori import ErroreCalcolo, ErroreRegistro, ValiditaNonUniforme
 
 R = "RAPPORTO-1"
 FEB = Mese(2026, 2)
@@ -127,3 +127,95 @@ def test_il_registro_sopravvive_alla_chiusura(tmp_path, orologio, corpus):
     with pytest.raises(ErroreRegistro, match="indietro"):
         riaperto.registra_fatto(R, "x", "1", date(2026, 1, 1))
     riaperto.chiudi()
+
+
+# Fatti categoriali e data di pagamento
+
+
+def test_codice_resta_testo_e_si_rilegge_uguale(registro, orologio):
+    fatto = registro.registra_codice(R, "qualifica", "0IR000", date(2026, 1, 1))
+    zero = registro.registra_codice(R, "tipo_servizio", "01", date(2026, 1, 1))
+    assert fatto.valore == "0IR000"
+    assert fatto.categoriale
+    assert registro.fatti_noti(R, "tipo_servizio", orologio.ora) == [zero]
+    assert registro.fatti_noti(R, "tipo_servizio", orologio.ora)[0].valore == "01"
+    assert Fatto.da_dizionario(fatto.in_dizionario()) == fatto
+
+
+def test_fatto_numerico_non_e_categoriale(registro):
+    fatto = registro.registra_fatto(R, "mensile", "1000", date(2026, 1, 1))
+    assert not fatto.categoriale
+    assert fatto.valore == Decimal(1000)
+
+
+@pytest.mark.parametrize("codice", ["", "  ", None, 12])
+def test_codice_non_valido_rifiutato(registro, codice):
+    with pytest.raises(ErroreRegistro, match="odice"):
+        registro.registra_codice(R, "qualifica", codice, date(2026, 1, 1))
+
+
+def test_una_formula_non_legge_un_codice(registro):
+    corpus = Corpus.da_toml(
+        """
+[[regola]]
+istituto = "a"
+versione = 1
+dal = 2026-01-01
+riferimento = "fittizio:a"
+formula = "fatto.qualifica"
+maturazione = "evento"
+"""
+    )
+    registro.registra_codice(R, "qualifica", "0IR000", date(2026, 1, 1))
+    with pytest.raises(ErroreCalcolo, match="qualifica"):
+        calcola(registro, corpus, R, FEB)
+
+
+def test_registro_esistente_senza_colonna_dei_codici_si_aggiorna(tmp_path):
+    percorso = tmp_path / "vecchio.sqlite"
+    db = sqlite3.connect(percorso)
+    db.executescript(
+        """
+        CREATE TABLE fatti (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, rapporto TEXT NOT NULL, tipo TEXT NOT NULL,
+            valore TEXT NOT NULL, valido_dal TEXT NOT NULL, valido_al TEXT, registrato_il TEXT NOT NULL,
+            atto_riferimento TEXT, atto_data TEXT
+        );
+        INSERT INTO fatti (rapporto, tipo, valore, valido_dal, registrato_il)
+        VALUES ('RAPPORTO-1', 'mensile', '1000', '2026-01-01', '2026-01-01T09:00:00.000000+00:00');
+        """
+    )
+    db.close()
+    registro = Registro(str(percorso))
+    assert registro.fatti_noti(R, "mensile", registro.adesso())[0].valore == Decimal(1000)
+    assert registro.registra_codice(R, "qualifica", "0IR000", date(2026, 1, 1)).valore == "0IR000"
+    registro.chiudi()
+
+
+def test_data_di_pagamento_solo_su_esito_pagato_che_contiene_il_rapporto(registro, corpus, orologio):
+    registro.registra_fatto(R, "compenso_mensile", "1000", date(2026, 1, 1))
+    righe = calcola(registro, corpus, R, FEB)
+    pagato = emetti_esito(registro, TipoEsito.PAGATO, date(2026, 2, 27), righe)
+    dichiarato = emetti_esito(registro, TipoEsito.DICHIARATO, date(2026, 3, 16), righe)
+
+    with pytest.raises(ErroreRegistro, match="inesistente"):
+        registro.registra_pagamento(R, 999, date(2026, 2, 27))
+    with pytest.raises(ErroreRegistro, match="pagato"):
+        registro.registra_pagamento(R, dichiarato.id, date(2026, 2, 27))
+    with pytest.raises(ErroreRegistro, match="ALTRO"):
+        registro.registra_pagamento("ALTRO", pagato.id, date(2026, 2, 27))
+
+    fatto = registro.registra_pagamento(R, pagato.id, date(2026, 2, 27))
+    assert fatto.tipo == "data_pagamento"
+    assert registro.pagamenti(R, registro.adesso()) == {pagato.id: fatto}
+
+
+def test_l_ultima_data_registrata_prevale_e_quella_precedente_resta_leggibile(registro, corpus, orologio):
+    registro.registra_fatto(R, "compenso_mensile", "1000", date(2026, 1, 1))
+    pagato = emetti_esito(registro, TipoEsito.PAGATO, date(2026, 2, 27), calcola(registro, corpus, R, FEB))
+    prima = registro.registra_pagamento(R, pagato.id, date(2026, 2, 27))
+    istante = orologio.ora
+    orologio.avanza()
+    dopo = registro.registra_pagamento(R, pagato.id, date(2026, 3, 1))
+    assert registro.pagamenti(R, orologio.ora)[pagato.id] == dopo
+    assert registro.pagamenti(R, istante)[pagato.id] == prima

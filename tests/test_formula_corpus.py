@@ -187,3 +187,9 @@ def test_regola_che_cambia_dentro_il_mese_non_si_applica():
     assert corpus.regola_per("a", Mese(2025, 12)) is None
     with pytest.raises(ValiditaNonUniforme):
         corpus.regola_per("a", Mese(2026, 3))
+
+
+def test_base_tra_i_riferimenti_di_una_formula():
+    letti = riferimenti("arrotonda(base.pens * parametro.a, 2)")
+    assert letti.basi == {"pens"}
+    assert valuta("base.a + 1", lambda origine, nome: Decimal(2)) == Decimal(3)

@@ -48,6 +48,20 @@ class _Lettore:
     def fatto(self, tipo: str, periodo: Periodo) -> Fatto | None:
         return self.registro.fatto_nel_periodo(self.rapporto, tipo, periodo, self.noto_al)
 
+    def valore_fatto(self, istituto: str, tipo: str, periodo: Periodo, fatti: dict[int, Fatto]) -> Decimal:
+        """Valore numerico letto da una formula; un fatto assente o categoriale ferma il calcolo."""
+        fatto = self.fatto(tipo, periodo)
+        if fatto is None:
+            raise FattoMancante(
+                f"Rapporto {self.rapporto}, istituto {istituto}: manca il fatto {tipo} per {periodo}"
+            )
+        if fatto.categoriale:
+            raise ErroreCalcolo(
+                f"Rapporto {self.rapporto}, istituto {istituto}: il fatto {tipo} è un codice, una formula non lo legge"
+            )
+        fatti[fatto.id] = fatto
+        return fatto.valore
+
     def parametro(self, nome: str, periodo: Periodo) -> ParametroLetto:
         vigenza = self.corpus.parametro(nome).vigenza_per(periodo)
         return ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento)
@@ -71,14 +85,7 @@ class _Lettore:
 
         def risolvi(origine: str, nome: str) -> Decimal:
             if origine == "fatto":
-                fatto = self.fatto(nome, periodo)
-                if fatto is None:
-                    raise FattoMancante(
-                        f"Rapporto {self.rapporto}, istituto {regola.istituto}: "
-                        f"manca il fatto {nome} per {periodo}"
-                    )
-                fatti[fatto.id] = fatto
-                return fatto.valore
+                return self.valore_fatto(regola.istituto, nome, periodo, fatti)
             if origine == "parametro":
                 parametri[nome] = self.parametro(nome, periodo)
                 return parametri[nome].valore
@@ -131,7 +138,11 @@ class _Calcolo:
         ]
         firme = []
         for indice, giorno in enumerate(giorni):
-            parte_fatti = tuple(colonna[indice].id if colonna[indice] else None for colonna in vigenti)
+            # Le frazioni seguono ogni fatto; un periodo dichiarato solo i cambi di valore.
+            parte_fatti = tuple(
+                (colonna[indice].id if con_corpus else colonna[indice].valore) if colonna[indice] else None
+                for colonna in vigenti
+            )
             firme.append((parte_fatti, self.corpus.firma_giorno(giorno) if con_corpus else ()))
         return firme
 
@@ -215,6 +226,8 @@ class _Calcolo:
         if istituto in self._righe_periodo:
             return self._righe_periodo[istituto]
         righe: dict[int, Importo] = {}
+        if istituto in self.corpus.istituti_di_cassa:
+            return righe
         for indice, periodo in enumerate(self.periodi):
             regola = self.corpus.regola_per(istituto, periodo)
             if regola is None or regola.maturazione != "periodo":
@@ -436,6 +449,13 @@ def spiega(importo: Importo, rientro: int = 0) -> str:
     ]
     if solo_prassi(d.riferimento):
         righe.append(f"{margine}  ATTENZIONE: fondata solo su prassi")
+    if importo.data_pagamento is not None:
+        righe.append(f"{margine}  pagato il {importo.data_pagamento}")
+    for concorso in d.concorsi:
+        righe.append(
+            f"{margine}  concorso {concorso.istituto} -> {concorso.base}: {concorso.misura} "
+            f"(dal {concorso.dal}; fonte: {concorso.riferimento})"
+        )
     if d.quota is not None:
         quota = d.quota
         calcolo = f"mese intero, residuo {quota.quota:.6f}" if quota.divisore is None else f"{quota.giorni}/{quota.divisore}"

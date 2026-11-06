@@ -31,3 +31,11 @@ class ParametroMancante(ErroreCalcolo):
 
 class ValiditaNonUniforme(ErroreCalcolo):
     """Un fatto, una regola o un parametro cambia dentro il periodo di competenza."""
+
+
+class ConcorsoMancante(ErroreCalcolo):
+    """Un istituto pagato non dichiara se concorre a una base imponibile."""
+
+
+class ConcorsoParziale(ErroreCalcolo):
+    """Un istituto concorre in parte a una base: il caso non è ancora modellato."""

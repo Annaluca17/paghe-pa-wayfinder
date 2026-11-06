@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS fatti (
     registrato_il TEXT NOT NULL,
     atto_riferimento TEXT,
     atto_data TEXT,
+    categoriale INTEGER NOT NULL DEFAULT 0,
     CHECK ((atto_riferimento IS NULL) = (atto_data IS NULL))
 );
 CREATE INDEX IF NOT EXISTS fatti_per_rapporto ON fatti (rapporto, tipo);
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS esiti (
 """
 
 TABELLE = ("fatti", "annullamenti", "esiti")
+TIPO_DATA_PAGAMENTO = "data_pagamento"
 
 
 def _trigger_immutabilita(tabella: str) -> str:
@@ -89,7 +91,15 @@ class Registro:
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA foreign_keys = ON")
         self._db.executescript(SCHEMA + "".join(_trigger_immutabilita(t) for t in TABELLE))
+        self._aggiorna_schema()
         self._ultimo = self._ultimo_istante()
+
+    def _aggiorna_schema(self) -> None:
+        """Un registro creato prima dei codici riceve la colonna: i dati non cambiano."""
+        colonne = {riga["name"] for riga in self._db.execute("PRAGMA table_info(fatti)")}
+        if "categoriale" not in colonne:
+            with self._db:
+                self._db.execute("ALTER TABLE fatti ADD COLUMN categoriale INTEGER NOT NULL DEFAULT 0")
 
     def _ultimo_istante(self) -> datetime | None:
         unione = " UNION ALL ".join(f"SELECT registrato_il AS r FROM {t}" for t in TABELLE)
@@ -116,31 +126,70 @@ class Registro:
         valido_al: date | None = None,
         atto: Atto | None = None,
     ) -> Fatto:
+        return self._inserisci_fatto(rapporto, tipo, _in_decimale(valore), False, valido_dal, valido_al, atto)
+
+    def registra_codice(
+        self,
+        rapporto: str,
+        tipo: str,
+        codice: str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Fatto categoriale, come contratto o qualifica: il codice resta testo e una formula non lo legge."""
+        if not isinstance(codice, str) or not codice.strip():
+            raise ErroreRegistro(f"Codice non valido: {codice!r}")
+        return self._inserisci_fatto(rapporto, tipo, codice, True, valido_dal, valido_al, atto)
+
+    def registra_pagamento(self, rapporto: str, esito_id: int, data: date, atto: Atto | None = None) -> Fatto:
+        """Valuta dell'accredito di un esito pagato (ADR 0006). Un nuovo fatto corregge il precedente."""
+        esito = self.esito(esito_id)
+        if esito.tipo is not TipoEsito.PAGATO:
+            raise ErroreRegistro(f"La data di pagamento vale solo per un esito pagato, non per l'esito {esito_id}")
+        if not any(riga.rapporto == rapporto for riga in esito.righe):
+            raise ErroreRegistro(f"L'esito {esito_id} non contiene il rapporto {rapporto}")
+        return self._inserisci_fatto(rapporto, TIPO_DATA_PAGAMENTO, Decimal(esito_id), False, data, data, atto)
+
+    def pagamenti(self, rapporto: str, noto_al: datetime) -> dict[int, Fatto]:
+        """Per ogni esito pagato del rapporto, l'ultima data di pagamento registrata e non annullata."""
+        return {int(fatto.valore): fatto for fatto in self.fatti_noti(rapporto, TIPO_DATA_PAGAMENTO, noto_al)}
+
+    def _inserisci_fatto(
+        self,
+        rapporto: str,
+        tipo: str,
+        valore: Decimal | str,
+        categoriale: bool,
+        valido_dal: date,
+        valido_al: date | None,
+        atto: Atto | None,
+    ) -> Fatto:
         if not rapporto or not tipo:
             raise ErroreRegistro("Rapporto e tipo sono obbligatori")
         if valido_al is not None and valido_al < valido_dal:
             raise ErroreRegistro("Validità invertita")
-        numero = _in_decimale(valore)
         if atto is not None:
             _controlla_atto(atto)
         istante = self.adesso()
         with self._db:
             cursore = self._db.execute(
                 "INSERT INTO fatti (rapporto, tipo, valore, valido_dal, valido_al, registrato_il,"
-                " atto_riferimento, atto_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                " atto_riferimento, atto_data, categoriale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     rapporto,
                     tipo,
-                    str(numero),
+                    str(valore),
                     valido_dal.isoformat(),
                     valido_al.isoformat() if valido_al else None,
                     istante_in_testo(istante),
                     atto.riferimento if atto else None,
                     atto.data.isoformat() if atto else None,
+                    int(categoriale),
                 ),
             )
         self._registra(istante)
-        return Fatto(cursore.lastrowid, rapporto, tipo, numero, valido_dal, valido_al, istante, atto)
+        return Fatto(cursore.lastrowid, rapporto, tipo, valore, valido_dal, valido_al, istante, atto, categoriale)
 
     def annulla_fatto(self, fatto_id: int, motivo: str) -> None:
         """Un fatto errato senza sostituto si neutralizza con una nuova registrazione."""
@@ -231,15 +280,17 @@ class Registro:
 
 
 def _fatto_da_riga(riga: sqlite3.Row) -> Fatto:
+    categoriale = bool(riga["categoriale"])
     return Fatto(
         id=riga["id"],
         rapporto=riga["rapporto"],
         tipo=riga["tipo"],
-        valore=Decimal(riga["valore"]),
+        valore=riga["valore"] if categoriale else Decimal(riga["valore"]),
         valido_dal=date.fromisoformat(riga["valido_dal"]),
         valido_al=date.fromisoformat(riga["valido_al"]) if riga["valido_al"] else None,
         registrato_il=datetime.fromisoformat(riga["registrato_il"]),
         atto=Atto(riga["atto_riferimento"], date.fromisoformat(riga["atto_data"])) if riga["atto_data"] else None,
+        categoriale=categoriale,
     )
 
 
