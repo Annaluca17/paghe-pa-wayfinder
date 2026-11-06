@@ -12,20 +12,20 @@ nome = "aliquota"
 [[parametro.vigenza]]
 dal = 2026-01-01
 valore = "0.10"
-riferimento = "FITTIZIO: fonte aliquota"
+riferimento = "fittizio:fonte-aliquota"
 
 [[regola]]
 istituto = "compenso"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO: art. 1"
+riferimento = "fittizio:art-1"
 formula = "fatto.compenso_mensile"
 
 [[regola]]
 istituto = "ritenuta"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO: art. 2"
+riferimento = "fittizio:art-2"
 formula = "arrotonda(importo.compenso * parametro.aliquota, 2)"
 """
 

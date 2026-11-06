@@ -35,7 +35,7 @@ def aumento_retroattivo(registro, orologio):
         "compenso_mensile",
         "1100.00",
         date(2026, 2, 1),
-        atto=Atto("FITTIZIO: determina 1", date(2026, 3, 10)),
+        atto=Atto("fittizio:determina-1", date(2026, 3, 10)),
     )
 
 
@@ -64,10 +64,10 @@ def test_derivazione_fino_a_norma_parametri_e_fatti(registro, corpus):
     importi = {i.istituto: i for i in calcola(registro, corpus, R, FEB)}
     d = importi["ritenuta"].derivazione
 
-    assert d.riferimento == "FITTIZIO: art. 2"
+    assert d.riferimento == "fittizio:art-2"
     assert d.versione_corpus == corpus.versione
     assert d.regola_versione == 1
-    assert [p.riferimento for p in d.parametri] == ["FITTIZIO: fonte aliquota"]
+    assert [p.riferimento for p in d.parametri] == ["fittizio:fonte-aliquota"]
     assert [i.istituto for i in d.importi] == ["compenso"]
     assert d.importi[0].derivazione.fatti == (fatto,)
 
@@ -128,8 +128,8 @@ def test_esito_conserva_corpus_regole_e_tempo_dei_fatti(registro, corpus, orolog
 def test_correzione_di_regola_produce_differenza_senza_toccare_l_esito(registro, corpus, orologio, pagato_febbraio):
     corretto = Corpus.da_toml(
         CORPUS_BASE.replace('"0.10"', '"0.12"').replace(
-            'versione = 1\ndal = 2026-01-01\nriferimento = "FITTIZIO: art. 2"',
-            'versione = 2\ndal = 2026-01-01\nriferimento = "FITTIZIO: art. 2"',
+            'versione = 1\ndal = 2026-01-01\nriferimento = "fittizio:art-2"',
+            'versione = 2\ndal = 2026-01-01\nriferimento = "fittizio:art-2"',
         )
     )
     assert corretto.versione != corpus.versione
@@ -153,7 +153,7 @@ def test_nuova_vigenza_non_tocca_i_periodi_precedenti(registro, orologio, pagato
 istituto = "ritenuta"
 versione = 1
 dal = 2026-04-01
-riferimento = "FITTIZIO: art. 2 nuovo testo"
+riferimento = "fittizio:art-2-nuovo"
 formula = "arrotonda(importo.compenso / 2, 2)"
 """
     )
@@ -168,7 +168,7 @@ def test_fatto_annullato_produce_differenza_negativa_tracciabile(registro, corpu
 istituto = "premio_prova"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO: art. 3"
+riferimento = "fittizio:art-3"
 formula = "fatto.premio"
 applica_se = "premio"
 """
@@ -183,7 +183,7 @@ applica_se = "premio"
     rettifica = voci[0].importo()
     assert rettifica.valore == Decimal("-50")
     assert rettifica.esiti_confrontati == (esito.id,)
-    assert rettifica.derivazione.riferimento == "FITTIZIO: art. 3"
+    assert rettifica.derivazione.riferimento == "fittizio:art-3"
 
 
 def test_applica_se_esclude_il_rapporto_e_vale_zero_come_dipendenza(registro):
@@ -193,14 +193,14 @@ def test_applica_se_esclude_il_rapporto_e_vale_zero_come_dipendenza(registro):
 istituto = "base"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO"
+riferimento = "fittizio:prova"
 formula = "fatto.compenso"
 
 [[regola]]
 istituto = "opzionale"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO"
+riferimento = "fittizio:prova"
 formula = "fatto.extra"
 applica_se = "extra"
 
@@ -208,7 +208,7 @@ applica_se = "extra"
 istituto = "totale"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO"
+riferimento = "fittizio:prova"
 formula = "importo.base + importo.opzionale"
 """
     )
@@ -239,14 +239,14 @@ istituto = "a"
 versione = 1
 dal = 2026-01-01
 al = 2026-01-31
-riferimento = "FITTIZIO"
+riferimento = "fittizio:prova"
 formula = "1"
 
 [[regola]]
 istituto = "b"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO"
+riferimento = "fittizio:prova"
 formula = "importo.a"
 """
     )
@@ -268,10 +268,10 @@ def test_spiegazione_arriva_a_norma_parametro_fatto_e_atto(registro, corpus, oro
     ritenuta = next(i for i in calcola(registro, corpus, R, FEB) if i.istituto == "ritenuta")
     testo = spiega(ritenuta)
     for atteso in (
-        "FITTIZIO: art. 2",
-        "FITTIZIO: fonte aliquota",
-        "FITTIZIO: art. 1",
-        "FITTIZIO: determina 1 del 2026-03-10",
+        "fittizio:art-2",
+        "fittizio:fonte-aliquota",
+        "fittizio:art-1",
+        "fittizio:determina-1 del 2026-03-10",
         "compenso_mensile = 1100.00",
     ):
         assert atteso in testo

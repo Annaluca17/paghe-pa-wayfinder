@@ -30,7 +30,7 @@ def test_immutabilita_imposta_dal_database(registro, corpus, orologio):
 
 def test_fatto_conserva_atto_e_assi_temporali(registro, orologio):
     orologio.vai(3, 15)
-    atto = Atto("FITTIZIO: determina 1", date(2026, 3, 10))
+    atto = Atto("fittizio:determina-1", date(2026, 3, 10))
     registrato = registro.registra_fatto(R, "compenso_mensile", "1100", date(2026, 2, 1), atto=atto)
     letto = registro.fatti_noti(R, "compenso_mensile", orologio.ora)[0]
     assert letto == registrato

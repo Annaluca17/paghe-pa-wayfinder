@@ -14,6 +14,7 @@ from typing import Callable, Iterable
 
 from .errori import ErroreRegistro, ValiditaNonUniforme
 from .modello import Atto, Esito, Fatto, Importo, TipoEsito
+from .riferimento import data_atto, motivo_rifiuto
 from .tempo import Mese, in_utc, istante_in_testo
 
 SCHEMA = """
@@ -71,6 +72,16 @@ def _in_decimale(valore: Decimal | int | str) -> Decimal:
     return risultato
 
 
+def _controlla_atto(atto: Atto) -> None:
+    """Solo in scrittura: i fatti già registrati restano leggibili anche se la sintassi evolve."""
+    motivo = motivo_rifiuto(atto.riferimento)
+    if motivo:
+        raise ErroreRegistro(f"Atto non valido: {motivo}")
+    citata = data_atto(atto.riferimento)
+    if citata is not None and citata != atto.data:
+        raise ErroreRegistro(f"La data dell'atto {atto.data} non coincide con il riferimento {atto.riferimento!r}")
+
+
 class Registro:
     def __init__(self, percorso: str = ":memory:", orologio: Callable[[], datetime] | None = None):
         self._orologio = orologio or (lambda: datetime.now(UTC))
@@ -110,6 +121,8 @@ class Registro:
         if valido_al is not None and valido_al < valido_dal:
             raise ErroreRegistro("Validità invertita")
         numero = _in_decimale(valore)
+        if atto is not None:
+            _controlla_atto(atto)
         istante = self.adesso()
         with self._db:
             cursore = self._db.execute(

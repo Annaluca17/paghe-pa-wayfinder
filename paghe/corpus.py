@@ -12,12 +12,16 @@ from pathlib import Path
 
 from .errori import ErroreCorpus, ParametroMancante, ValiditaNonUniforme
 from .formula import riferimenti
+from .riferimento import motivo_rifiuto
 from .tempo import Mese
 
 
 def _riferimento_obbligatorio(riferimento: str, soggetto: str) -> None:
     if not isinstance(riferimento, str) or not riferimento.strip():
         raise ErroreCorpus(f"{soggetto}: riferimento normativo obbligatorio")
+    motivo = motivo_rifiuto(riferimento)
+    if motivo:
+        raise ErroreCorpus(f"{soggetto}: riferimento non valido, {motivo}")
 
 
 @dataclass(frozen=True)
