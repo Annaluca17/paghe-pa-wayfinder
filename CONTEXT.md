@@ -105,7 +105,7 @@ Dati allegati alla liquidazione che dicono come pagarla: beneficiari e netti, ri
 _Avoid_: Distinta, tracciato mandati
 
 **Output obbligatorio**:
-Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, lista collaboratori, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4, autoliquidazione INAIL).
+Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, lista collaboratori, F24EP, CU, 770, Conto Annuale, PASSWEB, PIAO, trasparenza, conguagli, esiti 730-4, autoliquidazione INAIL). È sempre una vista del modello, mai il prodotto di un tool esistente.
 _Avoid_: Stampa, report
 
 ### Calcolo
@@ -384,6 +384,36 @@ _Avoid_: Trattenuta (senza dire quale), ritenuta (che è fiscale), quinto (che �
 Mappatura datata dell'istituto o della categoria di reddito verso un punto della CU, per anno di certificazione, come la voce SICO o il codice tributo. Se la numerazione cambia, cambia la mappatura e non l'istituto.
 _Avoid_: Codice CU dell'istituto, rigo (che è del 770)
 
+### Versamenti e altri output
+
+**Delega F24EP**:
+Vista delle liquidazioni verso terzi di una scadenza: righe per sezione, codice tributo o causale, riferimento, debito e credito, ricavate dalla composizione del pagamento delle proposte pagate. Il codice tributo è una mappatura datata dell'istituto. Trasmessa è un esito dichiarato che non cambia più; una correzione è una nuova delega.
+_Avoid_: F24 (senza dire quale), modello F24EP mensile, tracciato F24EP (che è solo la forma del file)
+
+**Credito da compensare**:
+Credito del sostituto (rimborso da assistenza fiscale, trattamento integrativo e simili) che una regola ricava dagli esiti pagati e porta come riga a credito nella delega della stessa scadenza. La parte non assorbita passa alla scadenza successiva come fatto con la sua origine.
+_Avoid_: Credito residuo (senza dire di quale scadenza), compensazione automatica
+
+**Data di versamento**:
+Fatto scelto dall'Ufficio personale per una delega F24EP. Il modello avvisa se cade dopo la scadenza che la regola ricava. Non è la data dell'esito versato, che viene dall'evento di ritorno.
+_Avoid_: Scadenza (che è della regola), data di pagamento (che è dei netti)
+
+**Ultimo miglio**:
+Vista dei valori da digitare in PASSWEB per una pratica di pensione o di fine servizio (TFS/TFR, DMA previste, miglioramento contrattuale), ricavata dagli esiti pagati e dai fatti del rapporto. Diventa esito dichiarato quando l'Ufficio personale registra l'inserimento. La sistemazione della posizione non ne fa parte: è la ListaPosPA a variazione.
+_Avoid_: Pratica PASSWEB, modello TFR1 (sostituito)
+
+**Retribuzioni pregresse**:
+Fatto del rapporto, con fonte, sugli importi dei mesi anteriori all'avvio del modello che l'ultimo miglio deve leggere. Se manca, la vista lo chiede come dato mancante e non stima.
+_Avoid_: Storico cedolini, ricostruzione retributiva
+
+**Voce di tariffa INAIL**:
+Fatto datato sul rapporto che lo classifica ai fini del premio INAIL. Con la base imponibile INAIL alimenta la dichiarazione delle retribuzioni.
+_Avoid_: Posizione INAIL (che è dell'ente), codice rischio
+
+**Dichiarazione delle retribuzioni INAIL**:
+Vista annuale che espone la regolazione dell'anno precedente e la rata dell'anno sulla base imponibile INAIL, per voce di tariffa. L'invio è un esito dichiarato; il premio si versa nella sezione INAIL della delega F24EP, senza compensazioni.
+_Avoid_: Autoliquidazione (quando si intende solo la dichiarazione), denuncia salari
+
 ### Fondo
 
 **Fondo risorse decentrate**:
@@ -449,5 +479,5 @@ _Avoid_: Disponibilità, saldo del fondo
 ### Metodo
 
 **Tool esistente**:
-Applicazione già sviluppata dall'utente, usata come fonte di regole e conoscenza normativa deterministica e, dove utile, come generatore di output; non è un riferimento strutturale.
+Applicazione già sviluppata dall'utente, da cui si prendono regole, parametri con fonte e motori deterministici, riscritti nel modello; può servire da controllo indipendente su un output del modello. Non genera output e non è un riferimento strutturale.
 _Avoid_: Modulo, componente legacy
