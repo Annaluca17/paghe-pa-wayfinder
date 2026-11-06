@@ -305,7 +305,7 @@ _Avoid_: Parametro locale, personalizzazione
 ### Fondo
 
 **Fondo risorse decentrate**:
-Identità a cui si riferiscono i fatti da atto che costituiscono e destinano le risorse per il trattamento accessorio: ente, anno di costituzione e ambito (per esempio comparto, dirigenza o EQ). Le risorse dell'EQ, pagate dal bilancio, sono un fondo con ambito EQ, così il limite del trattamento accessorio le somma come le altre. Non ha saldo né stato proprio: capienza, utilizzo e residui sono viste che incrociano quei fatti con gli importi degli istituti accessori.
+Identità a cui si riferiscono i fatti da atto che costituiscono e destinano le risorse per il trattamento accessorio: ente, anno di costituzione e ambito (per esempio comparto, dirigenza, EQ o segretario). Le risorse dell'EQ e quelle di posizione, galleggiamento e risultato del segretario, pagate dal bilancio e senza contratto integrativo, sono fondi con il proprio ambito, così il limite del trattamento accessorio le somma come le altre e la Tab. 15 le vede. Il fondo con ambito segretario sta nell'ente capofila, se c'è una convenzione. Non ha saldo né stato proprio: capienza, utilizzo e residui sono viste che incrociano quei fatti con gli importi degli istituti accessori.
 _Avoid_: Fondo (senza anno), modulo fondo, salario accessorio (che è l'insieme degli importi pagati)
 
 **Voce di costituzione**:
