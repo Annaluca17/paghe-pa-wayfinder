@@ -57,7 +57,7 @@ Fatto comunicato dalla Ragioneria attraverso un canale di input, come un impegno
 _Avoid_: Impegno del modello, anagrafica capitoli
 
 **Abbinamento**:
-Scelta, fatta da una regola dichiarata, dell'impegno che un importo consuma (classificazione, esercizio di esigibilità, atto). Se nessun impegno è capiente scatta un fermo; se l'impegno non è noto, nella proposta è un dato mancante. La Ragioneria può cambiarlo in conferma.
+Scelta, fatta da una regola dichiarata, dell'impegno che un importo consuma (classificazione, esercizio di esigibilità, atto). Se nessun impegno è capiente scatta un fermo; se l'impegno non è noto, nella proposta è un dato mancante. La Ragioneria può cambiarlo in conferma. Per un importo finanziato dal fondo, la regola cerca l'impegno che ha come atto presupposto la sottoscrizione del contratto integrativo del fondo dell'anno di competenza, con la classificazione dell'istituto e l'esercizio della data di pagamento prevista.
 _Avoid_: Imputazione automatica
 
 **Versione di proposta**:
@@ -115,7 +115,7 @@ Elemento retributivo o trattenuta definito da norma o contratto, con riferimento
 _Avoid_: Voce, codice voce
 
 **Fatto**:
-Evento su una persona o su un rapporto, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
+Evento su una persona, su un rapporto o su un fondo risorse decentrate, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
 _Avoid_: Movimento, variazione anagrafica
 
 **Importo**:
@@ -225,6 +225,52 @@ _Avoid_: Costante, tabella di sistema
 **Input da atto**:
 Decisione discrezionale dell'ente (contratto integrativo, costituzione del fondo, determina, valutazione) registrata come fatto con atto fonte e decorrenza; mai codificata come regola.
 _Avoid_: Parametro locale, personalizzazione
+
+### Fondo
+
+**Fondo risorse decentrate**:
+Identità a cui si riferiscono i fatti da atto che costituiscono e destinano le risorse per il trattamento accessorio: ente, anno di costituzione e ambito contrattuale (per esempio comparto o dirigenza). Non ha saldo né stato proprio: capienza, utilizzo e residui sono viste che incrociano quei fatti con gli importi degli istituti accessori.
+_Avoid_: Fondo (senza anno), modulo fondo, salario accessorio (che è l'insieme degli importi pagati)
+
+**Voce di costituzione**:
+Input da atto che porta a un fondo un importo con il suo riferimento normativo o contrattuale e l'atto che lo dispone. Ogni voce ha il proprio atto, così le integrazioni successive restano distinte; senza numero e data d'atto è un fatto in attesa d'atto.
+_Avoid_: Risorsa, riga del fondo
+
+**Certificazione del fondo**:
+Fatto sul fondo, con il verbale dell'organo di revisione come atto, che copre la costituzione nota alla data in cui è registrato. Una voce registrata o corretta dopo non è coperta, e le viste che dipendono dalla certificazione lo segnalano.
+_Avoid_: Fondo certificato (come stato), visto dei revisori
+
+**Destinazione**:
+Input da atto, tratto dal contratto integrativo, che assegna una parte di un fondo a un istituto. È a importo oppure a residuo, cioè prende ciò che avanza dalle altre; un fondo ne ha al più una a residuo.
+_Avoid_: Ripartizione, utilizzo (l'utilizzo è la vista degli importi che consumano la destinazione)
+
+**Sottoscrizione del contratto integrativo**:
+Fatto sul fondo, con il suo atto, da cui nasce l'obbligazione per le destinazioni. Alla sua registrazione il modello propone un impegno per ogni destinazione ed esercizio di esigibilità, salvo che la fonte sia già coperta dall'impegno automatico del bilancio. Prima della sottoscrizione le destinazioni valgono per la capienza ma non generano proposte.
+_Avoid_: Accordo, firma (senza dire quale)
+
+**Esigibilità attesa**:
+Esercizio in cui la destinazione dichiara che i suoi importi saranno pagati: l'anno di costituzione per le indennità mensili, l'anno successivo per performance e premi legati alla valutazione. La parte esigibile dopo l'anno di costituzione esce nella proposta come coperta da fondo pluriennale vincolato.
+_Avoid_: Scadenza, anno di pagamento (che è dell'importo)
+
+**Fonte di finanziamento**:
+Dichiarazione dell'istituto, con date e riferimento, di che cosa lo paga: una destinazione del fondo del suo ambito, il bilancio o un'altra provvista dichiarata. Può essere parziale. Se manca, il calcolo si ferma. Un importo consuma il fondo del suo anno di competenza, non dell'anno di pagamento.
+_Avoid_: Capitolo dell'istituto, tabella di ripartizione
+
+**Utilizzo**:
+Vista che somma sulla destinazione gli importi degli istituti che vi si finanziano.
+_Avoid_: Speso, consuntivo del fondo
+
+**Chiusura del fondo**:
+Vista sul fondo di un anno a una data di riferimento e a un tempo di registrazione: utilizzato, destinato ed esigibile dopo l'anno (fondo pluriennale vincolato), economie, e risorse vincolate se il contratto integrativo non è sottoscritto entro l'anno, distinguendo il fondo certificato da quello che non lo è.
+_Avoid_: Consuntivo, saldo di fine anno
+
+**Riporto**:
+Voce di costituzione, con il proprio atto, che porta a un fondo risorse non utilizzate di un fondo precedente e cita la chiusura da cui deriva con la data alla quale era nota. Se poi la chiusura cambia, il modello segnala la differenza e non modifica il riporto: rimedia l'ente con un fatto.
+_Avoid_: Residuo (senza dire di quale fondo), avanzo del fondo
+
+**Capienza**:
+Confronto tra l'utilizzo (esiti pagati più importi calcolati non ancora pagati) e la destinazione con atto, e tra la somma degli utilizzi e la costituzione coperta dalla certificazione. Una voce in attesa d'atto non apre capienza. Se la capienza è superata gli importi restano calcolati e visibili, ma nessuna versione di proposta li comprende; il fermo nomina fondo, destinazione, eccedenza e istituti. Che cosa ridurre lo decide l'ente con un fatto.
+_Avoid_: Disponibilità, saldo del fondo
 
 ### Metodo
 
