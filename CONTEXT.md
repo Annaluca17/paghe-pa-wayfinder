@@ -105,7 +105,7 @@ Dati allegati alla liquidazione che dicono come pagarla: beneficiari e netti, ri
 _Avoid_: Distinta, tracciato mandati
 
 **Output obbligatorio**:
-Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, lista collaboratori, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4).
+Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, lista collaboratori, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4, autoliquidazione INAIL).
 _Avoid_: Stampa, report
 
 ### Calcolo
@@ -401,7 +401,3 @@ _Avoid_: Disponibilità, saldo del fondo
 **Tool esistente**:
 Applicazione già sviluppata dall'utente, usata come fonte di regole e conoscenza normativa deterministica e, dove utile, come generatore di output; non è un riferimento strutturale.
 _Avoid_: Modulo, componente legacy
-
-**Struttura di riferimento**:
-Schema sigillato dell'utente, scritto prima della mappa, usato solo come controllo di completezza nel confronto finale.
-_Avoid_: Modello di riferimento, architettura target
