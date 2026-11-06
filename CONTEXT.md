@@ -52,6 +52,10 @@ _Avoid_: Interfaccia, import
 Impegno, liquidazione o accertamento generati dal modello paghe e soggetti a conferma della Ragioneria. La liquidazione consuma l'impegno; l'impegno si propone solo quando l'obbligazione nasce da un fatto del registro (fondo, integrativo, arretrati da rinnovo) e non è già coperta dall'impegno automatico del bilancio; l'accertamento si propone per un credito che nasce da un fatto del registro, come il riparto di una convenzione. Mandato e reversale non si propongono: sono atti della Ragioneria.
 _Avoid_: Export contabile, flusso contabile, proposta di mandato
 
+**Origine dell'impegno**:
+Dichiarazione dell'istituto, con date e riferimento, accanto alla sua classificazione ufficiale: automatico col bilancio, oppure l'atto che fa nascere l'obbligazione. Il modello propone l'impegno quando quell'atto è registrato, salvo l'automatico. Se manca, il calcolo si ferma.
+_Avoid_: Tipo impegno, flag automatico
+
 **Fatto contabile**:
 Fatto comunicato dalla Ragioneria attraverso un canale di input, come un impegno sulla spesa di personale (numero, esercizio, classificazione, atto presupposto, importo). Il modello lo legge e non lo produce.
 _Avoid_: Impegno del modello, anagrafica capitoli
