@@ -23,11 +23,12 @@ class Fatto:
     id: int
     rapporto: str
     tipo: str
-    valore: Decimal
+    valore: Decimal | str
     valido_dal: date
     valido_al: date | None
     registrato_il: datetime
     atto: Atto | None = None
+    categoriale: bool = False
 
     def copre(self, giorno: date) -> bool:
         return self.valido_dal <= giorno and (self.valido_al is None or giorno <= self.valido_al)
@@ -42,20 +43,23 @@ class Fatto:
             "valido_al": self.valido_al.isoformat() if self.valido_al else None,
             "registrato_il": istante_in_testo(self.registrato_il),
             "atto": {"riferimento": self.atto.riferimento, "data": self.atto.data.isoformat()} if self.atto else None,
+            "categoriale": self.categoriale,
         }
 
     @classmethod
     def da_dizionario(cls, dati: dict) -> "Fatto":
         atto = dati["atto"]
+        categoriale = dati.get("categoriale", False)
         return cls(
             id=dati["id"],
             rapporto=dati["rapporto"],
             tipo=dati["tipo"],
-            valore=Decimal(dati["valore"]),
+            valore=dati["valore"] if categoriale else Decimal(dati["valore"]),
             valido_dal=date.fromisoformat(dati["valido_dal"]),
             valido_al=date.fromisoformat(dati["valido_al"]) if dati["valido_al"] else None,
             registrato_il=datetime.fromisoformat(dati["registrato_il"]),
             atto=Atto(atto["riferimento"], date.fromisoformat(atto["data"])) if atto else None,
+            categoriale=categoriale,
         )
 
 
@@ -63,6 +67,17 @@ class Fatto:
 class ParametroLetto:
     nome: str
     valore: Decimal
+    dal: date
+    riferimento: str
+
+
+@dataclass(frozen=True)
+class ConcorsoLetto:
+    """Dichiarazione applicata a un importo pagato: a quale base concorre e in che misura."""
+
+    istituto: str
+    base: str
+    misura: str
     dal: date
     riferimento: str
 
@@ -93,6 +108,7 @@ class Derivazione:
     fatti: tuple[Fatto, ...]
     importi: tuple["Importo", ...]
     quota: Quota | None = None
+    concorsi: tuple[ConcorsoLetto, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -103,6 +119,7 @@ class Importo:
     valore: Decimal
     derivazione: Derivazione
     esiti_confrontati: tuple[int, ...] = ()
+    data_pagamento: date | None = None
 
     @property
     def chiave(self) -> tuple[str, str, Periodo]:
@@ -116,6 +133,7 @@ class Importo:
             "periodo": str(self.periodo),
             "valore": str(self.valore),
             "esiti_confrontati": list(self.esiti_confrontati),
+            "data_pagamento": self.data_pagamento.isoformat() if self.data_pagamento else None,
             "derivazione": {
                 "istituto": d.istituto,
                 "maturazione": d.maturazione,
@@ -141,6 +159,10 @@ class Importo:
                 ],
                 "fatti": [fatto.in_dizionario() for fatto in d.fatti],
                 "importi": [importo.in_dizionario() for importo in d.importi],
+                "concorsi": [
+                    {"istituto": c.istituto, "base": c.base, "misura": c.misura, "dal": c.dal.isoformat(), "riferimento": c.riferimento}
+                    for c in d.concorsi
+                ],
             },
         }
 
@@ -148,12 +170,14 @@ class Importo:
     def da_dizionario(cls, dati: dict) -> "Importo":
         d = dati["derivazione"]
         q = d["quota"]
+        pagato = dati.get("data_pagamento")
         return cls(
             rapporto=dati["rapporto"],
             istituto=dati["istituto"],
             periodo=Periodo.da_testo(dati["periodo"]),
             valore=Decimal(dati["valore"]),
             esiti_confrontati=tuple(dati["esiti_confrontati"]),
+            data_pagamento=date.fromisoformat(pagato) if pagato else None,
             derivazione=Derivazione(
                 istituto=d["istituto"],
                 maturazione=d["maturazione"],
@@ -179,6 +203,10 @@ class Importo:
                 ),
                 fatti=tuple(Fatto.da_dizionario(f) for f in d["fatti"]),
                 importi=tuple(cls.da_dizionario(i) for i in d["importi"]),
+                concorsi=tuple(
+                    ConcorsoLetto(c["istituto"], c["base"], c["misura"], date.fromisoformat(c["dal"]), c["riferimento"])
+                    for c in d.get("concorsi", ())
+                ),
             ),
         )
 

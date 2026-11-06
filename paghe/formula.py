@@ -1,7 +1,7 @@
 """Grammatica delle formule delle regole.
 
 Una formula è testo, non codice: viene analizzata e mai eseguita. Ammette
-`fatto.x`, `parametro.x`, `importo.x`, le quattro operazioni, il meno unario,
+`fatto.x`, `parametro.x`, `importo.x`, `base.x`, le quattro operazioni, il meno unario,
 `min`, `max` e `arrotonda(valore, decimali)`.
 
 Le costanti sono solo intere: un valore normativo non può stare in una formula,
@@ -20,7 +20,7 @@ from typing import Callable
 from .errori import ErroreFormula
 
 PRECISIONE = 50
-SORGENTI = {"fatto", "parametro", "importo"}
+SORGENTI = {"fatto", "parametro", "importo", "base"}
 OPERATORI = {
     ast.Add: lambda a, b: a + b,
     ast.Sub: lambda a, b: a - b,
@@ -36,6 +36,7 @@ class Riferimenti:
     fatti: frozenset[str]
     parametri: frozenset[str]
     importi: frozenset[str]
+    basi: frozenset[str] = frozenset()
 
 
 @lru_cache(maxsize=None)
@@ -87,6 +88,7 @@ def riferimenti(sorgente: str) -> Riferimenti:
         fatti=frozenset(trovati["fatto"]),
         parametri=frozenset(trovati["parametro"]),
         importi=frozenset(trovati["importo"]),
+        basi=frozenset(trovati["base"]),
     )
 
 

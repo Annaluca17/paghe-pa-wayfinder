@@ -16,5 +16,5 @@ Scelto perché l'aritmetica `Decimal`, `tomllib` e `sqlite3` sono nella libreria
 - La versione del corpus è l'impronta del contenuto. Una correzione cambia versione anche se l'autore dimentica di dichiararla; la `versione` della regola resta dichiarata.
 - Le variazioni dentro il mese seguono l'ADR 0004.
 - Il riferimento segue la sintassi dell'ADR 0003.
-- Ogni regola seleziona la vigenza per competenza. Le regole selezionate per data di pagamento non sono ancora supportate.
+- Ogni regola seleziona la vigenza per competenza. Fanno eccezione le regole di cassa, che seguono la data di pagamento (ADR 0006).
 - Pagato e versato si confrontano per somma degli esiti; il dichiarato per sostituzione integrale dell'ultimo esito sul periodo.

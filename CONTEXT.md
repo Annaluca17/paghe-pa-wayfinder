@@ -43,7 +43,7 @@ Elemento retributivo o trattenuta definito da norma o contratto, con riferimento
 _Avoid_: Voce, codice voce
 
 **Fatto**:
-Evento registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto.
+Evento registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
 _Avoid_: Movimento, variazione anagrafica
 
 **Importo**:
@@ -67,12 +67,20 @@ Periodo dichiarato senza imponibili che dichiara il servizio di un mese pagato i
 _Avoid_: Periodo vuoto, mese a zero
 
 **Data di pagamento**:
-Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto. Decide in quale denuncia entra l'importo.
+Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto legato all'esito pagato. Decide in quale denuncia entrano gli importi di quell'esito.
 _Avoid_: Data di liquidazione (la liquidazione è una fase contabile)
 
 **Base imponibile**:
-Insieme degli importi su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR). Ogni istituto dichiara, con le sue date, a quali basi concorre e in che misura. Una base non deriva da un'altra, salvo che una norma lo dica.
+Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR). Una base non deriva da un'altra, salvo che una norma lo dica.
 _Avoid_: Imponibile (senza dire quale)
+
+**Concorso**:
+Dichiarazione, con date e riferimento, di come un istituto entra in una base: intero, parziale o escluso. Vale la dichiarazione vigente alla data di pagamento; se è assente o parziale il calcolo si ferma.
+_Avoid_: Flag imponibile
+
+**Regola di cassa**:
+Regola che legge una base o un'altra regola di cassa. Si sceglie alla data di pagamento, con i parametri vigenti in quel giorno, e produce importi solo nella denuncia.
+_Avoid_: Contributo per competenza
 
 **Caso**:
 Situazione reale modellata con i suoi fatti, la sua regola, il riferimento e un esempio verificato. Finché un caso non è modellato, il calcolo si ferma e lo nomina.
