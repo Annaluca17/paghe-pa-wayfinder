@@ -1,6 +1,6 @@
 # Ciclo proposta–conferma–esito con la Ragioneria
 
-Il modello paghe propone **liquidazioni**, con allegata la **composizione del pagamento**: beneficiari e netti, ritenute collegate al mandato, versamenti a terzi. Propone **impegni** solo quando l'obbligazione nasce da un fatto del registro (fondo, integrativo, arretrati da rinnovo) e non è già coperta dall'impegno automatico del bilancio. Mandati e reversali non si propongono: sono atti della Ragioneria.
+Il modello paghe propone **liquidazioni**, con allegata la **composizione del pagamento**: beneficiari e netti, ritenute collegate al mandato, versamenti a terzi. Propone **impegni** solo quando l'obbligazione nasce da un fatto del registro (fondo, integrativo, arretrati da rinnovo) e non è già coperta dall'impegno automatico del bilancio. Mandati e reversali non si propongono: sono atti della Ragioneria. *Precisato dall'ADR 0017: si propone anche l'accertamento, per un credito che nasce da un fatto del registro. Precisato dall'ADR 0015: ogni istituto dichiara l'origine del proprio impegno.*
 
 Una **riga di proposta** ha come chiave classificazione ufficiale (missione, programma, piano dei conti di V livello) e impegno, ed elenca gli importi che la sommano. Il capitolo lo aggiunge la **mappatura contabile dell'ente**, fuori dal modello. Gli impegni arrivano come **fatti contabili**. Il modello li **abbina** con una regola dichiarata: se nessun impegno è capiente si ferma, se l'impegno non è noto lo segnala come dato mancante.
 

@@ -19,7 +19,7 @@ Ruolo dell'ente che conferma le proposte di movimento contabile, contabilizza e 
 _Avoid_: Finanziaria, ufficio contabilità
 
 **Personale correlato all'ente**:
-Ogni persona che riceve dall'ente un compenso soggetto ad adempimenti da sostituto d'imposta o previdenziali: comparto, dirigenza, segretario, amministratori, co.co.co., LSU/LPU.
+Ogni persona che riceve dall'ente un compenso soggetto ad adempimenti da sostituto d'imposta o previdenziali, o che presta all'ente un'attività che genera adempimenti anche senza compenso: comparto, dirigenza, segretario, amministratori, co.co.co., LSU/LPU.
 _Avoid_: Dipendente (quando si intende l'insieme intero)
 
 **Persona**:
@@ -49,8 +49,12 @@ Via da cui arriva un fatto già strutturato altrove (presenze, attestati di mala
 _Avoid_: Interfaccia, import
 
 **Proposta di movimento contabile**:
-Impegno o liquidazione generati dal modello paghe e soggetti a conferma della Ragioneria. La liquidazione consuma l'impegno; l'impegno si propone solo quando l'obbligazione nasce da un fatto del registro (fondo, integrativo, arretrati da rinnovo) e non è già coperta dall'impegno automatico del bilancio. Mandato e reversale non si propongono: sono atti della Ragioneria.
+Impegno, liquidazione o accertamento generati dal modello paghe e soggetti a conferma della Ragioneria. La liquidazione consuma l'impegno; l'impegno si propone solo quando l'obbligazione nasce da un fatto del registro (fondo, integrativo, arretrati da rinnovo) e non è già coperta dall'impegno automatico del bilancio; l'accertamento si propone per un credito che nasce da un fatto del registro, come il riparto di una convenzione. Mandato e reversale non si propongono: sono atti della Ragioneria.
 _Avoid_: Export contabile, flusso contabile, proposta di mandato
+
+**Origine dell'impegno**:
+Dichiarazione dell'istituto, con date e riferimento, accanto alla sua classificazione ufficiale: automatico col bilancio, oppure l'atto che fa nascere l'obbligazione. Il modello propone l'impegno quando quell'atto è registrato, salvo l'automatico. Se manca, il calcolo si ferma.
+_Avoid_: Tipo impegno, flag automatico
 
 **Fatto contabile**:
 Fatto comunicato dalla Ragioneria attraverso un canale di input, come un impegno sulla spesa di personale (numero, esercizio, classificazione, atto presupposto, importo). Il modello lo legge e non lo produce.
@@ -101,21 +105,89 @@ Dati allegati alla liquidazione che dicono come pagarla: beneficiari e netti, ri
 _Avoid_: Distinta, tracciato mandati
 
 **Output obbligatorio**:
-Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4).
+Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, lista collaboratori, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4).
 _Avoid_: Stampa, report
 
 ### Calcolo
 
 **Rapporto**:
-Legame tra una persona e l'ente per un titolo di compenso (lavoro dipendente, mandato elettivo, co.co.co., LSU/LPU, incarico); una persona può averne più di uno. Le aggregazioni per persona (CU) sono viste; una regola può leggere un cumulo per persona (conguaglio, massimale) purché resti tracciato.
+Legame tra una persona e l'ente per un titolo di compenso; una persona può averne più di uno. È un solo concetto per ogni titolo. Le aggregazioni per persona (CU) sono viste; una regola può leggere un cumulo per persona (conguaglio, massimale) purché resti tracciato.
 _Avoid_: Dipendente, matricola, posizione
+
+**Titolo di compenso**:
+Ragione giuridica di un rapporto (lavoro dipendente, mandato di amministratore, co.co.co., LSU/LPU, incarico), fissata alla sua nascita. Non cambia: un titolo diverso è un rapporto nuovo, non una variazione.
+_Avoid_: Tipo dipendente, categoria
+
+**Regime del titolo**:
+Insieme delle dichiarazioni del corpus per un titolo di compenso: istituti, basi imponibili, concorsi, regole, fermi e output obbligatori alimentati. Sta nel corpus e non nel registro; se per un titolo manca, il calcolo si ferma.
+_Avoid_: Modulo amministratori, gestione a parte
+
+**Piano di rate**:
+Input da atto del contratto di collaborazione: compenso totale, durata, date e importi delle rate. Ogni rata produce un importo che matura come evento, senza divisore né frazioni. Se la collaborazione cambia, cambia il piano con un altro atto.
+_Avoid_: Compenso mensile, stipendio del collaboratore
+
+**Attestazione della prestazione**:
+Fatto sul rapporto, dal responsabile, che dichiara eseguita la prestazione di una rata. Senza attestazione l'importo resta calcolato ma non entra in una versione di proposta.
+_Avoid_: Visto, nulla osta
+
+**Convenzione di segreteria**:
+Input da atto sul rapporto del segretario nell'ente capofila: enti partecipanti, capofila, ente che paga, quote e decorrenza. Il rapporto di titolarità è uno solo, nel capofila, che di norma paga, versa e dichiara. Un ente non capofila conosce la convenzione come fatto sull'ente, che alimenta il Conto Annuale; ha un rapporto solo se paga direttamente una quota, con un incarico da convenzione. Il pagamento diretto dell'intera retribuzione fissa da un non capofila ferma il calcolo e nomina il caso.
+_Avoid_: Segretario condiviso, rapporto in quota
+
+**Riparto della convenzione**:
+Vista che applica le quote della convenzione di segreteria agli esiti pagati e versati di un periodo, con la periodicità dichiarata dalla convenzione. Inviato agli altri enti è un esito dichiarato. Nel capofila genera una proposta di accertamento; nell'ente non capofila è un atto esterno che si trascrive e genera una proposta di liquidazione verso il capofila.
+_Avoid_: Rimborso (senza dire di chi), compensazione
+
+**Utilizzazione LSU/LPU**:
+Rapporto con titolo LSU/LPU, che non è lavoro subordinato e può non generare alcun importo. L'assegno pagato da altri non è un importo dell'ente: lo diventa solo se un fatto da atto dichiara l'ente come pagatore. Le presenze alimentano integrazione, uomo-anno e certificazione a INPS.
+_Avoid_: Dipendente LSU, rapporto di lavoro socialmente utile
+
+**Incarico del segretario**:
+Rapporto con titolo incarico in un ente diverso da quello di titolarità, che paga solo ciò che eroga direttamente. Non è lavoro dipendente con quell'ente e non ha organico. Un fatto ne dice l'origine: scavalco, cioè reggenza o supplenza disposta dal Ministero, con la durata del provvedimento; oppure convenzione, per la quota che un ente non capofila paga direttamente. La base viene dal rapporto di titolarità, che quell'ente non conosce: è un input da atto esterno; la percentuale la applica una regola. Il regime si fonda su una nota di prassi.
+_Avoid_: Scavalco come variazione del rapporto di titolarità, rimborso di scavalco, rapporto in quota
+
+**Quota riconosciuta da altri enti**:
+Input da atto, o atto esterno trascritto, in importo o percentuale, che riduce quanto il capofila paga al segretario in convenzione, con l'importo pieno visibile. Il riparto non la comprende. Se la somma delle quote supera il dovuto il calcolo si ferma.
+_Avoid_: Detrazione, conguaglio tra enti
+
+**Mandato di amministratore**:
+Rapporto di un amministratore locale, dalla proclamazione o nomina alla cessazione. Una rielezione è un rapporto nuovo; un cambio di carica no. Delimita la durata su cui si calcola l'indennità di fine mandato, dove la norma la prevede.
+_Avoid_: Mandato (senza dire quale: il mandato di pagamento è un atto della Ragioneria), carica (quando si intende il rapporto)
+
+**Carica**:
+Fatto categoriale datato su un mandato di amministratore (sindaco, vicesindaco, assessore, presidente del consiglio, consigliere). Se cambia apre una frazione e chiede una nuova misura da atto.
+_Avoid_: Ruolo, qualifica (che è del lavoro dipendente)
+
+**Misura dell'indennità di funzione**:
+Input da atto che fissa, per carica e decorrenza, l'importo mensile pieno dell'indennità di un amministratore, con il suo importo atteso. Rinuncia o riduzione volontaria sono altri input da atto. Il dimezzamento non vi rientra: lo applica una regola sulla condizione lavorativa dell'amministratore.
+_Avoid_: Indennità tabellare, indennità calcolata
+
+**Condizione lavorativa dell'amministratore**:
+Fatto datato sul mandato di amministratore che dice se l'amministratore è lavoratore dipendente, e se è in aspettativa. Può cambiare durante il mandato senza un nuovo atto dell'ente, e apre una frazione.
+_Avoid_: Flag aspettativa
+
+**Posizione previdenziale dell'amministratore**:
+Fatto datato sul mandato di amministratore che nomina la gestione o cassa a cui la persona è iscritta. Con carica, popolazione dell'ente e condizione lavorativa decide se spetta un onere dell'art. 86 e verso chi.
+_Avoid_: Cassa di appartenenza (senza data)
+
+**Onere dell'art. 86**:
+Istituto a carico dell'ente per un amministratore, separato dall'indennità, che resta esclusa da ogni base previdenziale. La quota forfettaria viene da una regola su minimale e aliquota; gli oneri in aspettativa e i rimborsi al datore vengono da un atto esterno trascritto.
+_Avoid_: Contributi sull'indennità, ritenuta previdenziale dell'amministratore
+
+**Presenza in seduta**:
+Fatto sul rapporto per ogni seduta di un organo a cui l'amministratore partecipa, con data, organo e verbale o foglio presenze come fonte. Matura il gettone di presenza, il cui valore è un input da atto con importo atteso.
+_Avoid_: Numero sedute, conteggio gettoni
+
+**Tetto del gettone**:
+Limite di legge ai gettoni di un consigliere, applicato da una regola: l'eccedenza non si paga e resta visibile nella derivazione.
+_Avoid_: Capienza dei gettoni
 
 **Istituto**:
 Elemento retributivo o trattenuta definito da norma o contratto, con riferimento; i codici esterni (SICO, UniEmens, codice tributo, piano dei conti) sono mappature datate dell'istituto.
 _Avoid_: Voce, codice voce
 
 **Fatto**:
-Evento su una persona, su un rapporto o su un fondo risorse decentrate, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
+Evento su una persona, su un rapporto, su un fondo risorse decentrate o sull'ente, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
 _Avoid_: Movimento, variazione anagrafica
 
 **Importo**:
@@ -147,8 +219,12 @@ Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolar
 _Avoid_: Data di pagamento (finché il pagamento non è eseguito)
 
 **Base imponibile**:
-Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR). Una base non deriva da un'altra, salvo che una norma lo dica.
+Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR, gestione separata). Una base non deriva da un'altra, salvo che una norma lo dica.
 _Avoid_: Imponibile (senza dire quale)
+
+**Categoria di reddito**:
+Elenco del modello, senza articoli nel nome (lavoro dipendente, carica elettiva, collaborazione, lavori socialmente utili), letto da regole di ritenuta, CU e 770. Ogni istituto la dichiara con date e riferimento, scelti in base all'anno d'imposta a cui il pagamento è attribuito, quindi con la cassa allargata dove vale: quando una norma è abrogata cambia il riferimento, non la categoria. Se manca, il calcolo si ferma.
+_Avoid_: Redditi assimilati (senza dire quali), articolo 50
 
 **Concorso**:
 Dichiarazione, con date e riferimento, di come un istituto entra in una base: intero, parziale o escluso. Vale la dichiarazione vigente alla data di pagamento; se è assente o parziale il calcolo si ferma.
@@ -198,6 +274,14 @@ _Avoid_: Elaborazione chiusa, storico cedolini
 Aggregazione di importi in una forma richiesta (cedolino, ListaPosPA, F24EP, proposta di movimento contabile); non è fonte di verità.
 _Avoid_: Stampa, tabulato
 
+**Controllo di completezza degli output**:
+Verifica che ogni importo pagato sia compreso in ogni output obbligatorio dichiarato dal suo regime, o ne sia escluso da una dichiarazione esplicita. Un'assenza non dichiarata ferma l'invio di quell'output, non il calcolo.
+_Avoid_: Quadratura, controllo finale
+
+**Lista collaboratori**:
+Vista della denuncia per chi è in gestione separata (co.co.co. e quote forfettarie degli amministratori), separata dalla ListaPosPA: ha struttura e identità proprie e segue il mese di erogazione. Produce un esito dichiarato.
+_Avoid_: ListaPosPA dei collaboratori, flusso parasubordinati
+
 **Quadro**:
 Elemento della ListaPosPA che dichiara un periodo: E0 per il mese corrente, V1 con una causale per un periodo precedente. Lo produce la vista dalla denuncia, mai il calcolo.
 _Avoid_: Periodo dichiarato (che è l'intervallo, non l'elemento del tracciato)
@@ -229,7 +313,7 @@ _Avoid_: Parametro locale, personalizzazione
 ### Fondo
 
 **Fondo risorse decentrate**:
-Identità a cui si riferiscono i fatti da atto che costituiscono e destinano le risorse per il trattamento accessorio: ente, anno di costituzione e ambito (per esempio comparto, dirigenza o EQ). Le risorse dell'EQ, pagate dal bilancio, sono un fondo con ambito EQ, così il limite del trattamento accessorio le somma come le altre. Non ha saldo né stato proprio: capienza, utilizzo e residui sono viste che incrociano quei fatti con gli importi degli istituti accessori.
+Identità a cui si riferiscono i fatti da atto che costituiscono e destinano le risorse per il trattamento accessorio: ente, anno di costituzione e ambito (per esempio comparto, dirigenza, EQ o segretario). Le risorse dell'EQ e quelle di posizione, galleggiamento e risultato del segretario, pagate dal bilancio e senza contratto integrativo, sono fondi con il proprio ambito, così il limite del trattamento accessorio le somma come le altre e la Tab. 15 le vede. Il fondo con ambito segretario sta nell'ente capofila, se c'è una convenzione. Non ha saldo né stato proprio: capienza, utilizzo e residui sono viste che incrociano quei fatti con gli importi degli istituti accessori.
 _Avoid_: Fondo (senza anno), modulo fondo, salario accessorio (che è l'insieme degli importi pagati)
 
 **Voce di costituzione**:
@@ -241,7 +325,7 @@ Elemento del catalogo del corpus, datato per anno del fondo, che dice che cos'è
 _Avoid_: Codice risorsa, voce Tab. 15
 
 **Importo atteso**:
-Importo che la regola di un tipo di voce ricava da parametri e fatti, per esempio un importo pro capite per la consistenza a una data. Non sostituisce l'importo della voce: il modello segnala la differenza.
+Importo che una regola ricava da parametri e fatti per un valore che l'ente fissa con un atto, come una voce di costituzione (un importo pro capite per la consistenza a una data) o la misura dell'indennità di funzione. Non sostituisce il valore dell'atto: il modello segnala la differenza.
 _Avoid_: Importo calcolato del fondo, importo teorico
 
 **Certificazione del fondo**:

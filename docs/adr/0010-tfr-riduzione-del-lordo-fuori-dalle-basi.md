@@ -21,7 +21,7 @@ Scelto perché Luca ha chiesto di modellare subito la riduzione (ticket #33, 06/
 ## Consequences
 
 - **La formula della riduzione elenca i tabellari.** La grammatica non somma per concorso: un test controlla che legga le stesse voci che concorrono per intero alla base `tfs`. Un istituto nuovo utile al TFS va aggiunto alla formula.
-- **Il Fondo Credito resta sul lordo prima della riduzione.** Il DPCM non lo nomina: **prassi-interpretazione** (nota di prassi 5). Il fiscale resta fuori dal modello: il c. 2 esclude effetti sull'imponibile fiscale.
+- **Il Fondo Credito resta sul lordo prima della riduzione.** Il DPCM non lo nomina: **prassi-interpretazione** (nota di prassi 5). Il fiscale resta fuori dal modello: il c. 2 esclude effetti sull'imponibile fiscale. *Precisato dall'ADR 0015: la riduzione resta senza effetti fiscali, ma il fiscale entra nel modello con la categoria di reddito.*
 - **La riduzione si arrotonda come la quota TFS del lavoratore,** prima l'80% e poi il 2,50%. Si calcola per periodo dichiarato sui tabellari del periodo. Un recupero su cessato ricalcola anche la riduzione.
 - **Gli ulteriori elementi non hanno ancora una voce.** Né il tabellare né il comparto sono ulteriori elementi; la retribuzione di posizione lo sarà quando entrerà nel corpus. Base e regola sono pronte.
 - **`RetribTeoricaTabellareTFR` passa alla parte 3.** Non dipende dai pagamenti: va esposta anche con la valutabile a zero e nel V1 causale 5 (Circ. 185/2021). Il suo contenuto è la domanda 5 del ticket, ancora aperta.
