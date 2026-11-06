@@ -35,7 +35,7 @@ _Avoid_: Stampa, report
 ### Calcolo
 
 **Rapporto**:
-Legame tra una persona e l'ente per un titolo di compenso (lavoro dipendente, mandato elettivo, co.co.co., LSU/LPU, incarico); una persona può averne più di uno. Le aggregazioni per persona (conguaglio, CU) sono viste.
+Legame tra una persona e l'ente per un titolo di compenso (lavoro dipendente, mandato elettivo, co.co.co., LSU/LPU, incarico); una persona può averne più di uno. Le aggregazioni per persona (CU) sono viste; una regola può leggere un cumulo per persona (conguaglio, massimale) purché resti tracciato.
 _Avoid_: Dipendente, matricola, posizione
 
 **Istituto**:
@@ -47,7 +47,7 @@ Evento registrato in modo immutabile e bitemporale (validità e registrazione), 
 _Avoid_: Movimento, variazione anagrafica
 
 **Importo**:
-Unità del modello: valore riferito a rapporto, istituto e periodo di competenza, con eventuale data di pagamento e derivazione (regola, parametri, fatti). Ricalcolabile finché non entra in un esito. Può derivare da altri importi (es. imponibili), senza cicli.
+Unità del modello: valore riferito a rapporto, istituto e periodo di competenza, con eventuale data di pagamento e derivazione (regola, parametri, fatti). Entra in una base imponibile solo con la data di pagamento. Ricalcolabile finché non entra in un esito. Può derivare da altri importi (es. imponibili), senza cicli.
 _Avoid_: Voce, riga di cedolino
 
 **Frazione**:
@@ -59,8 +59,24 @@ Modo, dichiarato dalla regola, in cui un istituto matura: a giorni, a evento, su
 _Avoid_: Tipo voce
 
 **Periodo dichiarato**:
-Intervallo esposto verso INPS, su cui si calcolano e si arrotondano i contributi; si apre per i cambi che INPS distingue, non per ogni frazione.
+Intervallo esposto verso INPS, su cui si calcolano e si arrotondano i contributi; si apre per i cambi che INPS distingue, non per ogni frazione. Comprende gli importi pagati nel mese, a prescindere dalla loro competenza.
 _Avoid_: Quadro (quando si intende l'intervallo)
+
+**Periodo giuridico**:
+Periodo dichiarato senza imponibili che dichiara il servizio di un mese pagato in un altro: per il principio di cassa gli importi stanno nel mese di pagamento.
+_Avoid_: Periodo vuoto, mese a zero
+
+**Data di pagamento**:
+Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto. Decide in quale denuncia entra l'importo.
+_Avoid_: Data di liquidazione (la liquidazione è una fase contabile)
+
+**Base imponibile**:
+Insieme degli importi su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR). Ogni istituto dichiara, con le sue date, a quali basi concorre e in che misura. Una base non deriva da un'altra, salvo che una norma lo dica.
+_Avoid_: Imponibile (senza dire quale)
+
+**Caso**:
+Situazione reale modellata con i suoi fatti, la sua regola, il riferimento e un esempio verificato. Finché un caso non è modellato, il calcolo si ferma e lo nomina.
+_Avoid_: Eccezione, formula generica
 
 **Nota di prassi**:
 Documento scritto nel repo che motiva una regola priva di fonte ufficiale puntuale; chi la legge sa che è prassi, e la spiegazione dell'importo lo segnala.

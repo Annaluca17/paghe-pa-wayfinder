@@ -14,8 +14,8 @@ Scelto perché ogni frazione conserva la propria derivazione, e perché nessun t
 
 - L'importo è riferito a un periodo con date, non più a un mese. Il totale del mese è una vista, e il confronto con gli esiti avviene per istituto, perché i fatti possono cambiare le frazioni.
 - A mese intero la quota dell'ultima frazione è il residuo: la somma delle frazioni coincide col mensile, anche nei mesi con 27 giorni da lunedì a sabato. È una scelta di progetto, non letta su una fonte.
-- I contributi maturano sul periodo dichiarato, leggendo la somma delle frazioni. Il corpus elenca in `[periodo_dichiarato]` i fatti che ne aprono uno nuovo; l'elenco reale è ancora da riscontrare sulle fonti INPS.
-- Un importo annuale ha come periodo il servizio dell'anno e non entra nel calcolo mensile. Quota in 365esimi con tetto a 1; il trattamento dell'anno bisestile è un'interpretazione.
+- I contributi maturano sul periodo dichiarato, leggendo gli importi pagati nel mese (ADR 0005, che supera su questo punto la somma delle frazioni). Il corpus elenca in `[periodo_dichiarato]` i fatti che ne aprono uno nuovo; l'elenco reale è nell'ADR 0005.
+- Un importo annuale ha come periodo il servizio dell'anno e non entra nel calcolo mensile, ma concorre alla base imponibile del mese in cui è pagato (ADR 0005). Quota in 365esimi con tetto a 1; il trattamento dell'anno bisestile è un'interpretazione.
 - Una nota scritta in `docs/prassi/`, citata come `prassi:immedia:nota:...`, può fondare una regola. Se è l'unica fonte, la spiegazione dell'importo lo segnala.
 - Il divisore e l'indennità di comparto si appoggiano alla nota 1. I cedolini osservati sono in ventiseiesimi da lunedì a sabato, ma sono prassi di un gestionale, non norma.
 - Un'esposizione divisa di giorni nella denuncia, come il «Dividi periodo» di SCAD, è un'altra operazione: se INPS ripartisce in giorni di calendario, può non coincidere con quanto calcolato qui.
