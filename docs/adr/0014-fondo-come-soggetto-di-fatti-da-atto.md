@@ -67,4 +67,4 @@ Scelto da Luca il 06/11/2026 nel grilling del ticket #18, domande 1–10. Il fon
 
 - Le dichiarazioni del corpus sui tipi di voce dal fondo 2027.
 - La forma del prospetto allegato all'atto.
-- I fondi della dirigenza e del segretario.
+- I fondi della dirigenza. *Il fondo del segretario è definito dall'ADR 0017: ambito segretario, a carico del bilancio, senza contratto integrativo.*

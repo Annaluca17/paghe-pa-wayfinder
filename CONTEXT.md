@@ -105,7 +105,7 @@ Dati allegati alla liquidazione che dicono come pagarla: beneficiari e netti, ri
 _Avoid_: Distinta, tracciato mandati
 
 **Output obbligatorio**:
-Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4).
+Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, lista collaboratori, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4).
 _Avoid_: Stampa, report
 
 ### Calcolo
@@ -187,7 +187,7 @@ Elemento retributivo o trattenuta definito da norma o contratto, con riferimento
 _Avoid_: Voce, codice voce
 
 **Fatto**:
-Evento su una persona, su un rapporto o su un fondo risorse decentrate, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
+Evento su una persona, su un rapporto, su un fondo risorse decentrate o sull'ente, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
 _Avoid_: Movimento, variazione anagrafica
 
 **Importo**:

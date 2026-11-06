@@ -173,7 +173,7 @@ Requisiti derivati (analisi del ricercatore, **prassi-interpretazione**):
 6. Definizioni del DM 17/3/2020 (art. 2) e circolare interministeriale attuativa per il calcolo del rapporto.
 7. PIAO: è richiesta la consistenza in FTE o in teste? Esistono linee guida DFP aggiornate dopo il 2023?
 8. Trasparenza art. 21 dal 2026: pubblicazione sostituita da link alla banca dati ARAN-CNEL?
-9. Amministratori, co.co.co., LSU/LPU: in quali tabelle SICO e in quali limiti di spesa rientrano?
+9. Amministratori, co.co.co., LSU/LPU: in quali tabelle SICO e in quali limiti di spesa rientrano? *Risolta in `regimi-titolo-compenso.md`, sezioni 11 e 12 (ticket #19). Dalla rilevazione 2025 le co.co.co. non stanno più in Tab. 2A: la riga «Personale flessibile» della sezione A va letta con questa correzione.*
 
 ## Fonti principali
 
