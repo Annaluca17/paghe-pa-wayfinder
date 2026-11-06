@@ -13,20 +13,20 @@ nome = "aliquota_prova"
 [[parametro.vigenza]]
 dal = 2026-01-01
 valore = "{aliquota}"
-riferimento = "FITTIZIO: fonte di prova, non è una norma"
+riferimento = "fittizio:fonte-prova"
 
 [[regola]]
 istituto = "compenso_prova"
 versione = 1
 dal = 2026-01-01
-riferimento = "FITTIZIO: art. 1 del contratto di prova"
+riferimento = "fittizio:contratto-prova-art-1"
 formula = "fatto.compenso_mensile"
 
 [[regola]]
 istituto = "ritenuta_prova"
 versione = {versione_ritenuta}
 dal = 2026-01-01
-riferimento = "FITTIZIO: art. 2 del contratto di prova"
+riferimento = "fittizio:contratto-prova-art-2"
 formula = "arrotonda(importo.compenso_prova * parametro.aliquota_prova, 2)"
 """
 
@@ -80,7 +80,7 @@ def main() -> None:
         "compenso_mensile",
         "1100.00",
         date(2026, 2, 1),
-        atto=Atto("FITTIZIO: determina di prova n. 1", date(2026, 3, 10)),
+        atto=Atto("fittizio:determina-prova-1", date(2026, 3, 10)),
     )
 
     print("\n3. Febbraio com'è dovuto oggi:")

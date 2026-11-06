@@ -102,11 +102,11 @@ def test_riferimenti_dichiarati():
 
 def test_riferimento_obbligatorio_su_regola_e_parametro():
     with pytest.raises(ErroreCorpus, match="riferimento"):
-        Corpus.da_toml(CORPUS_BASE.replace('riferimento = "FITTIZIO: art. 1"', 'riferimento = " "'))
+        Corpus.da_toml(CORPUS_BASE.replace('riferimento = "fittizio:art-1"', 'riferimento = " "'))
     with pytest.raises(ErroreCorpus, match="riferimento"):
-        Corpus.da_toml(CORPUS_BASE.replace('riferimento = "FITTIZIO: fonte aliquota"', 'riferimento = ""'))
+        Corpus.da_toml(CORPUS_BASE.replace('riferimento = "fittizio:fonte-aliquota"', 'riferimento = ""'))
     with pytest.raises(ErroreCorpus):
-        Corpus.da_toml(CORPUS_BASE.replace('riferimento = "FITTIZIO: art. 1"\n', ""))
+        Corpus.da_toml(CORPUS_BASE.replace('riferimento = "fittizio:art-1"\n', ""))
 
 
 def regola(istituto, formula, dal="2026-01-01", extra=""):
@@ -115,7 +115,7 @@ def regola(istituto, formula, dal="2026-01-01", extra=""):
 istituto = "{istituto}"
 versione = 1
 dal = {dal}
-riferimento = "FITTIZIO"
+riferimento = "fittizio:prova"
 formula = "{formula}"
 {extra}
 """
@@ -160,19 +160,19 @@ nome = "p"
 [[parametro.vigenza]]
 dal = 2026-01-01
 valore = "1"
-riferimento = "FITTIZIO A"
+riferimento = "fittizio:a"
 [[parametro.vigenza]]
 dal = 2026-03-01
 valore = "2"
-riferimento = "FITTIZIO B"
+riferimento = "fittizio:b"
 [[parametro.vigenza]]
 dal = 2026-05-15
 valore = "3"
-riferimento = "FITTIZIO C"
+riferimento = "fittizio:c"
 """
     p = Corpus.da_toml(parametri).parametro("p")
     assert p.vigenza_per(Mese(2026, 2)).valore == 1
-    assert p.vigenza_per(Mese(2026, 3)).riferimento == "FITTIZIO B"
+    assert p.vigenza_per(Mese(2026, 3)).riferimento == "fittizio:b"
     with pytest.raises(ParametroMancante):
         p.vigenza_per(Mese(2025, 12))
     with pytest.raises(ValiditaNonUniforme):
