@@ -38,6 +38,8 @@ _TIPI_NORMA = {
     "costituzione",
 }
 _TIPI_REGIONALI = {"legge", "regolamento"}
+# Atti di altre autorità statali: il DPCM 20/12/1999 sul TFR non ha numero (ticket #33).
+_ALTRE_AUTORITA = {"presidente.consiglio.ministri": {"decreto"}}
 _TIPI_PRASSI = {
     "inps": {"circolare", "messaggio", "documento.tecnico"},
     "inpdap": {"nota.operativa"},
@@ -81,9 +83,12 @@ def _motivo_citazione(citazione: str) -> str | None:
         elif autorita.startswith("regione."):
             if tipo not in _TIPI_REGIONALI:
                 return f"tipo di norma regionale non previsto, {tipo!r}: {citazione!r}"
+        elif autorita in _ALTRE_AUTORITA:
+            if tipo not in _ALTRE_AUTORITA[autorita]:
+                return f"tipo di atto non previsto per {autorita}, {tipo!r}: {citazione!r}"
         else:
             return f"autorità non prevista, {autorita!r}: {citazione!r}"
-        if tipo != "costituzione" and not gruppi["num"]:
+        if tipo != "costituzione" and autorita not in _ALTRE_AUTORITA and not gruppi["num"]:
             return f"numero mancante: {citazione!r}"
 
     emittente = gruppi["emit"]

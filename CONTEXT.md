@@ -98,6 +98,14 @@ _Avoid_: Blocco, errore generico
 Codice INPS del rapporto: 1 TFR, 2 optante, 3 TFS. Sceglie la contribuzione di fine servizio. TFS e TFR di un Comune stanno entrambi nella gestione ex INADEL.
 _Avoid_: Tipo liquidazione
 
+**Riduzione TFR**:
+Riduzione del lordo di chi è in regime TFR, pari al 2,50% soppresso sull'80% delle voci utili al TFS. Non entra in nessuna base: le basi restano sul lordo intero, che è l'incremento figurativo del DPCM.
+_Avoid_: Trattenuta 2,50% (il contributo è soppresso, non trattenuto)
+
+**Ulteriori elementi TFR**:
+Voci utili al TFR ma non al TFS, come la retribuzione di posizione: base propria al 100%, contributo al 6,91%.
+_Avoid_: Voci solo TFR
+
 **Caso**:
 Situazione reale modellata con i suoi fatti, la sua regola, il riferimento e un esempio verificato. Finché un caso non è modellato, il calcolo si ferma e lo nomina.
 _Avoid_: Eccezione, formula generica
