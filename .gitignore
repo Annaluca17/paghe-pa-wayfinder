@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+
+# Registri locali: possono contenere dati personali
+*.sqlite
+*.sqlite3
+*.db
+samples/
