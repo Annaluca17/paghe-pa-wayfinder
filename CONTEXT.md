@@ -127,7 +127,7 @@ Fatto sul rapporto, dal responsabile, che dichiara eseguita la prestazione di un
 _Avoid_: Visto, nulla osta
 
 **Convenzione di segreteria**:
-Input da atto sul rapporto del segretario nell'ente capofila: enti partecipanti, capofila, quote e decorrenza. Il rapporto è uno solo, nel capofila, che paga, versa e dichiara. Un ente non capofila non ha un rapporto con quella persona.
+Input da atto sul rapporto del segretario nell'ente capofila: enti partecipanti, capofila, ente che paga, quote e decorrenza. Il rapporto è uno solo, nel capofila, che di norma paga, versa e dichiara; se paga direttamente un altro ente il calcolo si ferma e nomina il caso. Un ente non capofila non ha un rapporto con quella persona: conosce la convenzione come fatto sull'ente, che alimenta il Conto Annuale.
 _Avoid_: Segretario condiviso, rapporto in quota
 
 **Riparto della convenzione**:
@@ -135,7 +135,7 @@ Vista che applica le quote della convenzione di segreteria agli esiti pagati e v
 _Avoid_: Rimborso (senza dire di chi), compensazione
 
 **Mandato di amministratore**:
-Rapporto di un amministratore locale, dalla proclamazione o nomina alla cessazione. Una rielezione è un rapporto nuovo; un cambio di carica no. Delimita la durata su cui si calcola l'indennità di fine mandato.
+Rapporto di un amministratore locale, dalla proclamazione o nomina alla cessazione. Una rielezione è un rapporto nuovo; un cambio di carica no. Delimita la durata su cui si calcola l'indennità di fine mandato, dove la norma la prevede.
 _Avoid_: Mandato (senza dire quale: il mandato di pagamento è un atto della Ragioneria), carica (quando si intende il rapporto)
 
 **Carica**:
@@ -199,7 +199,7 @@ Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo C
 _Avoid_: Imponibile (senza dire quale)
 
 **Categoria di reddito**:
-Elenco del modello, senza articoli nel nome (lavoro dipendente, carica elettiva, collaborazione, lavori socialmente utili), letto da regole di ritenuta, CU e 770. Ogni istituto la dichiara con date e riferimento, scelti alla data di pagamento: quando una norma è abrogata cambia il riferimento, non la categoria. Se manca, il calcolo si ferma.
+Elenco del modello, senza articoli nel nome (lavoro dipendente, carica elettiva, collaborazione, lavori socialmente utili), letto da regole di ritenuta, CU e 770. Ogni istituto la dichiara con date e riferimento, scelti in base all'anno d'imposta a cui il pagamento è attribuito, quindi con la cassa allargata dove vale: quando una norma è abrogata cambia il riferimento, non la categoria. Se manca, il calcolo si ferma.
 _Avoid_: Redditi assimilati (senza dire quali), articolo 50
 
 **Concorso**:
