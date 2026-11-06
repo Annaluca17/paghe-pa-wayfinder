@@ -223,7 +223,7 @@ Fatto, con date e riferimento, che dice perché importi con competenza in un ann
 _Avoid_: Tipo arretrato, flag tassazione separata
 
 **Regime di tassazione**:
-Trattamento fiscale di un importo, ordinario o separato, che una regola datata ricava dalla causa del pagamento tardivo. Si congela nell'esito pagato. Non è una categoria di reddito.
+Trattamento fiscale di un importo: ordinario, separato o sostitutivo. Il separato lo ricava una regola datata dalla causa del pagamento tardivo; il sostitutivo vale per gli istituti che dichiarano di rientrare in un'agevolazione, come la sostitutiva sull'accessorio. Si congela nell'esito pagato. Non è una categoria di reddito.
 _Avoid_: Tassazione dell'istituto, categoria (quando si intende il trattamento)
 
 **Valuta prevista**:
@@ -333,6 +333,56 @@ _Avoid_: Costante, tabella di sistema
 **Input da atto**:
 Decisione discrezionale dell'ente (contratto integrativo, costituzione del fondo, determina, valutazione) registrata come fatto con atto fonte e decorrenza; mai codificata come regola.
 _Avoid_: Parametro locale, personalizzazione
+
+### Fisco
+
+**Anno d'imposta**:
+Anno a cui un pagamento è attribuito ai fini fiscali: quello della data di pagamento, o l'anno prima per le somme pagate entro il 12 gennaio, se la categoria di reddito dichiara la cassa allargata. Si calcola sulla valuta prevista e si congela nell'esito pagato. Sceglie il testo di legge da applicare. Un importo in tassazione separata conserva anche l'anno di riferimento della sua competenza.
+_Avoid_: Anno fiscale (senza dire di cosa), anno di competenza (che è un altro asse)
+
+**Imponibile fiscale**:
+Base per persona e anno d'imposta che somma gli esiti pagati di tutti i suoi rapporti con l'ente in regime ordinario, ciascuno con la sua categoria di reddito. Le ritenute e il conguaglio la leggono.
+_Avoid_: Imponibile IRPEF del rapporto, imponibile del mese (che è il valore di un solo pagamento)
+
+**Ritenuta**:
+Importo sul rapporto del pagamento in cui è operata, calcolato sulle somme di quel periodo di paga con gli scaglioni ragguagliati al periodo; la derivazione risale all'imponibile fiscale della persona.
+_Avoid_: Ritenuta progressiva, trattenuta IRPEF (la trattenuta a terzi è un'altra cosa)
+
+**Dichiarazione del sostituito**:
+Fatto della persona, con validità e documento di origine, che chiede le detrazioni e ne dà le condizioni, e che può indicare un'aliquota più alta o redditi di altri sostituti da conguagliare. Senza dichiarazione non si applicano detrazioni e il modello lo segnala, senza fermarsi.
+_Avoid_: Modulo detrazioni, carichi di famiglia (che sono solo una parte)
+
+**Conguaglio fiscale**:
+Ricalcolo dell'imposta dell'anno sull'imponibile fiscale della persona, confrontato con le ritenute già negli esiti. Si fa sull'ultimo pagamento attribuito all'anno, o su quello finale alla cessazione; se un fatto cambia il dovuto, ne segue uno nuovo per differenza, entro il 28 febbraio per l'anno precedente. Una proiezione resta visibile come avviso.
+_Avoid_: Conguaglio (senza dire quale: c'è anche quello contributivo), ricalcolo di dicembre
+
+**Richiesta di differimento**:
+Fatto della persona che chiede di trattenere nei mesi successivi, con interesse, l'imposta del conguaglio che non trova capienza. Senza richiesta la trattenuta si ferma a capienza e il resto va in CU come non trattenuto.
+_Avoid_: Rateizzazione (che è anche quella del 730-4 o dei recuperi oltre i 60 euro)
+
+**Domicilio fiscale**:
+Fatto datato della persona letto dalle regole delle addizionali, che con esso scelgono le aliquote della regione e del comune.
+_Avoid_: Residenza (quando si intende il domicilio fiscale), comune dell'anagrafica
+
+**Esito 730-4**:
+Fatto della persona che arriva dal canale 730-4 con la sua provenienza: crediti, debiti, rate e acconti da operare. Un 730-4 rettificativo o integrativo lo sostituisce con un nuovo fatto. Le regole ne ricavano rimborsi e trattenute dal primo pagamento utile da luglio.
+_Avoid_: 730 (che è la dichiarazione della persona, non il risultato contabile per il sostituto), importazione 730
+
+**Conguaglio non effettuato**:
+Fatto con il codice della CU che dice perché un conguaglio, da 730-4 o di fine anno, non si è potuto fare: cessazione, aspettativa, decesso, retribuzione insufficiente, incapienza, passaggio senza interruzione.
+_Avoid_: Conguaglio sospeso, anomalia 730
+
+**Reddito del biennio**:
+Fatto della persona con i redditi dei due anni prima dell'anno di pagamento, preso dalle CU già consegnate, per l'aliquota media della tassazione separata quando quegli anni sono anteriori al modello. Se manca, il calcolo fiscale si ferma.
+_Avoid_: Aliquota media (che è il risultato della regola), storico redditi
+
+**Trattenuta a terzi**:
+Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, per un pignoramento, una cessione o una delegazione trascritti come atto esterno sul rapporto. È un versamento a terzi nella composizione del pagamento. Un concorso non ancora modellato ferma il calcolo.
+_Avoid_: Trattenuta (senza dire quale), ritenuta (che è fiscale), quinto (che è solo uno dei limiti)
+
+**Punto CU**:
+Mappatura datata dell'istituto o della categoria di reddito verso un punto della CU, per anno di certificazione, come la voce SICO o il codice tributo. Se la numerazione cambia, cambia la mappatura e non l'istituto.
+_Avoid_: Codice CU dell'istituto, rigo (che è del 770)
 
 ### Fondo
 
