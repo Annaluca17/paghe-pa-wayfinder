@@ -150,6 +150,14 @@ _Avoid_: Indennità tabellare, indennità calcolata
 Fatto datato sul mandato di amministratore che dice se l'amministratore è lavoratore dipendente, e se è in aspettativa. Può cambiare durante il mandato senza un nuovo atto dell'ente, e apre una frazione.
 _Avoid_: Flag aspettativa
 
+**Posizione previdenziale dell'amministratore**:
+Fatto datato sul mandato di amministratore che nomina la gestione o cassa a cui la persona è iscritta. Con carica, popolazione dell'ente e condizione lavorativa decide se spetta un onere dell'art. 86 e verso chi.
+_Avoid_: Cassa di appartenenza (senza data)
+
+**Onere dell'art. 86**:
+Istituto a carico dell'ente per un amministratore, separato dall'indennità, che resta esclusa da ogni base previdenziale. La quota forfettaria viene da una regola su minimale e aliquota; gli oneri in aspettativa e i rimborsi al datore vengono da un atto esterno trascritto.
+_Avoid_: Contributi sull'indennità, ritenuta previdenziale dell'amministratore
+
 **Presenza in seduta**:
 Fatto sul rapporto per ogni seduta di un organo a cui l'amministratore partecipa, con data, organo e verbale o foglio presenze come fonte. Matura il gettone di presenza, il cui valore è un input da atto con importo atteso.
 _Avoid_: Numero sedute, conteggio gettoni

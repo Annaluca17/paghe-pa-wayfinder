@@ -146,6 +146,20 @@ Vigenza dei testi TUIR e D.P.R. 600: fino al 31/12/2026; dal 01/01/2027 vedi 13.
   - Art. 16 c. 2: aliquota 8,5%. **norma certa** [N8]. Seconda fonte: circolare RGS controllo IN4 sull'8,5%. [R1]
   - Risoluzione 16/02/2001 n. 24, richiamata da 29/E: per gli assimilati la base è quella IRPEF, a prescindere dalla rilevanza previdenziale. **norma certa** come riportata in [A3].
 
+#### Verifica del tool `indennita-amministratori`
+
+Controllo chiesto da Luca nel grilling, domanda 11. Letto il sorgente di `index.html` (commit `6d19640`, unico del repo, senza novità sul remoto il 06/11/2026). È l'unico tool del portale su questo tema.  
+La copia in `Progetto HR Tools/calcolo indennità amministratori/` è diversa e più vecchia (12/07): non è stata confrontata riga per riga.
+
+- **Che cosa contiene:** base 13.800 euro, percentuali per fascia dell'art. 1 c. 583 L. 234/2021, percentuali di vicesindaco, assessori e presidente del consiglio dal D.M. 119/2000, maggiorazioni art. 2 cumulabili, dimezzamento, tetto del gettone, una mensilità di fine mandato per il sindaco. Sono la pista dell'importo atteso.
+- **Che cosa non contiene:** art. 86 TUEL, quota forfettaria, gestione separata, IRAP, ritenute, permessi e rimborsi. Il README promette «oneri a carico dell'ente», ma il codice non li calcola e la nota a video li esclude. Conferma quanto scritto in `conoscenza-tool.md`.
+- **Punti da riscontrare prima del corpus (da verificare):**
+  - il tool applica le maggiorazioni prima di calcolare il tetto del gettone, mentre l'art. 82 c. 2 parla di indennità massima: non è chiaro se la massima comprenda le maggiorazioni;
+  - il tool stesso dichiara controversa l'applicabilità delle maggiorazioni dopo il c. 583;
+  - il tool non distingue le regioni a statuto speciale, e il c. 583 riguarda le ordinarie;
+  - la base di 13.800 euro nel codice è un valore fisso, senza vigenza, e richiede una seconda fonte.
+- **Pista non riscontrata:** il monitor normativo del 05/11/2026 segnala una nota ANCI sui rimborsi di viaggio e soggiorno degli amministratori, con allineamento ai parametri del CCNL dirigenti. Riguarda la misura dell'art. 84 TUEL, oggi **da verificare**.
+
 ### B. Co.co.co.
 
 #### 5. Ammissibilità, fiscale, contributi
