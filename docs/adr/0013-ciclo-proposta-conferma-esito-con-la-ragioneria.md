@@ -40,4 +40,4 @@ Fonti (ricerca #8):
   - i codici di V livello di IRAP e Titolo 9;
   - gli elementi obbligatori della transazione elementare.
 - Il formato concreto dello schema (JSON Schema o altro) e l'adattatore di riferimento, inserimento manuale più file, spettano al prototipo.
-- Le regole di abbinamento per accessorio, FPV e residui dipendono dal ticket sul fondo risorse decentrate.
+- Le regole di abbinamento per accessorio, FPV e residui dipendono dal ticket sul fondo risorse decentrate. *Definite dall'ADR 0014: impegno proposto alla sottoscrizione dell'integrativo per destinazione ed esercizio di esigibilità, FPV per la quota esigibile dopo l'anno, abbinamento all'impegno della sottoscrizione del fondo dell'anno di competenza.*
