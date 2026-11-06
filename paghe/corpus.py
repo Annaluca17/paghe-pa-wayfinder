@@ -29,7 +29,7 @@ MATURAZIONI = {"giorni", "evento", "periodo", "mese", "annuale"}
 MATURAZIONI_DI_CASSA = {"periodo", "mese"}
 CONTEGGI = {"lun_sab", "calendario"}
 MISURE = {"intero", "parziale", "escluso"}
-AMBITI_FERMO = {"calcolo", "denuncia"}
+AMBITI_FERMO = {"calcolo", "denuncia", "vista"}
 FITTIZIO = "fittizio:"
 
 
@@ -192,7 +192,8 @@ class Concorso:
 class Fermo:
     """Un fatto che chiede un caso non modellato: se c'è nel mese, il calcolo si ferma e lo nomina.
 
-    `calcolo` ferma anche gli importi per competenza; `denuncia` solo basi e contributi.
+    `calcolo` ferma anche gli importi per competenza; `denuncia` solo basi e contributi; `vista`
+    lascia calcolare la denuncia e rende la ListaPosPA una bozza non trasmissibile (ADR 0008).
     """
 
     fatto: str

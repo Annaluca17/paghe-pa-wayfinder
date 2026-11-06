@@ -338,13 +338,7 @@ def _denuncia(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, ist
     lettore.controlla_fermi(mese, {"calcolo", "denuncia"})
     pagate, senza_data = _righe_pagate(registro, rapporto, mese, istante)
 
-    servizio = registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, mese, istante)
-    giorni = mese.giorni()
-    periodi = [
-        periodo
-        for periodo in _Calcolo(lettore, mese).periodi
-        if servizio[giorni.index(periodo.dal)] is not None
-    ]
+    periodi = _periodi_in_servizio(lettore, mese)
     in_servizio = bool(periodi)
     if not in_servizio:
         if not pagate:
@@ -373,6 +367,22 @@ def _denuncia(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, ist
         del_mese = _Contributi(lettore, ultimo.periodo, basi_mese).tutti(corpus.istituti_sul_mese)
         risultato[-1] = replace(ultimo, contributi=ultimo.contributi + del_mese)
     return Denuncia(rapporto, mese, tuple(risultato), senza_data)
+
+
+def _periodi_in_servizio(lettore: _Lettore, mese: Mese) -> list[Periodo]:
+    servizio = lettore.registro.vigenti_per_giorno(lettore.rapporto, lettore.corpus.fatto_servizio, mese, lettore.noto_al)
+    giorni = mese.giorni()
+    return [periodo for periodo in _Calcolo(lettore, mese).periodi if servizio[giorni.index(periodo.dal)] is not None]
+
+
+def periodi_in_servizio(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime) -> list[Periodo]:
+    """Periodi dichiarati del mese coperti dal servizio, come li apre la denuncia."""
+    return _periodi_in_servizio(_Lettore(registro, corpus, rapporto, istante), mese)
+
+
+def righe_pagate(registro: Registro, rapporto: str, mese: Mese, istante: datetime) -> list[Importo]:
+    """Righe degli esiti pagati nel mese, con la loro data di pagamento."""
+    return [riga.importo for riga in _righe_pagate(registro, rapporto, mese, istante)[0]]
 
 
 def _controlla_cumuli(registro: Registro, corpus: Corpus, denuncia: Denuncia, istante: datetime) -> None:

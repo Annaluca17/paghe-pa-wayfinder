@@ -149,14 +149,6 @@ def test_prima_fascia_2027_non_ancora_nel_corpus(registro, reale, orologio):
         calcola_denuncia(registro, reale, R, Mese(2027, 1))
 
 
-def test_tfs_e_tfr_fermano_la_denuncia(registro, reale, orologio):
-    assumi(registro, "istruttori")
-    registro.registra_codice(R, "regime_fine_servizio", "TFS", date(2026, 1, 1))
-    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
-    with pytest.raises(CasoNonModellato, match="TFS"):
-        calcola_denuncia(registro, reale, R, Mese(2026, 11))
-
-
 def test_part_time_ferma_il_calcolo(registro, reale):
     assumi(registro, "istruttori")
     registro.registra_fatto(R, "part_time", "50", date(2026, 11, 1))

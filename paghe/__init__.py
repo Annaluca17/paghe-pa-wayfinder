@@ -13,6 +13,7 @@ from .corpus import (
     VigenzaParametro,
 )
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
+from .lista_pos_pa import ListaPosPA, lista_pos_pa
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
 from .registro import Registro
 from .tempo import Mese, Periodo
@@ -30,6 +31,7 @@ __all__ = [
     "Fermo",
     "Fatto",
     "Importo",
+    "ListaPosPA",
     "Massimale",
     "Mese",
     "Parametro",
@@ -47,5 +49,6 @@ __all__ = [
     "calcola_denuncia",
     "differenze",
     "emetti_esito",
+    "lista_pos_pa",
     "spiega",
 ]
