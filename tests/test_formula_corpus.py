@@ -33,6 +33,41 @@ def test_arrotondamento_solo_se_dichiarato_e_mezzo_in_su():
 
 
 @pytest.mark.parametrize(
+    ("valore", "atteso"),
+    [
+        ("814.4436", "814.44"),
+        ("74.955", "74.96"),
+        ("52.755", "52.76"),
+        ("65.493", "65.49"),
+        ("-1.005", "-1.01"),
+    ],
+)
+def test_arrotondamento_al_centesimo_sulla_terza_cifra(valore, atteso):
+    assert valuta("arrotonda(fatto.a, 2)", lambda *_: Decimal(valore)) == Decimal(atteso)
+
+
+@pytest.mark.parametrize(
+    ("imponibile", "totale", "lavoratore", "ente"),
+    [
+        ("150.00", "48.98", "13.28", "35.70"),
+        ("150.10", "49.01", "13.28", "35.73"),
+        ("2098.00", "685.00", "185.67", "499.33"),
+    ],
+)
+def test_quota_ente_per_differenza_quadra_sempre_col_totale(imponibile, totale, lavoratore, ente):
+    # Aliquote solo illustrative: non sono parametri del corpus.
+    letti = {"i": Decimal(imponibile), "t": Decimal("0.3265"), "l": Decimal("0.0885")}
+    risolvi = lambda _, nome: letti[nome]
+    formula_totale = "arrotonda(fatto.i * parametro.t, 2)"
+    formula_lavoratore = "arrotonda(fatto.i * parametro.l, 2)"
+    assert valuta(formula_totale, risolvi) == Decimal(totale)
+    assert valuta(formula_lavoratore, risolvi) == Decimal(lavoratore)
+    quota_ente = valuta(f"{formula_totale} - {formula_lavoratore}", risolvi)
+    assert quota_ente == Decimal(ente)
+    assert quota_ente + valuta(formula_lavoratore, risolvi) == Decimal(totale)
+
+
+@pytest.mark.parametrize(
     "formula",
     [
         "__import__('os').system('x')",
