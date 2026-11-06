@@ -11,3 +11,6 @@ dist/
 *.sqlite3
 *.db
 samples/
+
+# Pagina del prototipo dimostrativo (ticket #37): si rigenera, non si committa
+_prototipo/

@@ -28,6 +28,12 @@ La vista ListaPosPA (`lista_pos_pa`) e la sua serializzazione (`paghe.uniemens.i
 python -m pytest
 ```
 
+Prototipo dimostrativo da buttare (ticket #37): una pagina HTML statica con quattro dipendenti fittizi calcolati sul corpus reale, dai fatti alla ListaPosPA, con la spiegazione di ogni importo. La cartella `_prototipo/` è esclusa da Git.
+
+```bash
+python -m paghe.prototipo _prototipo
+```
+
 ## Lavoro in locale
 
 ```bash
