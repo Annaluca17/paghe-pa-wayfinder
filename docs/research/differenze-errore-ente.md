@@ -473,7 +473,7 @@ prassi:inps:documento.tecnico:2017-12-06;sn.manuale~pag33
 
 ## Impatto sulle decisioni e ADR precedenti
 
-Nessuna ADR è modificata. Segnalazioni per Luca.
+Segnalazioni per Luca, scritte prima della decisione. Le ADR 0005 e 0008 ora rimandano all'ADR 0018, senza riscrivere il loro testo.
 
 **Confermano**
 
@@ -504,16 +504,24 @@ Nessuna ADR è modificata. Segnalazioni per Luca.
 
 - La regola dell'ADR 0003 e 0005 sui riferimenti con fine vigenza nota vale anche per le future regole su art. 17, art. 21 e art. 10: `al` 31/12/2026 e successore, con i riferimenti qui proposti.
 
+## Decisione del 06/11/2026
+
+Luca ha deciso nel grilling del ticket #16 (domande 1–9). Le decisioni sono nell'ADR 0018 e nella nota di prassi 8.
+
+- **Causa:** opzione D di P1. Il termine e il fermo sono quelli proposti.
+- **Errore puro:** opzione E3 di P4, con un cambiamento: per la competenza dell'anno prima il modello non propone nulla. Nessuna soglia di ritardo «breve». La stessa meccanica vale per ogni situazione di fatto.
+- **Determina che paga soltanto l'errore:** non è un atto sopravvenuto. Chi sceglie quel tipo dichiara che l'atto attribuisce il diritto.
+- **Interpello:** al primo caso reale, presentato dall'ente, senza dati nel repo. Il modello non ne dipende. Rilettura da parte di un consulente fiscale prima del corpus reale.
+- **Recupero:** riporto calcolato dal modello al posto del fermo sul mese negativo. Un riporto aperto alla cessazione ferma il calcolo. Il piano di rate da atto è rinviato.
+- **Sospensione:** cessazione e sospensione diventano fatti distinti, in forma minima. La fine del servizio senza uno dei due ferma il calcolo.
+- **Indebito:** termine e tipo di fatto nella specifica ora, nel codice alla fetta fiscale. La data di pagamento è precisata per il recupero.
+- **Sentenze e transazioni sui contributi:** quadro fermo, con un quesito a INPS.
+
+Le proposte qui sopra restano come motivazione. Il codice non cambia in questa PR: riporto e fatti di cessazione e sospensione vanno in un ticket separato.
+
 ## Domande aperte
 
-Per Luca (decisioni):
-
-1. Registrare la causa con l'opzione D? Con il termine proposto?
-2. Scelta sull'errore puro: E3 con i default proposti?
-3. Presentare un interpello su un caso reale, senza dati nel repo?
-4. Riporto del recupero in luogo del fermo del mese negativo?
-5. Introdurre il fatto di sospensione ora, o tenere un fermo per il recupero sul sospeso?
-6. Fatto **Indebito** ora o alla fetta fiscale?
+Le domande per Luca sono chiuse nella sezione precedente.
 
 Da verificare:
 

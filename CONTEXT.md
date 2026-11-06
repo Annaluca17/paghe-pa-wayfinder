@@ -211,8 +211,20 @@ Periodo dichiarato senza imponibili che dichiara il servizio di un mese pagato i
 _Avoid_: Periodo vuoto, mese a zero
 
 **Data di pagamento**:
-Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto legato all'esito pagato e letto dall'evento di ritorno del pagamento eseguito. Decide in quale denuncia entrano gli importi di quell'esito.
+Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto legato all'esito pagato e letto dall'evento di ritorno del pagamento eseguito. Per un recupero è il giorno in cui la trattenuta è operata o l'incasso è avvenuto. Decide in quale denuncia entrano gli importi di quell'esito.
 _Avoid_: Data di liquidazione (la liquidazione è una fase contabile), valuta prevista
+
+**Pagamento fisiologico**:
+Dichiarazione dell'istituto, con date e riferimento, che il suo pagamento oltre l'anno di competenza rientra nei tempi ordinari, come la performance. Non richiede una causa del pagamento tardivo.
+_Avoid_: Arretrato fisiologico, ritardo normale
+
+**Causa del pagamento tardivo**:
+Fatto, con date e riferimento, che dice perché importi con competenza in un anno precedente sono pagati dopo: legge, contratto collettivo, sentenza, atto sopravvenuto o situazione di fatto. Un atto è sopravvenuto solo se attribuisce il diritto dopo il periodo. Una situazione di fatto, come un errore di calcolo dell'ente, porta anche la scelta dell'ente e la motivazione. Serve se l'importo non è attribuito all'anno di competenza e l'istituto non dichiara un pagamento fisiologico; se manca, il calcolo fiscale si ferma.
+_Avoid_: Tipo arretrato, flag tassazione separata
+
+**Regime di tassazione**:
+Trattamento fiscale di un importo, ordinario o separato, che una regola datata ricava dalla causa del pagamento tardivo. Si congela nell'esito pagato. Non è una categoria di reddito.
+_Avoid_: Tassazione dell'istituto, categoria (quando si intende il trattamento)
 
 **Valuta prevista**:
 Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolare ritenute e netti della composizione del pagamento. Se la valuta effettiva è diversa, la differenza si regola sull'esito.
@@ -239,8 +251,20 @@ Regola di cassa che legge il totale del mese delle basi, non il singolo periodo 
 _Avoid_: Contributo mensile (quando si intende un contributo per periodo)
 
 **Recupero**:
-Importo negativo pagato che entra in una base. Modellati i casi in servizio, detratto dal periodo, e su cessato, in un periodo fuori servizio; gli altri fermano il calcolo.
+Importo negativo pagato che entra in una base. Modellati i casi in servizio, detratto dal periodo fino a capienza con riporto ai mesi successivi; su sospeso, rinviato al rientro in servizio; e su cessato, in un periodo fuori servizio. Gli altri fermano il calcolo, compreso un riporto ancora aperto alla cessazione.
 _Avoid_: Trattenuta (la trattenuta è un istituto)
+
+**Indebito**:
+Fatto che dichiara una somma pagata senza titolo, con atto, modalità di restituzione (netto o lordo), importo tassato, ritenute riferibili e data di definitività. Ne leggono CU e 770; il movimento nelle basi è il recupero.
+_Avoid_: Recupero (che è il movimento), somma a debito
+
+**Cessazione**:
+Fatto che chiude un rapporto. Dopo di essa un recupero sta in un periodo fuori servizio. La fine del servizio senza una cessazione o una sospensione ferma il calcolo.
+_Avoid_: Sospensione (quando il rapporto prosegue), fine servizio (senza dire quale)
+
+**Sospensione**:
+Fatto che interrompe il servizio di un rapporto che prosegue, con inizio e, quando è noto, rientro. Un recupero attende il rientro in servizio.
+_Avoid_: Cessazione temporanea, aspettativa (che è una delle possibili cause)
 
 **Fermo**:
 Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato. Con un codice, scatta solo per quel valore del fatto.
