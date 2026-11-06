@@ -19,7 +19,7 @@ Ruolo dell'ente che conferma le proposte di movimento contabile, contabilizza e 
 _Avoid_: Finanziaria, ufficio contabilità
 
 **Personale correlato all'ente**:
-Ogni persona che riceve dall'ente un compenso soggetto ad adempimenti da sostituto d'imposta o previdenziali: comparto, dirigenza, segretario, amministratori, co.co.co., LSU/LPU.
+Ogni persona che riceve dall'ente un compenso soggetto ad adempimenti da sostituto d'imposta o previdenziali, o che presta all'ente un'attività che genera adempimenti anche senza compenso: comparto, dirigenza, segretario, amministratori, co.co.co., LSU/LPU.
 _Avoid_: Dipendente (quando si intende l'insieme intero)
 
 **Persona**:
@@ -133,6 +133,10 @@ _Avoid_: Segretario condiviso, rapporto in quota
 **Riparto della convenzione**:
 Vista che applica le quote della convenzione di segreteria agli esiti pagati e versati di un periodo, con la periodicità dichiarata dalla convenzione. Inviato agli altri enti è un esito dichiarato. Nel capofila genera una proposta di accertamento; nell'ente non capofila è un atto esterno che si trascrive e genera una proposta di liquidazione verso il capofila.
 _Avoid_: Rimborso (senza dire di chi), compensazione
+
+**Utilizzazione LSU/LPU**:
+Rapporto con titolo LSU/LPU, che non è lavoro subordinato e può non generare alcun importo. L'assegno pagato da altri non è un importo dell'ente: lo diventa solo se un fatto da atto dichiara l'ente come pagatore. Le presenze alimentano integrazione, uomo-anno e certificazione a INPS.
+_Avoid_: Dipendente LSU, rapporto di lavoro socialmente utile
 
 **Mandato di amministratore**:
 Rapporto di un amministratore locale, dalla proclamazione o nomina alla cessazione. Una rielezione è un rapporto nuovo; un cambio di carica no. Delimita la durata su cui si calcola l'indennità di fine mandato, dove la norma la prevede.
