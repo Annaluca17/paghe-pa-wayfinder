@@ -39,13 +39,7 @@ conguaglio_annuo = ["contributo_aggiuntivo"]
 
 # Fermi: casi che la prima fetta non modella (ADR 0005, nota di prassi 3).
 
-[[fermo]]
-fatto = "regime_fine_servizio"
-caso = "contribuzione TFS o TFR non ancora esposta in GestPrevidenziale"
-# ADR 0008: il regime è obbligatorio nel tracciato. La denuncia si calcola, la vista è una bozza.
-# Il TFS si calcola dalla parte 1 del ticket #33; la parte 3 toglie questo fermo.
-ambito = "vista"
-riferimento = "prassi:inps:circolare:2014-01-16;6 + prassi:immedia:nota:2026-11-06;3"
+# Il fermo con ambito vista sul regime è tolto: GestPrevidenziale è esposta (ticket #33, parte 3).
 
 [[fermo]]
 fatto = "regime_fine_servizio"

@@ -42,7 +42,7 @@ Restano fuori le riduzioni INADEL ed ENPAS, che riguardano il TFS e ricadono gi�
 
 **Scelta di progetto.** La prima fetta si ferma e nomina il caso quando trova:
 
-- **regime di fine servizio (TFS o TFR):** contribuzione non modellata. Dall'ADR 0008 non ferma la denuncia: rende la ListaPosPA una bozza non trasmissibile;
+- **regime di fine servizio (TFS o TFR):** contribuzione non modellata. Dall'ADR 0008 non ferma la denuncia: rende la ListaPosPA una bozza non trasmissibile. *Superato dal ticket #33: TFS e TFR sono calcolati ed esposti; resta il fermo dell'optante (note di prassi 4-6);*
 - **part-time e retribuzione ridotta:** il riproporzionamento non è modellato. Fermano anche il calcolo;
 - **aspettativa sindacale:** la retribuzione virtuale del Fondo Credito (Circ. INPS 6/2014 § 19) non è modellata;
 - **più rapporti della stessa persona nell'anno**, riconosciuti dal codice fiscale: l'1% e il massimale si calcolano per persona;

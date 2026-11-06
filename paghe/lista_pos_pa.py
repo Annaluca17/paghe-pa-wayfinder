@@ -1,4 +1,4 @@
-"""Vista ListaPosPA di un rapporto nel mese (ADR 0005 e 0008, nota di prassi 2).
+"""Vista ListaPosPA di un rapporto nel mese (ADR 0005, 0008 e 0011, nota di prassi 2).
 
 Legge la denuncia calcolata e la dispone nei quadri della prima fetta: E0 per i periodi in
 servizio, V1 causale 5 solo giuridico per un mese di servizio pagato più tardi, V1 causale 1 per
@@ -11,9 +11,10 @@ la serializzazione è in `paghe.uniemens`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+from .calcolo import calcola
 from .corpus import Corpus
 from .denuncia import Denuncia, PeriodoDenuncia, SU_CESSATO, _denuncia, calcola_denuncia, periodi_in_servizio, righe_pagate
 from .modello import Importo
@@ -27,6 +28,11 @@ CODICE_CESSAZIONE = "codice_cessazione"
 # Codici del tracciato, Allegato tecnico UniEmens 4.33.1, appendice B.
 GESTIONE_CPDEL = "2"  # CodGestione, p. 245
 GESTIONE_CREDITO = "9"
+GESTIONE_PREVIDENZIALE = "6"  # I.N.A.D.E.L., p. 245: TFS e TFR degli enti locali
+TIPO_CONTRIBUTO_TFS = "7"  # p. 252
+TIPO_CONTRIBUTO_TFR = "8"
+REGIMI_TFR = {"1", "2"}  # RetribTeoricaTabellareTFR e RetribValutabileTFR: DT 4.33, p. 183
+BASI_UTILI_TFR = ("tfs", "tfr_ulteriori")  # voci comuni al TFS e ulteriori elementi
 TIPO_CONTRIBUTO_CREDITO = "9"  # TipoContributo, p. 251
 TIPO_CONTRIBUTO_1_PER_CENTO = "5"  # «Eccedenza con contributo maggiorato dell'1%»: da verificare
 ALIQUOTA_DI_CASSA = "2"  # Aliquota, p. 256
@@ -63,6 +69,19 @@ class Gestione:
 
 
 @dataclass(frozen=True)
+class Previdenziale:
+    """GestPrevidenziale: TFS con il regime 3, TFR con il regime 1 (DT 4.33, p. 191-193)."""
+
+    imponibile_tfr: Decimal | None = None
+    contributo_tfr: Decimal | None = None
+    imponibile_tfr_ulteriori: Decimal | None = None
+    contributo_tfr_ulteriori: Decimal | None = None
+    imponibile_tfs: Decimal | None = None
+    contributo_tfs: Decimal | None = None
+    cod_gestione: str = GESTIONE_PREVIDENZIALE
+
+
+@dataclass(frozen=True)
 class EnteVersante:
     """Terna del V1: l'ente dichiarante, con il mese in cui la somma è stata pagata."""
 
@@ -82,7 +101,10 @@ class Quadro:
     pensionistica: Gestione | None = None
     contrib_1_per_cento: Decimal | None = None
     credito: Gestione | None = None
+    previdenziale: Previdenziale | None = None
     codice_cessazione: str | None = None
+    retrib_teorica_tfr: Decimal | None = None
+    retrib_valutabile_tfr: Decimal | None = None
     enti_versanti: tuple[EnteVersante, ...] = ()
     importi: tuple[Importo, ...] = ()
 
@@ -188,12 +210,14 @@ class _Vista:
                 "della denuncia del primo pagamento (nota di prassi 2)"
             )
             return None
+        inquadramento = self.inquadramento(periodo.periodo)
         return Quadro(
             tipo="E0",
             causale=None,
             periodo=periodo.periodo,
-            inquadramento=self.inquadramento(periodo.periodo),
+            inquadramento=inquadramento,
             codice_cessazione=self.codice_cessazione(periodo.periodo),
+            retrib_teorica_tfr=self.retrib_teorica_tfr(periodo.periodo, inquadramento),
             **_gestioni(periodo),
         )
 
@@ -216,13 +240,16 @@ class _Vista:
             if self._pagato_prima(mese):
                 continue
             for periodo in periodi_in_servizio(self.registro, self.corpus, self.rapporto, mese, self.istante):
+                inquadramento = self.inquadramento(periodo)
                 quadri.append(
                     Quadro(
                         tipo="V1",
                         causale="5",
                         periodo=periodo,
-                        inquadramento=self.inquadramento(periodo),
+                        inquadramento=inquadramento,
                         codice_cessazione=self.codice_cessazione(periodo),
+                        # «Sempre valorizzata» (Circ. INPS 185/2021 § 2.2.1), anche senza gestioni.
+                        retrib_teorica_tfr=self.retrib_teorica_tfr(periodo, inquadramento),
                     )
                 )
         return quadri
@@ -279,6 +306,26 @@ class _Vista:
             terne.append(EnteVersante(tipo_contributo, p.imponibile, p.contributo, self.mese))
         if gestioni["contrib_1_per_cento"] is not None:
             terne.append(EnteVersante(TIPO_CONTRIBUTO_1_PER_CENTO, None, gestioni["contrib_1_per_cento"], self.mese))
+        previdenziale = gestioni["previdenziale"]
+        if previdenziale is not None and previdenziale.imponibile_tfr_ulteriori is not None:
+            self.fermi.append(
+                QuadroFermo(
+                    "V1 causale 1",
+                    ultimo,
+                    "Ulteriori elementi TFR in un arretrato: l'Allegato tecnico 4.33.1 non dà un tipo contributo "
+                    "per l'Ente Versante (ticket #33)",
+                    importi,
+                )
+            )
+            return None
+        if previdenziale is not None and previdenziale.imponibile_tfs is not None:
+            terne.append(
+                EnteVersante(TIPO_CONTRIBUTO_TFS, previdenziale.imponibile_tfs, previdenziale.contributo_tfs, self.mese)
+            )
+        if previdenziale is not None and previdenziale.imponibile_tfr is not None:
+            terne.append(
+                EnteVersante(TIPO_CONTRIBUTO_TFR, previdenziale.imponibile_tfr, previdenziale.contributo_tfr, self.mese)
+            )
         if gestioni["credito"] is not None:
             c = gestioni["credito"]
             terne.append(EnteVersante(TIPO_CONTRIBUTO_CREDITO, c.imponibile, c.contributo, self.mese))
@@ -287,6 +334,7 @@ class _Vista:
             causale="1",
             periodo=ultimo,
             inquadramento=inquadramento,
+            retrib_teorica_tfr=self.retrib_teorica_tfr(ultimo, inquadramento),
             enti_versanti=tuple(terne),
             **gestioni,
         )
@@ -304,6 +352,50 @@ class _Vista:
             if periodi:
                 return periodi[-1]
         return None
+
+    def retrib_teorica_tfr(self, periodo: Periodo, inquadramento: Inquadramento) -> Decimal | None:
+        """Mensile intero delle voci fisse utili al TFR, senza tredicesima (Circ. INPS 185/2021 § 2.2.1).
+
+        Le voci fisse sono le regole a giorni che concorrono per intero alla base `tfs` o
+        `tfr_ulteriori`; il mensile è quello della formula, prima della quota del mese parziale.
+        Decisione di Luca, ticket #33: intera anche nel mese parziale (nota di prassi 6, ADR 0011).
+        """
+        if inquadramento.regime_fine_servizio not in REGIMI_TFR:
+            return None
+        mensili: dict[str, Decimal] = {}
+        for riga in calcola(self.registro, self.corpus, self.rapporto, Mese(periodo.dal.year, periodo.dal.month), self.istante):
+            derivazione = riga.derivazione
+            if derivazione.maturazione != "giorni" or not periodo.contiene(riga.periodo):
+                continue
+            if not any(
+                (concorso := self.corpus.concorso(riga.istituto, base, periodo.al)) and concorso.misura == "intero"
+                for base in BASI_UTILI_TFR
+            ):
+                continue
+            mensili[riga.istituto] = derivazione.quota.base if derivazione.quota else riga.valore
+        if not mensili:
+            self._chiedi("retribuzione teorica tabellare TFR", periodo)
+            return None
+        return sum(mensili.values(), Decimal(0))
+
+    def cambio_di_regime(self) -> None:
+        """Più regimi nell'anno: la tredicesima chiede un quadro non modellato (ticket #33, domanda 8)."""
+        anno = Periodo(date(self.mese.anno, 1, 1), self.mese.ultimo_giorno)
+        regimi = {
+            str(fatto.valore)
+            for fatto in self.registro.vigenti_per_giorno(self.rapporto, "regime_fine_servizio", anno, self.istante)
+            if fatto is not None
+        }
+        if len(regimi) > 1:
+            self.fermi.append(
+                QuadroFermo(
+                    "V1 con IdentAtto codice 2",
+                    anno,
+                    f"Cambio del regime di fine servizio nell'anno ({', '.join(sorted(regimi))}): la tredicesima "
+                    "va dichiarata con il codice 2 di IdentAtto (Allegato tecnico 4.33.1, p. 255; msg INPS "
+                    "1974/2018 e 2918/2018), non modellato",
+                )
+            )
 
     def bozza(self, quadri: list[Quadro]) -> list[str]:
         """Fermi del corpus con ambito `vista`: il quadro esce, ma la lista non si trasmette."""
@@ -324,13 +416,29 @@ def _successivo(mese: Mese) -> Mese:
     return Mese(mese.anno + 1, 1) if mese.mese == 12 else Mese(mese.anno, mese.mese + 1)
 
 
+def _previdenziale(periodo: PeriodoDenuncia, contributi: dict[str, Decimal]) -> Previdenziale | None:
+    """TFS o TFR dagli importi della denuncia: le regole si applicano già solo al regime giusto."""
+    ulteriori = periodo.base("tfr_ulteriori")
+    valori = {
+        "imponibile_tfr": contributi.get("imponibile_tfr"),
+        "contributo_tfr": contributi.get("contributo_tfr"),
+        "imponibile_tfr_ulteriori": ulteriori.valore if ulteriori and "contributo_tfr_ulteriori" in contributi else None,
+        "contributo_tfr_ulteriori": contributi.get("contributo_tfr_ulteriori"),
+        "imponibile_tfs": contributi.get("imponibile_tfs"),
+        "contributo_tfs": contributi.get("tfs_totale"),
+    }
+    return Previdenziale(**valori) if any(valore is not None for valore in valori.values()) else None
+
+
 def _gestioni(periodo: PeriodoDenuncia) -> dict:
-    """CPDEL e credito; l'1% a parte, mai nel contributo (Circ. INPS 6/2026 § 5)."""
+    """CPDEL, TFS o TFR e credito; l'1% a parte, mai nel contributo (Circ. INPS 6/2026 § 5)."""
     contributi = {riga.istituto: riga.valore for riga in periodo.contributi}
     cpdel = periodo.base("cpdel")
     credito = periodo.base("fondo_credito")
     aggiuntivo = contributi.get("contributo_aggiuntivo")
     return {
+        "previdenziale": _previdenziale(periodo, contributi),
+        "retrib_valutabile_tfr": contributi.get("retribuzione_valutabile_tfr"),
         "pensionistica": Gestione(cpdel.valore, contributi.get("cpdel_totale", Decimal(0))) if cpdel else None,
         # Solo se diverso da zero: un 1% a zero non si espone (prassi-interpretazione).
         "contrib_1_per_cento": aggiuntivo if aggiuntivo else None,
@@ -351,6 +459,7 @@ def lista_pos_pa(
     denuncia = calcola_denuncia(registro, corpus, rapporto, mese, istante)
     vista = _Vista(registro, corpus, rapporto, mese, istante)
     lavoratore = vista.lavoratore()
+    vista.cambio_di_regime()
 
     correnti: list[Quadro] = []
     precedenti: list[Quadro] = []

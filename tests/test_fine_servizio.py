@@ -283,10 +283,10 @@ def test_recupero_su_cessato_recupera_anche_il_tfs(registro, reale, orologio):
     assert valori["tfs_ente"] == Decimal("-29.08")
 
 
-def test_il_regime_resta_un_fermo_della_vista_finche_gestprevidenziale_non_c_e(reale):
-    """La parte 3 toglie questo fermo: oggi la ListaPosPA con il regime resta una bozza."""
+def test_il_regime_non_rende_piu_la_lista_una_bozza(reale):
+    """Parte 3: GestPrevidenziale è esposta, il fermo con ambito vista è tolto. Resta l'optante."""
     fermi = {(f.fatto, f.codice, f.ambito) for f in reale.fermi}
-    assert ("regime_fine_servizio", None, "vista") in fermi
+    assert not any(ambito == "vista" for _, _, ambito in fermi)
     assert ("regime_fine_servizio", "2", "denuncia") in fermi
 
 

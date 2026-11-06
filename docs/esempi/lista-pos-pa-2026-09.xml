@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- BOZZA NON TRASMISSIBILE, rapporto RAPPORTO-1: contribuzione TFS o TFR, non modellata: bozza non trasmissibile (prassi:inps:circolare:2014-01-16;6 + prassi:immedia:nota:2026-11-06;3) -->
 <DenunceMensili>
   <DatiMittente Tipo="1">
     <CFPersonaMittente>VRDLGU75B12F205B</CFPersonaMittente>
@@ -31,7 +30,7 @@
               <TipoServizio>4</TipoServizio>
               <Contratto>RALN</Contratto>
               <Qualifica>0FZEQF</Qualifica>
-              <RegimeFineServizio>3</RegimeFineServizio>
+              <RegimeFineServizio>1</RegimeFineServizio>
             </InquadramentoLavPA>
             <Gestioni>
               <GestPensionistica>
@@ -39,12 +38,19 @@
                 <Imponibile>2828,29</Imponibile>
                 <Contributo>923,44</Contributo>
               </GestPensionistica>
+              <GestPrevidenziale>
+                <CodGestione>6</CodGestione>
+                <ImponibileTFR>2225,74</ImponibileTFR>
+                <ContributoTFR>135,77</ContributoTFR>
+              </GestPrevidenziale>
               <GestCredito>
                 <CodGestione>9</CodGestione>
                 <Imponibile>2828,29</Imponibile>
                 <Contributo>9,90</Contributo>
               </GestCredito>
             </Gestioni>
+            <RetribTeoricaTabellareTFR>2192,02</RetribTeoricaTabellareTFR>
+            <RetribValutabileTFR>2782,18</RetribValutabileTFR>
           </E0_PeriodoNelMese>
           <V1_PeriodoPrecedente CausaleVariazione="5">
             <GiornoInizio>2026-08-24</GiornoInizio>
@@ -54,8 +60,9 @@
               <TipoServizio>4</TipoServizio>
               <Contratto>RALN</Contratto>
               <Qualifica>0FZEQF</Qualifica>
-              <RegimeFineServizio>3</RegimeFineServizio>
+              <RegimeFineServizio>1</RegimeFineServizio>
             </InquadramentoLavPA>
+            <RetribTeoricaTabellareTFR>2192,02</RetribTeoricaTabellareTFR>
           </V1_PeriodoPrecedente>
         </D0_DenunciaIndividuale>
       </PosPA>
