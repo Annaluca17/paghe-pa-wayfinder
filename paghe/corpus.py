@@ -194,16 +194,21 @@ class Fermo:
 
     `calcolo` ferma anche gli importi per competenza; `denuncia` solo basi e contributi; `vista`
     lascia calcolare la denuncia e rende la ListaPosPA una bozza non trasmissibile (ADR 0008).
+    Con `codice` il fermo scatta solo se il fatto categoriale ha quel valore (ADR 0009).
     """
 
     fatto: str
     caso: str
     ambito: str
     riferimento: str
+    codice: str | None = None
 
     def __post_init__(self) -> None:
         soggetto = f"Fermo {self.fatto}"
         _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.codice is not None and (not isinstance(self.codice, str) or not self.codice.strip()
+                                        or self.codice != self.codice.strip()):
+            raise ErroreCorpus(f"{soggetto}: codice non valido, {self.codice!r}")
         if not self.caso.strip():
             raise ErroreCorpus(f"{soggetto}: il caso va nominato")
         if self.ambito not in AMBITI_FERMO:
@@ -442,7 +447,10 @@ class Corpus:
             ),
         }
         if self.fermi:
-            contenuto["fermi"] = sorted([f.fatto, f.caso, f.ambito, f.riferimento] for f in self.fermi)
+            contenuto["fermi"] = sorted(
+                [f.fatto, f.caso, f.ambito, f.riferimento, *([f.codice] if f.codice is not None else [])]
+                for f in self.fermi
+            )
         if self.denuncia != RegoleDenuncia():
             massimale = self.denuncia.massimale
             contenuto["denuncia"] = {
@@ -529,7 +537,8 @@ class Corpus:
             basi = tuple(Base(voce["nome"], voce["riferimento"]) for voce in dati.get("base", []))
             concorsi = tuple(concorso for voce in dati.get("concorso", []) for concorso in _concorsi_da_toml(voce))
             fermi = tuple(
-                Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"]) for voce in dati.get("fermo", [])
+                Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"], voce.get("codice"))
+                for voce in dati.get("fermo", [])
             )
             denuncia = _denuncia_da_toml(dati.get("denuncia", {}))
         except (tomllib.TOMLDecodeError, KeyError, TypeError, AttributeError) as errore:

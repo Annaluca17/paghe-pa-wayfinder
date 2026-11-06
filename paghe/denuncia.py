@@ -233,12 +233,19 @@ def _base_del_periodo(
 
 
 class _Contributi:
-    """Regole di cassa di un periodo, valutate alle date di pagamento degli importi nelle basi."""
+    """Regole di cassa di un periodo, valutate alle date di pagamento degli importi nelle basi.
 
-    def __init__(self, lettore: _Lettore, periodo: Periodo, basi: tuple[Importo, ...]):
+    `applica_se` si legge su `condizione_su`: il periodo stesso, oppure, fuori servizio, l'ultimo
+    giorno di servizio. Un recupero su cessato segue così il regime che aveva il servizio (ADR 0009).
+    """
+
+    def __init__(
+        self, lettore: _Lettore, periodo: Periodo, basi: tuple[Importo, ...], condizione_su: Periodo | None = None
+    ):
         self.lettore = lettore
         self.corpus = lettore.corpus
         self.periodo = periodo
+        self.condizione_su = condizione_su or periodo
         self.basi = {riga.istituto.removeprefix("base."): riga for riga in basi}
         self.date = sorted({giorno for base in basi for giorno in _date_di_pagamento(base)})
         self._calcolati: dict[str, Importo | None] = {}
@@ -280,6 +287,11 @@ class _Contributi:
         parametri: dict[str, ParametroLetto] = {}
         fatti: dict[int, Fatto] = {}
         letti: dict[str, Importo] = {}
+        if regola.applica_se is not None:
+            condizione = self.lettore.fatto(regola.fatto_condizione, self.condizione_su)
+            if condizione is None or not self.lettore.soddisfa(regola, condizione):
+                return None
+            fatti[condizione.id] = condizione
 
         def risolvi(origine: str, nome: str) -> Decimal:
             if origine == "fatto":
@@ -350,6 +362,7 @@ def _denuncia(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, ist
         gruppi[_periodo_della_riga(riga.importo, periodi, mese)].append(riga)
 
     sul_periodo = corpus.istituti_di_cassa - corpus.istituti_sul_mese
+    condizione_su = None if in_servizio else _ultimo_giorno_di_servizio(registro, corpus, rapporto, mese, istante)
     risultato: list[PeriodoDenuncia] = []
     for periodo in periodi:
         basi = tuple(
@@ -357,16 +370,32 @@ def _denuncia(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, ist
             for importo in (_base_del_periodo(base, gruppi[periodo], periodo, corpus, istante) for base in corpus.basi())
             if importo is not None
         )
-        contributi = _Contributi(lettore, periodo, basi).tutti(sul_periodo) if basi else ()
+        contributi = _Contributi(lettore, periodo, basi, condizione_su).tutti(sul_periodo) if basi else ()
         dichiarato = PeriodoDenuncia(periodo, in_servizio, basi, contributi)
         risultato.append(replace(dichiarato, recuperi=_recuperi(registro, corpus, rapporto, mese, dichiarato, istante)))
 
     if corpus.istituti_sul_mese and any(periodo.basi for periodo in risultato):
         ultimo = risultato[-1]
         basi_mese = _basi_del_mese(risultato, corpus, istante)
-        del_mese = _Contributi(lettore, ultimo.periodo, basi_mese).tutti(corpus.istituti_sul_mese)
+        del_mese = _Contributi(lettore, ultimo.periodo, basi_mese, condizione_su).tutti(corpus.istituti_sul_mese)
         risultato[-1] = replace(ultimo, contributi=ultimo.contributi + del_mese)
     return Denuncia(rapporto, mese, tuple(risultato), senza_data)
+
+
+def _ultimo_giorno_di_servizio(
+    registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime
+) -> Periodo | None:
+    """Ultimo giorno coperto dal servizio prima del mese; None se il servizio non c'è mai stato."""
+    prima = mese.primo_giorno - timedelta(days=1)
+    giorni = [
+        min(fatto.valido_al or prima, prima)
+        for fatto in registro.fatti_noti(rapporto, corpus.fatto_servizio, istante)
+        if fatto.valido_dal <= prima
+    ]
+    for giorno in sorted(set(giorni), reverse=True):
+        if registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, Periodo(giorno, giorno), istante)[0] is not None:
+            return Periodo(giorno, giorno)
+    return None
 
 
 def _periodi_in_servizio(lettore: _Lettore, mese: Mese) -> list[Periodo]:
