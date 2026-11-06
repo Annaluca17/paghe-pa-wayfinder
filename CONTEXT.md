@@ -138,6 +138,10 @@ _Avoid_: Rimborso (senza dire di chi), compensazione
 Rapporto con titolo LSU/LPU, che non è lavoro subordinato e può non generare alcun importo. L'assegno pagato da altri non è un importo dell'ente: lo diventa solo se un fatto da atto dichiara l'ente come pagatore. Le presenze alimentano integrazione, uomo-anno e certificazione a INPS.
 _Avoid_: Dipendente LSU, rapporto di lavoro socialmente utile
 
+**Incarico di scavalco**:
+Rapporto con titolo incarico nell'ente utilizzatore, per la reggenza o supplenza disposta dal Ministero, con la durata del provvedimento. Non è lavoro dipendente con quell'ente: non ha organico e genera un unico compenso, oltre al rimborso di viaggio. La base viene dal rapporto del segretario nell'ente di titolarità, che l'ente utilizzatore non conosce: è un input da atto esterno; la percentuale la applica una regola.
+_Avoid_: Scavalco come variazione del rapporto di titolarità, rimborso di scavalco
+
 **Mandato di amministratore**:
 Rapporto di un amministratore locale, dalla proclamazione o nomina alla cessazione. Una rielezione è un rapporto nuovo; un cambio di carica no. Delimita la durata su cui si calcola l'indennità di fine mandato, dove la norma la prevede.
 _Avoid_: Mandato (senza dire quale: il mandato di pagamento è un atto della Ragioneria), carica (quando si intende il rapporto)

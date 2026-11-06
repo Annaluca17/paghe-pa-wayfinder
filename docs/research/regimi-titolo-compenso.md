@@ -341,6 +341,22 @@ Altri elementi certi del testo: graduazione c. 2; elevazione del tetto fino al 1
 - Direttore generale: S710. Scavalco e rogito: S740. Convenzione: I223. **norma certa**
 - Macrocategoria «Segretario comunale e provinciale» con Tab. 15 propria. Non esiste un «fondo segretario» in senso proprio. **norma certa**
 
+#### Verifica dei materiali su scavalco e convenzione
+
+Controllo chiesto da Luca nel grilling, domanda 13.
+
+- **Tool `Calcolatore-Convenzione`** (ultimo commit 02/11/2026). **Non calcola lo scavalco:** la parola compare solo in `PIANO.md`, per la guida rinviata (ticket T2). Calcola dovuto, percepito e differenze del segretario in convenzione. Conferma la base art. 56 c. 1 lett. a-d con il 25% dell'art. 63, e le fonti contrattuali lette nella sezione 8. Ha un campo «quota già corrisposta da altri enti», in importo o in percentuale, «dalla convenzione o dal cedolino dell'altro ente»: **i pagamenti diretti da enti non capofila sono previsti in pratica.**
+- **Nota interna sulla gestione dei segretari** (elaborazione interna, letta nel vault, non citabile come fonte normativa). **prassi-interpretazione**:
+  - distingue la reggenza (sede vacante) dalla supplenza a scavalco (titolare assente);
+  - l'indennità è accessoria, «soggetta a tutto tranne TFS/TFR»: tabella CPDEL sì, INADEL no;
+  - base: stipendio, RIA, posizione e maturato, senza maggiorazione, retribuzione aggiuntiva, galleggiamento e rateo di tredicesima;
+  - l'ente utilizzatore censisce il segretario con gli stessi dati di inquadramento, solo per l'accessorio, e con servizio «Altro» nella denuncia, indicando l'amministrazione di titolarità;
+  - suggerisce un'aliquota IRPEF fissa del 43%, come opportunità e senza una fonte;
+  - in convenzione, gli accessori (rogito, maggiorazione) liquidati direttamente dagli enti secondari seguono lo stesso trattamento.
+  - Il testo descrive la procedura di un gestionale e cita il CCNL 2020: del documento vale il trattamento, non la forma, e la percentuale va letta sull'art. 62 vigente.
+- **`Guida_Pratica_Assistenza (1).md`** nella cartella di lavoro: **non affidabile.** Il piano del tool la destina all'archivio. Indica massimo 90 giorni e base del solo stipendio, in contrasto con l'art. 62 e con la nota interna.
+- **Da verificare:** la voce del tracciato per il servizio «Altro», che l'ADR 0005 già tratta come «altra amministrazione»; la CU; il conguaglio tra i due sostituti; l'origine del 43%.
+
 ### E. Trasversali
 
 #### 11. Conto Annuale, rilevazione 2025
