@@ -219,7 +219,7 @@ Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolar
 _Avoid_: Data di pagamento (finché il pagamento non è eseguito)
 
 **Base imponibile**:
-Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR). Una base non deriva da un'altra, salvo che una norma lo dica.
+Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR, gestione separata). Una base non deriva da un'altra, salvo che una norma lo dica.
 _Avoid_: Imponibile (senza dire quale)
 
 **Categoria di reddito**:
@@ -277,6 +277,10 @@ _Avoid_: Stampa, tabulato
 **Controllo di completezza degli output**:
 Verifica che ogni importo pagato sia compreso in ogni output obbligatorio dichiarato dal suo regime, o ne sia escluso da una dichiarazione esplicita. Un'assenza non dichiarata ferma l'invio di quell'output, non il calcolo.
 _Avoid_: Quadratura, controllo finale
+
+**Lista collaboratori**:
+Vista della denuncia per chi è in gestione separata (co.co.co. e quote forfettarie degli amministratori), separata dalla ListaPosPA: ha struttura e identità proprie e segue il mese di erogazione. Produce un esito dichiarato.
+_Avoid_: ListaPosPA dei collaboratori, flusso parasubordinati
 
 **Quadro**:
 Elemento della ListaPosPA che dichiara un periodo: E0 per il mese corrente, V1 con una causale per un periodo precedente. Lo produce la vista dalla denuncia, mai il calcolo.
