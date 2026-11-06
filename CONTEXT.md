@@ -127,7 +127,7 @@ Fatto sul rapporto, dal responsabile, che dichiara eseguita la prestazione di un
 _Avoid_: Visto, nulla osta
 
 **Convenzione di segreteria**:
-Input da atto sul rapporto del segretario nell'ente capofila: enti partecipanti, capofila, ente che paga, quote e decorrenza. Il rapporto è uno solo, nel capofila, che di norma paga, versa e dichiara; se paga direttamente un altro ente il calcolo si ferma e nomina il caso. Un ente non capofila non ha un rapporto con quella persona: conosce la convenzione come fatto sull'ente, che alimenta il Conto Annuale.
+Input da atto sul rapporto del segretario nell'ente capofila: enti partecipanti, capofila, ente che paga, quote e decorrenza. Il rapporto di titolarità è uno solo, nel capofila, che di norma paga, versa e dichiara. Un ente non capofila conosce la convenzione come fatto sull'ente, che alimenta il Conto Annuale; ha un rapporto solo se paga direttamente una quota, con un incarico da convenzione. Il pagamento diretto dell'intera retribuzione fissa da un non capofila ferma il calcolo e nomina il caso.
 _Avoid_: Segretario condiviso, rapporto in quota
 
 **Riparto della convenzione**:
@@ -138,9 +138,13 @@ _Avoid_: Rimborso (senza dire di chi), compensazione
 Rapporto con titolo LSU/LPU, che non è lavoro subordinato e può non generare alcun importo. L'assegno pagato da altri non è un importo dell'ente: lo diventa solo se un fatto da atto dichiara l'ente come pagatore. Le presenze alimentano integrazione, uomo-anno e certificazione a INPS.
 _Avoid_: Dipendente LSU, rapporto di lavoro socialmente utile
 
-**Incarico di scavalco**:
-Rapporto con titolo incarico nell'ente utilizzatore, per la reggenza o supplenza disposta dal Ministero, con la durata del provvedimento. Non è lavoro dipendente con quell'ente: non ha organico e genera un unico compenso, oltre al rimborso di viaggio. La base viene dal rapporto del segretario nell'ente di titolarità, che l'ente utilizzatore non conosce: è un input da atto esterno; la percentuale la applica una regola.
-_Avoid_: Scavalco come variazione del rapporto di titolarità, rimborso di scavalco
+**Incarico del segretario**:
+Rapporto con titolo incarico in un ente diverso da quello di titolarità, che paga solo ciò che eroga direttamente. Non è lavoro dipendente con quell'ente e non ha organico. Un fatto ne dice l'origine: scavalco, cioè reggenza o supplenza disposta dal Ministero, con la durata del provvedimento; oppure convenzione, per la quota che un ente non capofila paga direttamente. La base viene dal rapporto di titolarità, che quell'ente non conosce: è un input da atto esterno; la percentuale la applica una regola. Il regime si fonda su una nota di prassi.
+_Avoid_: Scavalco come variazione del rapporto di titolarità, rimborso di scavalco, rapporto in quota
+
+**Quota riconosciuta da altri enti**:
+Input da atto, o atto esterno trascritto, in importo o percentuale, che riduce quanto il capofila paga al segretario in convenzione, con l'importo pieno visibile. Il riparto non la comprende. Se la somma delle quote supera il dovuto il calcolo si ferma.
+_Avoid_: Detrazione, conguaglio tra enti
 
 **Mandato di amministratore**:
 Rapporto di un amministratore locale, dalla proclamazione o nomina alla cessazione. Una rielezione è un rapporto nuovo; un cambio di carica no. Delimita la durata su cui si calcola l'indennità di fine mandato, dove la norma la prevede.
