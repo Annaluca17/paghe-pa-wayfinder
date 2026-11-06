@@ -288,3 +288,118 @@ def test_il_regime_resta_un_fermo_della_vista_finche_gestprevidenziale_non_c_e(r
     fermi = {(f.fatto, f.codice, f.ambito) for f in reale.fermi}
     assert ("regime_fine_servizio", None, "vista") in fermi
     assert ("regime_fine_servizio", "2", "denuncia") in fermi
+
+
+# --- TFR (ticket #33, parte 2) ---
+# Fonti: DPCM 20/12/1999 art. 1 c. 2, 3 e 7; msg INPS 2440/2019; Circ. INPS 185/2021 § 2.2.1.
+
+
+def test_riferimento_al_dpcm_ammesso():
+    from paghe.riferimento import motivo_rifiuto
+
+    assert motivo_rifiuto("urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3") is None
+    assert "tipo" in motivo_rifiuto("urn:nir:presidente.consiglio.ministri:legge:1999-12-20")
+
+
+def test_tfr_riduzione_del_lordo_per_competenza(registro, reale):
+    dipendente(registro, "istruttori", "1")
+    righe = {riga.istituto: riga.valore for riga in calcola(registro, reale, R, Mese(2026, 11))}
+    assert righe == {
+        "tabellare_istruttori": Decimal("2019.63"),
+        "comparto_istruttori": Decimal("32.06"),
+        "riduzione_tfr": Decimal("-40.39"),  # 2,50% di 1.615,70, l'80% del tabellare
+    }
+
+
+@pytest.mark.parametrize("regime", ["3", None])
+def test_senza_regime_tfr_nessuna_riduzione(registro, reale, regime):
+    dipendente(registro, "istruttori", regime)
+    assert "riduzione_tfr" not in {riga.istituto for riga in calcola(registro, reale, R, Mese(2026, 11))}
+
+
+def test_tfr_di_un_mese_intero(registro, reale, orologio):
+    dipendente(registro, "istruttori", "1")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    periodo, = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
+    valori = importi(periodo)
+    # La riduzione non entra in nessuna base: è l'incremento figurativo del c. 3.
+    assert valori["base.cpdel"] == Decimal("2051.69")
+    assert valori["base.fondo_credito"] == Decimal("2051.69")
+    assert valori["base.tfs"] == Decimal("2019.63")
+    assert valori["imponibile_tfr"] == Decimal("1615.70")
+    assert valori["contributo_tfr"] == Decimal("98.56")  # 6,10%, tutto a carico dell'ente
+    assert valori["retribuzione_valutabile_tfr"] == Decimal("2019.63")
+    assert not {"imponibile_tfs", "tfs_totale", "contributo_tfr_ulteriori"} & valori.keys()
+
+
+def test_tfr_assunto_ad_agosto_e_pagato_a_settembre(registro, reale, orologio):
+    dipendente(registro, "funzionari", "1", dal=date(2026, 8, 24))
+    agosto = {riga.istituto: riga.valore for riga in calcola(registro, reale, R, Mese(2026, 8))}
+    assert agosto["riduzione_tfr"] == Decimal("-11.80")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 8), Mese(2026, 9)), date(2026, 9, 25))
+    periodo, = calcola_denuncia(registro, reale, R, Mese(2026, 9)).periodi
+    valori = importi(periodo)
+    assert valori["base.tfs"] == Decimal("2782.18")
+    assert valori["imponibile_tfr"] == Decimal("2225.74")
+    assert valori["contributo_tfr"] == Decimal("135.77")
+    assert valori["retribuzione_valutabile_tfr"] == Decimal("2782.18")
+
+
+def test_con_il_tfs_nessun_contributo_tfr(registro, reale, orologio):
+    dipendente(registro, "istruttori", "3")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    periodo, = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
+    assert not {"imponibile_tfr", "contributo_tfr", "retribuzione_valutabile_tfr"} & importi(periodo).keys()
+
+
+def test_il_contributo_tfr_cita_il_dpcm(registro, reale, orologio):
+    dipendente(registro, "istruttori", "1")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    periodo, = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
+    contributo = next(riga for riga in periodo.contributi if riga.istituto == "contributo_tfr")
+    assert "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com7" in spiega(contributo)
+
+
+def test_recupero_su_cessato_in_tfr(registro, reale, orologio):
+    fatti = dipendente(registro, "istruttori", "1")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 10)), date(2026, 10, 27))
+
+    orologio.vai(11, 3)
+    for fatto in fatti[1:]:
+        registro.annulla_fatto(fatto.id, "cessazione comunicata in ritardo")
+    for tipo, codice in (("tipo_impiego", "1"), ("area", "istruttori"), ("regime_fine_servizio", "1")):
+        registro.registra_codice(R, tipo, codice, date(2026, 1, 1), date(2026, 10, 15))
+    recupero = [voce.importo() for voce in differenze(registro, reale, R, Mese(2026, 10), TipoEsito.PAGATO)]
+    assert {riga.istituto: riga.valore for riga in recupero}["riduzione_tfr"] == Decimal("20.19")
+    paga(registro, orologio, recupero, date(2026, 11, 20))
+
+    periodo, = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
+    valori = importi(periodo)
+    assert valori["base.tfs"] == Decimal("-1009.81")
+    assert valori["imponibile_tfr"] == Decimal("-807.85")
+    assert valori["contributo_tfr"] == Decimal("-49.28")
+    assert valori["retribuzione_valutabile_tfr"] == Decimal("-1009.81")
+
+
+def test_la_riduzione_legge_le_voci_che_concorrono_alla_base_tfs(reale):
+    """La formula elenca gli istituti: deve restare allineata alle dichiarazioni di concorso."""
+    from paghe.formula import riferimenti
+    from paghe.tempo import Periodo
+
+    giorno = Periodo(date(2026, 11, 1), date(2026, 11, 1))
+    letti = riferimenti(reale.regola_per("riduzione_tfr", giorno).formula).importi
+    interi = {
+        istituto
+        for istituto in reale.istituti()
+        if (concorso := reale.concorso(istituto, "tfs", date(2026, 11, 1))) and concorso.misura == "intero"
+    }
+    assert letti == interi
+
+
+def test_ulteriori_elementi_tfr_al_6_91(reale):
+    """Nessun istituto del corpus è oggi un ulteriore elemento: la base resta vuota (Pensione-2.0, art. 49 CCNL 2000)."""
+    assert reale.parametro("aliquota_tfr_ulteriori").vigenze[-1].valore == Decimal("6.91")
+    assert not any(
+        (c := reale.concorso(istituto, "tfr_ulteriori", date(2026, 11, 1))) and c.misura == "intero"
+        for istituto in reale.istituti()
+    )

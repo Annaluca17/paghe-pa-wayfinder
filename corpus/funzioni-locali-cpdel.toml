@@ -1,5 +1,5 @@
-# Corpus reale: CPDEL, Fondo Credito e TFS di un dipendente del comparto Funzioni Locali.
-# Ticket #29, parte 2; TFS dal ticket #33, parte 1. Si carica con Corpus.carica(percorso, reale=True), che rifiuta i
+# Corpus reale: CPDEL, Fondo Credito, TFS e TFR di un dipendente del comparto Funzioni Locali.
+# Ticket #29, parte 2; TFS e TFR dal ticket #33, parti 1 e 2. Si carica con Corpus.carica(percorso, reale=True), che rifiuta i
 # riferimenti fittizi (ADR 0003). Copertura: competenze e pagamenti dal 01/01/2026.
 #
 # Stato delle fonti (riscontro nel ticket #29):
@@ -7,13 +7,16 @@
 #                         2026, tab. B e C del CCNL 28/10/2026
 #                         TFS ex INADEL 6,10% sull'80%, ente 3,60, iscritto 2,50 (L. 152/1968
 #                         art. 11; msg INPS 2440/2019); comparto escluso dal TFS (art. 33 c. 3
-#                         CCNL 22/01/2004). Riscontro nel ticket #33
+#                         CCNL 22/01/2004). TFR 6,10% sull'80% a carico dell'ente e
+#                         ulteriori elementi al 6,91% (DPCM 20/12/1999 art. 1 c. 6-7; msg
+#                         INPS 2440/2019). Riscontro nel ticket #33
 #   da verificare         massimale 2026: letto nella Circ. INPS 6/2026 § 6, la seconda fonte
 #                         è solo una fonte secondaria; qui serve solo a fermare la denuncia.
 #                         Art. 74 c. 4 CCNL 16/11/2022 ancora vigente dopo i CCNL del 2026
 #   prassi-interpretazione  tabellare mensile, divisore del mese parziale, arrotondamento delle
 #                         quote CPDEL e TFS, 1% sull'ultimo periodo, imponibile TFS all'80%
-#                         arrotondato prima dell'aliquota: note di prassi 1, 2, 3 e 4
+#                         arrotondato prima dell'aliquota, riduzione del lordo TFR e sua
+#                         esclusione dalle basi: note di prassi 1, 2, 3, 4 e 5
 
 [periodo_dichiarato]
 servizio = "tipo_impiego"
@@ -86,6 +89,11 @@ riferimento = "prassi:inps:circolare:2014-01-16;6~par19"
 nome = "tfs"
 riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:circolare:2021-12-14;185~par2.2.1"
 
+# Ulteriori elementi TFR: voci utili solo al TFR, al 100% (msg INPS 2440/2019).
+[[base]]
+nome = "tfr_ulteriori"
+riferimento = "prassi:inps:messaggio:2019-07-01;2440 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com6"
+
 # Aliquote, in punti percentuali
 
 [[parametro]]
@@ -138,6 +146,23 @@ nome = "aliquota_tfs_lavoratore"
 dal = 1972-01-01
 valore = "2.50"
 riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:messaggio:2019-07-01;2440"
+
+# TFR: contributo sulle voci comuni al TFS, stessa base e aliquota, tutto a carico dell'ente
+# (DPCM art. 1 c. 7). Decorrenza: copertura del corpus.
+
+[[parametro]]
+nome = "aliquota_tfr"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "6.10"
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com7 + prassi:inps:messaggio:2019-07-01;2440"
+
+[[parametro]]
+nome = "aliquota_tfr_ulteriori"
+[[parametro.vigenza]]
+dal = 2019-10-01
+valore = "6.91"
+riferimento = "prassi:inps:messaggio:2019-07-01;2440 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com6"
 
 # Soglie annuali INPS: valgono per l'anno, oltre il calcolo si ferma.
 
@@ -417,6 +442,57 @@ riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:20
 formula = "importo.tfs_totale - importo.tfs_lavoratore"
 maturazione = "periodo"
 
+# TFR solo con il regime 1. Riduzione del lordo pari al contributo soppresso del 2,50%
+# sull'80% delle voci utili al TFS (DPCM art. 1 c. 2-3). È per competenza e non entra in
+# nessuna base: le basi restano sul lordo prima della riduzione, cioè l'incremento figurativo
+# del c. 3 (nota di prassi 5). La formula elenca le voci che concorrono alla base tfs: un test
+# la tiene allineata.
+
+[[regola]]
+istituto = "riduzione_tfr"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + prassi:immedia:nota:2026-11-06;5"
+formula = "-arrotonda(arrotonda((importo.tabellare_funzionari + importo.tabellare_istruttori + importo.tabellare_operatori_esperti + importo.tabellare_operatori) * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
+maturazione = "periodo"
+applica_se = "regime_fine_servizio=1"
+
+[[regola]]
+istituto = "imponibile_tfr"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com7 + prassi:inps:circolare:2021-12-14;185~par2.2.1 + prassi:immedia:nota:2026-11-06;4"
+formula = "arrotonda(base.tfs * parametro.quota_imponibile_tfs / 100, 2)"
+maturazione = "periodo"
+applica_se = "regime_fine_servizio=1"
+
+[[regola]]
+istituto = "contributo_tfr"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com7 + prassi:inps:messaggio:2019-07-01;2440"
+formula = "arrotonda(importo.imponibile_tfr * parametro.aliquota_tfr / 100, 2)"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "contributo_tfr_ulteriori"
+versione = 1
+dal = 2026-01-01
+riferimento = "prassi:inps:messaggio:2019-07-01;2440 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com6"
+formula = "arrotonda(base.tfr_ulteriori * parametro.aliquota_tfr_ulteriori / 100, 2)"
+maturazione = "periodo"
+applica_se = "regime_fine_servizio=1"
+
+# RetribValutabileTFR: retribuzione corrisposta utile al TFR, al 100% e per cassa.
+[[regola]]
+istituto = "retribuzione_valutabile_tfr"
+versione = 1
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+formula = "base.tfs + base.tfr_ulteriori"
+maturazione = "periodo"
+applica_se = "regime_fine_servizio=1"
+
 # 1% sul totale del mese oltre la prima fascia mensile, sull'ultimo periodo (nota di prassi 2).
 
 [[regola]]
@@ -543,3 +619,62 @@ basi = ["tfs"]
 misura = "escluso"
 dal = 2026-01-01
 riferimento = "ccnl:S105:2004-01-22~art33-com3"
+
+# Concorsi agli ulteriori elementi TFR. Il tabellare è voce comune al TFS e sta già
+# nell'imponibile TFR; il comparto non è tra le voci dell'art. 49 CCNL 14/09/2000.
+
+[[concorso]]
+istituto = "tabellare_funzionari"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tabellare_istruttori"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tabellare_operatori_esperti"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tabellare_operatori"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "comparto_funzionari"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2000-09-14~art49 + prassi:immedia:nota:2026-11-06;5"
+
+[[concorso]]
+istituto = "comparto_istruttori"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2000-09-14~art49 + prassi:immedia:nota:2026-11-06;5"
+
+[[concorso]]
+istituto = "comparto_operatori_esperti"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2000-09-14~art49 + prassi:immedia:nota:2026-11-06;5"
+
+[[concorso]]
+istituto = "comparto_operatori"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2000-09-14~art49 + prassi:immedia:nota:2026-11-06;5"
