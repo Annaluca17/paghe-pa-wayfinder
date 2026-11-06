@@ -191,7 +191,7 @@ Documento scritto nel repo che motiva una regola priva di fonte ufficiale puntua
 _Avoid_: Regola di casa
 
 **Esito**:
-Istantanea immutabile di ciò che è stato pagato, dichiarato o versato verso terzi; base del confronto per ogni differenza successiva. L'esito pagato nasce dall'evento di ritorno del pagamento eseguito, con le righe della versione di proposta confermata, non dalla conferma; l'esito versato nasce allo stesso modo dall'evento di versamento eseguito, che sia mandato F24EP o regolarizzazione di un provvisorio.
+Istantanea immutabile di ciò che è stato pagato, dichiarato o versato verso terzi; base del confronto per ogni differenza successiva. L'esito pagato nasce dall'evento di ritorno del pagamento eseguito, con le righe della versione di proposta confermata, non dalla conferma; l'esito versato nasce allo stesso modo dall'evento di versamento eseguito, che sia mandato F24EP o regolarizzazione di un provvisorio. Anche ciò che si invia per gli adempimenti non stipendiali (Tab. 15 e SICI, relazione tecnico-finanziaria, invio al MEF, trasparenza) è un esito dichiarato; se poi un fatto cambia la vista, il modello segnala la differenza con l'ultimo esito.
 _Avoid_: Elaborazione chiusa, storico cedolini
 
 **Vista**:
@@ -229,12 +229,20 @@ _Avoid_: Parametro locale, personalizzazione
 ### Fondo
 
 **Fondo risorse decentrate**:
-Identità a cui si riferiscono i fatti da atto che costituiscono e destinano le risorse per il trattamento accessorio: ente, anno di costituzione e ambito contrattuale (per esempio comparto o dirigenza). Non ha saldo né stato proprio: capienza, utilizzo e residui sono viste che incrociano quei fatti con gli importi degli istituti accessori.
+Identità a cui si riferiscono i fatti da atto che costituiscono e destinano le risorse per il trattamento accessorio: ente, anno di costituzione e ambito (per esempio comparto, dirigenza o EQ). Le risorse dell'EQ, pagate dal bilancio, sono un fondo con ambito EQ, così il limite del trattamento accessorio le somma come le altre. Non ha saldo né stato proprio: capienza, utilizzo e residui sono viste che incrociano quei fatti con gli importi degli istituti accessori.
 _Avoid_: Fondo (senza anno), modulo fondo, salario accessorio (che è l'insieme degli importi pagati)
 
 **Voce di costituzione**:
-Input da atto che porta a un fondo un importo con il suo riferimento normativo o contrattuale e l'atto che lo dispone. Ogni voce ha il proprio atto, così le integrazioni successive restano distinte; senza numero e data d'atto è un fatto in attesa d'atto.
+Input da atto che porta a un fondo un importo di un tipo di voce, con l'atto che lo dispone. Ogni voce ha il proprio atto, così le integrazioni successive restano distinte; senza numero e data d'atto è un fatto in attesa d'atto.
 _Avoid_: Risorsa, riga del fondo
+
+**Tipo di voce**:
+Elemento del catalogo del corpus, datato per anno del fondo, che dice che cos'è una voce di costituzione: riferimento, natura (stabile, variabile, decurtazione), inclusione nel limite del trattamento accessorio con il suo riferimento, codice della Tab. 15 come mappatura datata e, dove la norma lo consente, la regola dell'importo atteso. Un tipo generico per le risorse di legge non elencate lascia all'ente la dichiarazione dell'inclusione, con riferimento; se manca, si ferma solo la vista del limite.
+_Avoid_: Codice risorsa, voce Tab. 15
+
+**Importo atteso**:
+Importo che la regola di un tipo di voce ricava da parametri e fatti, per esempio un importo pro capite per la consistenza a una data. Non sostituisce l'importo della voce: il modello segnala la differenza.
+_Avoid_: Importo calcolato del fondo, importo teorico
 
 **Certificazione del fondo**:
 Fatto sul fondo, con il verbale dell'organo di revisione come atto, che copre la costituzione nota alla data in cui è registrato. Una voce registrata o corretta dopo non è coperta, e le viste che dipendono dalla certificazione lo segnalano.
@@ -252,13 +260,21 @@ _Avoid_: Accordo, firma (senza dire quale)
 Esercizio in cui la destinazione dichiara che i suoi importi saranno pagati: l'anno di costituzione per le indennità mensili, l'anno successivo per performance e premi legati alla valutazione. La parte esigibile dopo l'anno di costituzione esce nella proposta come coperta da fondo pluriennale vincolato.
 _Avoid_: Scadenza, anno di pagamento (che è dell'importo)
 
+**Vincolo di utilizzo**:
+Dichiarazione del corpus su come le destinazioni di un fondo devono ripartirsi, per esempio una quota minima della parte variabile alla performance. Come il catalogo dei tipi di voce, si sceglie per anno del fondo. Il prospetto del contratto integrativo in attesa d'atto segnala la violazione; alla sottoscrizione le proposte di impegno si fermano e nominano il vincolo.
+_Avoid_: Regola di ripartizione, percentuale del fondo
+
 **Fonte di finanziamento**:
 Dichiarazione dell'istituto, con date e riferimento, di che cosa lo paga: una destinazione del fondo del suo ambito, il bilancio o un'altra provvista dichiarata. Può essere parziale. Se manca, il calcolo si ferma. Un importo consuma il fondo del suo anno di competenza, non dell'anno di pagamento.
 _Avoid_: Capitolo dell'istituto, tabella di ripartizione
 
 **Utilizzo**:
-Vista che somma sulla destinazione gli importi degli istituti che vi si finanziano.
+Vista che somma sulla destinazione gli importi degli istituti che vi si finanziano, per anno di competenza: la performance di un anno pagata l'anno dopo è utilizzo del fondo del suo anno. La spesa per cassa (Tab. 13) è un'altra vista sugli esiti pagati.
 _Avoid_: Speso, consuntivo del fondo
+
+**Limite del trattamento accessorio**:
+Fatto sull'ente per anno, fatto di componenti con atto e tipo (importo 2016 certificato, adeguamento al valore medio pro capite 2018, altre componenti di legge), ciascuna con l'importo atteso dove esiste una regola. La vista del limite lo confronta con la somma delle voci incluse di tutti i fondi dell'ente nell'anno. Se è superato, il prospetto dell'atto di costituzione lo segnala e le proposte di impegno nate dalla sottoscrizione dei fondi coinvolti si fermano; le liquidazioni su impegni già confermati proseguono.
+_Avoid_: Tetto 2016 (che è solo una componente), tetto del fondo
 
 **Chiusura del fondo**:
 Vista sul fondo di un anno a una data di riferimento e a un tempo di registrazione: utilizzato, destinato ed esigibile dopo l'anno (fondo pluriennale vincolato), economie, e risorse vincolate se il contratto integrativo non è sottoscritto entro l'anno, distinguendo il fondo certificato da quello che non lo è.
