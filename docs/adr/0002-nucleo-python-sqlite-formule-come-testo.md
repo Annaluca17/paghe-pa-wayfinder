@@ -14,7 +14,7 @@ Scelto perché l'aritmetica `Decimal`, `tomllib` e `sqlite3` sono nella libreria
 - Una formula ammette solo costanti intere: ogni valore normativo deve essere un parametro con vigenza e fonte.
 - Nessun arrotondamento implicito: lo dichiara la regola con `arrotonda`. Il mezzo per eccesso copre le regole trovate nel ticket #15 (`docs/research/arrotondamenti-norma.md`).
 - La versione del corpus è l'impronta del contenuto. Una correzione cambia versione anche se l'autore dimentica di dichiararla; la `versione` della regola resta dichiarata.
-- La competenza è mensile. Se un fatto, una regola o un parametro cambia dentro il mese, il calcolo si ferma con un errore: i ratei non sono ancora modellati e non vengono stimati.
+- Le variazioni dentro il mese seguono l'ADR 0004.
 - Il riferimento segue la sintassi dell'ADR 0003.
 - Ogni regola seleziona la vigenza per competenza. Le regole selezionate per data di pagamento non sono ancora supportate.
 - Pagato e versato si confrontano per somma degli esiti; il dichiarato per sostituzione integrale dell'ultimo esito sul periodo.

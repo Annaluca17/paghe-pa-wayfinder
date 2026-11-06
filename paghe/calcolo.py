@@ -1,75 +1,104 @@
-"""Proiezione degli importi dal registro, differenze rispetto agli esiti, spiegazione."""
+"""Proiezione degli importi dal registro, differenze rispetto agli esiti, spiegazione.
+
+Il mese si divide in frazioni in cui fatti, regole e parametri sono uniformi. Le regole
+a giorni e a evento producono un importo per frazione; quelle sul periodo dichiarato ne
+leggono la somma; quelle annuali si calcolano sul servizio dell'anno (ADR 0004).
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal, localcontext
+from typing import Callable
 
-from .corpus import Corpus
+from .corpus import Corpus, Regola
 from .errori import ErroreCalcolo, FattoMancante
-from .formula import valuta
-from .modello import Derivazione, Esito, Fatto, Importo, ParametroLetto, TipoEsito
+from .formula import PRECISIONE, riferimenti, valuta
+from .modello import Derivazione, Esito, Fatto, Importo, ParametroLetto, Quota, TipoEsito
 from .registro import Registro
-from .tempo import Mese, in_utc
+from .riferimento import solo_prassi
+from .tempo import Mese, Periodo, in_utc
 
 
-class _Calcolo:
-    def __init__(self, registro: Registro, corpus: Corpus, rapporto: str, competenza: Mese, noto_al: datetime):
+def _arrotonda(valore: Decimal, decimali: int) -> Decimal:
+    return valore.quantize(Decimal(1).scaleb(-decimali), rounding=ROUND_HALF_UP)
+
+
+def _raggruppa(giorni: list[date], firme: list[tuple]) -> list[Periodo]:
+    """Periodi massimali di giorni consecutivi con la stessa firma."""
+    periodi = []
+    inizio = 0
+    for indice in range(1, len(giorni) + 1):
+        if indice == len(giorni) or firme[indice] != firme[inizio]:
+            periodi.append(Periodo(giorni[inizio], giorni[indice - 1]))
+            inizio = indice
+    return periodi
+
+
+class _Lettore:
+    """Valuta una regola su un periodo e raccoglie ciò che ha letto."""
+
+    def __init__(self, registro: Registro, corpus: Corpus, rapporto: str, noto_al: datetime):
         self.registro = registro
         self.corpus = corpus
         self.rapporto = rapporto
-        self.competenza = competenza
         self.noto_al = noto_al
-        self.calcolati: dict[str, Importo | None] = {}
 
-    def importo(self, istituto: str) -> Importo | None:
-        """None se la regola non si applica al rapporto (`applica_se` senza fatto)."""
-        if istituto in self.calcolati:
-            return self.calcolati[istituto]
-        regola = self.corpus.regola_per(istituto, self.competenza)
-        if regola is None:
-            raise ErroreCalcolo(f"Istituto {istituto}: nessuna regola vigente per {self.competenza}")
+    def fatto(self, tipo: str, periodo: Periodo) -> Fatto | None:
+        return self.registro.fatto_nel_periodo(self.rapporto, tipo, periodo, self.noto_al)
 
+    def parametro(self, nome: str, periodo: Periodo) -> ParametroLetto:
+        vigenza = self.corpus.parametro(nome).vigenza_per(periodo)
+        return ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento)
+
+    def importo(
+        self,
+        regola: Regola,
+        periodo: Periodo,
+        leggi_importo: Callable[[str], list[Importo]],
+    ) -> Importo | None:
+        """None se la regola non si applica (`applica_se` senza fatto, importi letti assenti)."""
         fatti: dict[int, Fatto] = {}
         if regola.applica_se is not None:
-            condizione = self._fatto(regola.applica_se)
+            condizione = self.fatto(regola.applica_se, periodo)
             if condizione is None:
-                self.calcolati[istituto] = None
                 return None
             fatti[condizione.id] = condizione
 
         parametri: dict[str, ParametroLetto] = {}
-        dipendenze: dict[str, Importo] = {}
+        dipendenze: dict[tuple, Importo] = {}
 
         def risolvi(origine: str, nome: str) -> Decimal:
             if origine == "fatto":
-                fatto = self._fatto(nome)
+                fatto = self.fatto(nome, periodo)
                 if fatto is None:
                     raise FattoMancante(
-                        f"Rapporto {self.rapporto}, istituto {istituto}: "
-                        f"manca il fatto {nome} per {self.competenza}"
+                        f"Rapporto {self.rapporto}, istituto {regola.istituto}: "
+                        f"manca il fatto {nome} per {periodo}"
                     )
                 fatti[fatto.id] = fatto
                 return fatto.valore
             if origine == "parametro":
-                vigenza = self.corpus.parametro(nome).vigenza_per(self.competenza)
-                parametri[nome] = ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento)
-                return vigenza.valore
-            dipendenza = self.importo(nome)
-            if dipendenza is None:
-                return Decimal(0)
-            dipendenze[nome] = dipendenza
-            return dipendenza.valore
+                parametri[nome] = self.parametro(nome, periodo)
+                return parametri[nome].valore
+            lette = leggi_importo(nome)
+            for riga in lette:
+                dipendenze[riga.chiave] = riga
+            return sum((riga.valore for riga in lette), Decimal(0))
 
         valore = valuta(regola.formula, risolvi)
-        risultato = Importo(
+        if riferimenti(regola.formula).importi and not dipendenze and regola.applica_se is None:
+            return None
+        righe = [dipendenze[chiave] for chiave in sorted(dipendenze, key=str)]
+        return Importo(
             rapporto=self.rapporto,
-            istituto=istituto,
-            competenza=self.competenza,
+            istituto=regola.istituto,
+            periodo=periodo,
             valore=valore,
             derivazione=Derivazione(
-                istituto=istituto,
+                istituto=regola.istituto,
+                maturazione=regola.maturazione,
                 regola_versione=regola.versione,
                 riferimento=regola.riferimento,
                 formula=regola.formula,
@@ -77,14 +106,142 @@ class _Calcolo:
                 noto_al=self.noto_al,
                 parametri=tuple(parametri[nome] for nome in sorted(parametri)),
                 fatti=tuple(fatti[numero] for numero in sorted(fatti)),
-                importi=tuple(dipendenze[nome] for nome in sorted(dipendenze)),
+                importi=tuple(righe),
             ),
         )
-        self.calcolati[istituto] = risultato
+
+
+class _Calcolo:
+    def __init__(self, lettore: _Lettore, competenza: Mese):
+        self.lettore = lettore
+        self.corpus = lettore.corpus
+        self.competenza = competenza
+        giorni = competenza.giorni()
+        self.frazioni = _raggruppa(giorni, self._firme(giorni, self.corpus.tipi_fatto(), True))
+        self.periodi = _raggruppa(giorni, self._firme(giorni, self.corpus.fatti_periodo_dichiarato, False))
+        self._righe_frazione: dict[str, dict[int, Importo]] = {}
+        self._righe_periodo: dict[str, dict[int, Importo]] = {}
+
+    def _firme(self, giorni: list[date], tipi: tuple[str, ...], con_corpus: bool) -> list[tuple]:
+        lettore = self.lettore
+        periodo = Periodo(giorni[0], giorni[-1])
+        vigenti = [
+            lettore.registro.vigenti_per_giorno(lettore.rapporto, tipo, periodo, lettore.noto_al)
+            for tipo in tipi
+        ]
+        firme = []
+        for indice, giorno in enumerate(giorni):
+            parte_fatti = tuple(colonna[indice].id if colonna[indice] else None for colonna in vigenti)
+            firme.append((parte_fatti, self.corpus.firma_giorno(giorno) if con_corpus else ()))
+        return firme
+
+    def _regola_richiesta(self, istituto: str, periodo: Periodo) -> Regola:
+        regola = self.corpus.regola_per(istituto, periodo)
+        if regola is None:
+            raise ErroreCalcolo(f"Istituto {istituto}: nessuna regola vigente per {periodo}")
+        return regola
+
+    def righe_frazione(self, istituto: str) -> dict[int, Importo]:
+        if istituto in self._righe_frazione:
+            return self._righe_frazione[istituto]
+        righe: dict[int, Importo] = {}
+        for indice, frazione in enumerate(self.frazioni):
+            regola = self.corpus.regola_per(istituto, frazione)
+            if regola is None or regola.maturazione in ("periodo", "annuale"):
+                continue
+
+            def leggi(nome: str, posizione: int = indice, tratto: Periodo = frazione) -> list[Importo]:
+                self._regola_richiesta(nome, tratto)
+                riga = self.righe_frazione(nome).get(posizione)
+                return [riga] if riga else []
+
+            importo = self.lettore.importo(regola, frazione, leggi)
+            if importo is not None:
+                righe[indice] = importo
+        righe = self._applica_quote(istituto, righe)
+        self._righe_frazione[istituto] = righe
+        return righe
+
+    def _applica_quote(self, istituto: str, righe: dict[int, Importo]) -> dict[int, Importo]:
+        """Le regole a giorni: la formula dà il mensile, la quota lo riporta alla frazione."""
+        ordinate = sorted(righe)
+        if not ordinate or righe[ordinate[0]].derivazione.maturazione != "giorni":
+            return righe
+        coperti = sum(righe[indice].periodo.giorni_calendario for indice in ordinate)
+        intero = coperti == len(self.competenza.giorni())
+        stessa_base = len({righe[indice].valore for indice in ordinate}) == 1
+        risultato: dict[int, Importo] = {}
+        with localcontext() as contesto:
+            contesto.prec = PRECISIONE
+            residuo = Decimal(1)
+            pagato = Decimal(0)
+            for posizione, indice in enumerate(ordinate):
+                riga = righe[indice]
+                regola = self._regola_richiesta(istituto, riga.periodo)
+                ultima = posizione == len(ordinate) - 1
+                giorni = (
+                    riga.periodo.giorni_lun_sab if regola.conteggio == "lun_sab" else riga.periodo.giorni_calendario
+                )
+                parametri = riga.derivazione.parametri
+                if intero and ultima:
+                    divisore = None
+                    quota = residuo
+                else:
+                    if regola.divisore is not None:
+                        letto = self.lettore.parametro(regola.divisore, riga.periodo)
+                        divisore = letto.valore
+                        parametri = tuple(sorted((*parametri, letto), key=lambda p: p.nome))
+                    else:
+                        divisore = Decimal(len(self.competenza.giorni()))
+                    quota = min(Decimal(giorni) / divisore, residuo)
+                residuo -= quota
+                if intero and ultima and stessa_base:
+                    valore = _arrotonda(riga.valore - pagato, regola.decimali)
+                else:
+                    valore = _arrotonda(riga.valore * quota, regola.decimali)
+                pagato += valore
+                risultato[indice] = replace(
+                    riga,
+                    valore=valore,
+                    derivazione=replace(
+                        riga.derivazione,
+                        parametri=parametri,
+                        quota=Quota(regola.conteggio, giorni, divisore, quota, riga.valore),
+                    ),
+                )
         return risultato
 
-    def _fatto(self, tipo: str) -> Fatto | None:
-        return self.registro.fatto_nel_mese(self.rapporto, tipo, self.competenza, self.noto_al)
+    def righe_periodo(self, istituto: str) -> dict[int, Importo]:
+        if istituto in self._righe_periodo:
+            return self._righe_periodo[istituto]
+        righe: dict[int, Importo] = {}
+        for indice, periodo in enumerate(self.periodi):
+            regola = self.corpus.regola_per(istituto, periodo)
+            if regola is None or regola.maturazione != "periodo":
+                continue
+
+            def leggi(nome: str, posizione: int = indice, tratto: Periodo = periodo) -> list[Importo]:
+                dipendenza = self._regola_richiesta(nome, tratto)
+                if dipendenza.maturazione == "periodo":
+                    riga = self.righe_periodo(nome).get(posizione)
+                    return [riga] if riga else []
+                return [
+                    riga
+                    for posto, riga in sorted(self.righe_frazione(nome).items())
+                    if tratto.contiene(self.frazioni[posto])
+                ]
+
+            importo = self.lettore.importo(regola, periodo, leggi)
+            if importo is None:
+                continue
+            letti = importo.derivazione.importi
+            if letti:
+                dal = min(riga.periodo.dal for riga in letti)
+                al = max(riga.periodo.al for riga in letti)
+                importo = replace(importo, periodo=Periodo(dal, al))
+            righe[indice] = importo
+        self._righe_periodo[istituto] = righe
+        return righe
 
 
 def calcola(
@@ -94,24 +251,65 @@ def calcola(
     competenza: Mese,
     noto_al: datetime | None = None,
 ) -> tuple[Importo, ...]:
-    """Stato completo del periodo; funzione pura di registro, corpus e istante."""
+    """Stato completo del mese; funzione pura di registro, corpus e istante. Esclude gli annuali."""
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
-    calcolo = _Calcolo(registro, corpus, rapporto, competenza, istante)
-    importi = []
+    calcolo = _Calcolo(_Lettore(registro, corpus, rapporto, istante), competenza)
+    importi: list[Importo] = []
     for istituto in corpus.istituti():
-        if corpus.regola_per(istituto, competenza) is None:
+        importi.extend(calcolo.righe_frazione(istituto).values())
+        importi.extend(calcolo.righe_periodo(istituto).values())
+    return tuple(sorted(importi, key=lambda i: (i.istituto, i.periodo)))
+
+
+def calcola_annuale(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    anno: int,
+    noto_al: datetime | None = None,
+) -> tuple[Importo, ...]:
+    """Regole annuali: base dell'ultimo giorno di servizio, quota sui giorni di servizio dell'anno."""
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    lettore = _Lettore(registro, corpus, rapporto, istante)
+    intero_anno = Periodo(date(anno, 1, 1), date(anno, 12, 31))
+    importi = []
+    for regola_tipo in corpus.regole_annuali():
+        vigenti = registro.vigenti_per_giorno(rapporto, regola_tipo.applica_se, intero_anno, istante)
+        giorni = [giorno for giorno, fatto in zip(intero_anno.giorni(), vigenti) if fatto is not None]
+        if not giorni:
             continue
-        importo = calcolo.importo(istituto)
-        if importo is not None:
-            importi.append(importo)
-    return tuple(importi)
+        ultimo = Periodo(giorni[-1], giorni[-1])
+        regola = corpus.regola_per(regola_tipo.istituto, ultimo)
+        if regola is None or regola.maturazione != "annuale":
+            continue
+        base = lettore.importo(regola, ultimo, lambda _: [])
+        letto = lettore.parametro(regola.divisore, ultimo)
+        with localcontext() as contesto:
+            contesto.prec = PRECISIONE
+            continuo = len(giorni) == intero_anno.giorni_calendario
+            quota = Decimal(1) if continuo else min(Decimal(len(giorni)) / letto.valore, Decimal(1))
+            valore = _arrotonda(base.valore * quota, regola.decimali)
+        parametri = tuple(sorted((*base.derivazione.parametri, letto), key=lambda p: p.nome))
+        importi.append(
+            replace(
+                base,
+                periodo=Periodo(giorni[0], giorni[-1]),
+                valore=valore,
+                derivazione=replace(
+                    base.derivazione,
+                    parametri=parametri,
+                    quota=Quota(regola.conteggio, len(giorni), letto.valore, quota, base.valore),
+                ),
+            )
+        )
+    return tuple(sorted(importi, key=lambda i: i.istituto))
 
 
 @dataclass(frozen=True)
 class Differenza:
     rapporto: str
     istituto: str
-    competenza: Mese
+    competenza: Mese | int
     dovuto: Decimal
     gia_esitato: Decimal
     esiti: tuple[int, ...]
@@ -126,43 +324,86 @@ class Differenza:
         return replace(self._base, valore=self.valore, esiti_confrontati=self.esiti)
 
 
-def _esiti_di_confronto(registro: Registro, rapporto: str, competenza: Mese, tipo: TipoEsito, istante: datetime) -> list[Esito]:
+def _riga_nel_confronto(riga: Importo, rapporto: str, competenza: Mese | int) -> bool:
+    if riga.rapporto != rapporto:
+        return False
+    if isinstance(competenza, int):
+        return riga.derivazione.maturazione == "annuale" and riga.periodo.dal.year == competenza
+    return riga.derivazione.maturazione != "annuale" and competenza.periodo.contiene(riga.periodo)
+
+
+def _esiti_di_confronto(
+    registro: Registro, rapporto: str, competenza: Mese | int, tipo: TipoEsito, istante: datetime
+) -> list[Esito]:
     """Pagato e versato si sommano; una dichiarazione sostituisce per intero il periodo."""
     interessati = [
         esito
         for esito in registro.esiti(tipo, istante)
-        if any(riga.rapporto == rapporto and riga.competenza == competenza for riga in esito.righe)
+        if any(_riga_nel_confronto(riga, rapporto, competenza) for riga in esito.righe)
     ]
     if tipo is TipoEsito.DICHIARATO:
         return interessati[-1:]
     return interessati
 
 
+def _somma_righe(righe: list[Importo]) -> Importo:
+    """Un solo importo per istituto: con più frazioni, conserva le frazioni nella derivazione."""
+    if len(righe) == 1:
+        return righe[0]
+    ultima = righe[-1]
+    return replace(
+        ultima,
+        periodo=Periodo(righe[0].periodo.dal, ultima.periodo.al),
+        valore=sum((riga.valore for riga in righe), Decimal(0)),
+        derivazione=replace(
+            ultima.derivazione,
+            formula="somma delle frazioni",
+            quota=None,
+            parametri=(),
+            fatti=(),
+            importi=tuple(righe),
+        ),
+    )
+
+
 def differenze(
     registro: Registro,
     corpus: Corpus,
     rapporto: str,
-    competenza: Mese,
+    competenza: Mese | int,
     tipo: TipoEsito,
     noto_al: datetime | None = None,
 ) -> tuple[Differenza, ...]:
-    """Dovuto ricalcolato meno quanto risulta dagli esiti, mai da un ricalcolo del passato."""
+    """Dovuto ricalcolato meno quanto risulta dagli esiti, mai da un ricalcolo del passato.
+
+    `competenza` è un mese oppure, per gli importi annuali, un anno. Il confronto è per
+    istituto: se i fatti cambiano le frazioni, le frazioni nuove non combaciano con le vecchie.
+    """
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
-    dovuti = {importo.istituto: importo for importo in calcola(registro, corpus, rapporto, competenza, istante)}
+    if isinstance(competenza, int):
+        calcolati = calcola_annuale(registro, corpus, rapporto, competenza, istante)
+    else:
+        calcolati = calcola(registro, corpus, rapporto, competenza, istante)
+    dovuti: dict[str, list[Importo]] = {}
+    for importo in calcolati:
+        dovuti.setdefault(importo.istituto, []).append(importo)
 
     esitati: dict[str, Decimal] = {}
     fonti: dict[str, list[int]] = {}
     ultima_riga: dict[str, Importo] = {}
     for esito in _esiti_di_confronto(registro, rapporto, competenza, tipo, istante):
         for riga in esito.righe:
-            if riga.rapporto == rapporto and riga.competenza == competenza:
+            if _riga_nel_confronto(riga, rapporto, competenza):
                 esitati[riga.istituto] = esitati.get(riga.istituto, Decimal(0)) + riga.valore
-                fonti.setdefault(riga.istituto, []).append(esito.id)
+                fonti.setdefault(riga.istituto, [])
+                if esito.id not in fonti[riga.istituto]:
+                    fonti[riga.istituto].append(esito.id)
                 ultima_riga[riga.istituto] = riga
 
     risultato = []
     for istituto in sorted(dovuti.keys() | esitati.keys()):
-        dovuto = dovuti[istituto].valore if istituto in dovuti else Decimal(0)
+        righe = dovuti.get(istituto, [])
+        dovuto = sum((riga.valore for riga in righe), Decimal(0))
         gia_esitato = esitati.get(istituto, Decimal(0))
         if dovuto != gia_esitato:
             risultato.append(
@@ -173,7 +414,7 @@ def differenze(
                     dovuto=dovuto,
                     gia_esitato=gia_esitato,
                     esiti=tuple(fonti.get(istituto, ())),
-                    _base=dovuti.get(istituto) or ultima_riga[istituto],
+                    _base=_somma_righe(righe) if righe else ultima_riga[istituto],
                 )
             )
     return tuple(risultato)
@@ -189,17 +430,24 @@ def spiega(importo: Importo, rientro: int = 0) -> str:
     margine = "  " * rientro
     d = importo.derivazione
     righe = [
-        f"{margine}{importo.istituto} [{importo.competenza}] rapporto {importo.rapporto}: {importo.valore}",
-        f"{margine}  regola v{d.regola_versione}: {d.formula}",
+        f"{margine}{importo.istituto} [{importo.periodo}] rapporto {importo.rapporto}: {importo.valore}",
+        f"{margine}  regola v{d.regola_versione} ({d.maturazione}): {d.formula}",
         f"{margine}  riferimento: {d.riferimento}",
     ]
+    if solo_prassi(d.riferimento):
+        righe.append(f"{margine}  ATTENZIONE: fondata solo su prassi")
+    if d.quota is not None:
+        quota = d.quota
+        calcolo = f"mese intero, residuo {quota.quota:.6f}" if quota.divisore is None else f"{quota.giorni}/{quota.divisore}"
+        righe.append(f"{margine}  quota ({quota.conteggio}): {calcolo} su base {quota.base}")
     if importo.esiti_confrontati:
         elenco = ", ".join(f"#{numero}" for numero in importo.esiti_confrontati)
         righe.append(f"{margine}  differenza rispetto agli esiti: {elenco}")
     for parametro in d.parametri:
+        avviso = " [solo prassi]" if solo_prassi(parametro.riferimento) else ""
         righe.append(
             f"{margine}  parametro {parametro.nome} = {parametro.valore} "
-            f"(dal {parametro.dal}; fonte: {parametro.riferimento})"
+            f"(dal {parametro.dal}; fonte: {parametro.riferimento}){avviso}"
         )
     for fatto in d.fatti:
         atto = f"; atto: {fatto.atto.riferimento} del {fatto.atto.data}" if fatto.atto else ""

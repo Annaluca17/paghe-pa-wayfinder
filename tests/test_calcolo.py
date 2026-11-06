@@ -155,6 +155,7 @@ versione = 1
 dal = 2026-04-01
 riferimento = "fittizio:art-2-nuovo"
 formula = "arrotonda(importo.compenso / 2, 2)"
+maturazione = "evento"
 """
     )
     assert differenze(registro, con_vigenza, R, FEB, TipoEsito.PAGATO) == ()
@@ -170,6 +171,7 @@ versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:art-3"
 formula = "fatto.premio"
+maturazione = "evento"
 applica_se = "premio"
 """
     con_premio = Corpus.da_toml(testo)
@@ -195,6 +197,7 @@ versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:prova"
 formula = "fatto.compenso"
+maturazione = "evento"
 
 [[regola]]
 istituto = "opzionale"
@@ -202,6 +205,7 @@ versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:prova"
 formula = "fatto.extra"
+maturazione = "evento"
 applica_se = "extra"
 
 [[regola]]
@@ -210,6 +214,7 @@ versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:prova"
 formula = "importo.base + importo.opzionale"
+maturazione = "evento"
 """
     )
     registro.registra_fatto(R, "compenso", "100", date(2026, 1, 1))
@@ -219,9 +224,24 @@ formula = "importo.base + importo.opzionale"
     assert per_istituto(calcola(registro, corpus, R, FEB)) == {"base": 100, "opzionale": 5, "totale": 105}
 
 
-def test_fatto_mancante_ferma_il_calcolo(registro, corpus):
+def test_fatto_mancante_ferma_il_calcolo(registro):
+    corpus = Corpus.da_toml(
+        """
+[[regola]]
+istituto = "a"
+versione = 1
+dal = 2026-01-01
+riferimento = "fittizio:a"
+formula = "fatto.compenso_mensile"
+maturazione = "evento"
+"""
+    )
     with pytest.raises(FattoMancante, match="compenso_mensile"):
         calcola(registro, corpus, R, FEB)
+
+
+def test_senza_servizio_nessun_importo(registro, corpus):
+    assert calcola(registro, corpus, R, FEB) == ()
 
 
 def test_parametro_senza_vigenza_ferma_il_calcolo(registro, corpus):
@@ -241,6 +261,7 @@ dal = 2026-01-01
 al = 2026-01-31
 riferimento = "fittizio:prova"
 formula = "1"
+maturazione = "evento"
 
 [[regola]]
 istituto = "b"
@@ -248,6 +269,7 @@ versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:prova"
 formula = "importo.a"
+maturazione = "evento"
 """
     )
     with pytest.raises(ErroreCalcolo, match="nessuna regola vigente"):

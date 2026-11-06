@@ -15,12 +15,24 @@ dal = 2026-01-01
 valore = "{aliquota}"
 riferimento = "fittizio:fonte-prova"
 
+[[parametro]]
+nome = "divisore_giornaliero"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "26"
+riferimento = "fittizio:fonte-divisore"
+
 [[regola]]
 istituto = "compenso_prova"
 versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:contratto-prova-art-1"
 formula = "fatto.compenso_mensile"
+maturazione = "giorni"
+applica_se = "compenso_mensile"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
 
 [[regola]]
 istituto = "ritenuta_prova"
@@ -28,6 +40,7 @@ versione = {versione_ritenuta}
 dal = 2026-01-01
 riferimento = "fittizio:contratto-prova-art-2"
 formula = "arrotonda(importo.compenso_prova * parametro.aliquota_prova, 2)"
+maturazione = "periodo"
 """
 
 
@@ -105,6 +118,12 @@ def main() -> None:
     print("\n6. Da dove viene la ritenuta di febbraio:")
     ritenuta = next(i for i in calcola(registro, regole, rapporto, febbraio) if i.istituto == "ritenuta_prova")
     print(spiega(ritenuta))
+
+    print("\n7. Un secondo rapporto inizia il 24/08 a 1000: agosto vale 7 giorni su 26, settembre intero.")
+    secondo = "RAPPORTO-PROVA-2"
+    registro.registra_fatto(secondo, "compenso_mensile", "1000.00", date(2026, 8, 24))
+    _elenca(calcola(registro, regole, secondo, Mese(2026, 8)))
+    _elenca(calcola(registro, regole, secondo, Mese(2026, 9)))
     registro.chiudi()
 
 

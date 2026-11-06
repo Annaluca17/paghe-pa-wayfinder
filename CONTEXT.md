@@ -50,6 +50,22 @@ _Avoid_: Movimento, variazione anagrafica
 Unità del modello: valore riferito a rapporto, istituto e periodo di competenza, con eventuale data di pagamento e derivazione (regola, parametri, fatti). Ricalcolabile finché non entra in un esito. Può derivare da altri importi (es. imponibili), senza cicli.
 _Avoid_: Voce, riga di cedolino
 
+**Frazione**:
+Parte del mese in cui fatti, regole e parametri sono uniformi; ogni frazione produce il proprio importo. Il totale del mese è una vista.
+_Avoid_: Rateo (quando si intende la parte di mese)
+
+**Maturazione**:
+Modo, dichiarato dalla regola, in cui un istituto matura: a giorni, a evento, sul periodo dichiarato o annuale.
+_Avoid_: Tipo voce
+
+**Periodo dichiarato**:
+Intervallo esposto verso INPS, su cui si calcolano e si arrotondano i contributi; si apre per i cambi che INPS distingue, non per ogni frazione.
+_Avoid_: Quadro (quando si intende l'intervallo)
+
+**Nota di prassi**:
+Documento scritto nel repo che motiva una regola priva di fonte ufficiale puntuale; chi la legge sa che è prassi, e la spiegazione dell'importo lo segnala.
+_Avoid_: Regola di casa
+
 **Esito**:
 Istantanea immutabile di ciò che è stato pagato, dichiarato o versato verso terzi; base del confronto per ogni differenza successiva.
 _Avoid_: Elaborazione chiusa, storico cedolini

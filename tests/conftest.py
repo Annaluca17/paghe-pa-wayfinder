@@ -14,12 +14,24 @@ dal = 2026-01-01
 valore = "0.10"
 riferimento = "fittizio:fonte-aliquota"
 
+[[parametro]]
+nome = "divisore_giornaliero"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "26"
+riferimento = "fittizio:fonte-divisore"
+
 [[regola]]
 istituto = "compenso"
 versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:art-1"
 formula = "fatto.compenso_mensile"
+maturazione = "giorni"
+applica_se = "compenso_mensile"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
 
 [[regola]]
 istituto = "ritenuta"
@@ -27,6 +39,7 @@ versione = 1
 dal = 2026-01-01
 riferimento = "fittizio:art-2"
 formula = "arrotonda(importo.compenso * parametro.aliquota, 2)"
+maturazione = "periodo"
 """
 
 
