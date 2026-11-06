@@ -22,11 +22,83 @@ _Avoid_: Finanziaria, ufficio contabilità
 Ogni persona che riceve dall'ente un compenso soggetto ad adempimenti da sostituto d'imposta o previdenziali: comparto, dirigenza, segretario, amministratori, co.co.co., LSU/LPU.
 _Avoid_: Dipendente (quando si intende l'insieme intero)
 
+**Persona**:
+Individuo del personale correlato all'ente; soggetto dei fatti che non dipendono dal titolo di compenso (codice fiscale, nascita, genere, titolo di studio). Ha uno o più rapporti.
+_Avoid_: Anagrafica, dipendente
+
+**Scheda della persona**:
+Vista di tutti i fatti di una persona e dei suoi rapporti, vigenti a una data e noti a un'altra; serve paga, gestione giuridica e adempimenti. Non è fonte di verità: una correzione è un nuovo fatto.
+_Avoid_: Anagrafica, anagrafica dipendente
+
 ### Integrazione
 
+**Fatto giuridico**:
+Fatto su persona o rapporto che nasce da un atto dell'ente o da un evento della persona (assunzione, inquadramento, orario, ufficio, cessazione) e che l'Ufficio personale registra nel registro. Il registro è la sua unica forma strutturata: non c'è un secondo sistema giuridico con una verità propria.
+_Avoid_: Dato anagrafico, variazione giuridica
+
+**Fatto in attesa d'atto**:
+Fatto che nasce da un atto dell'ente non ancora adottato: ha decorrenza e valori ma non il riferimento `ente:`. Si calcola come simulazione e alimenta il prospetto allegato all'atto. Non entra in un esito né in una proposta finché l'atto non gli dà numero e data. Non vale per gli atti esterni (pignoramenti, cessioni, notifiche), che si trascrivono.
+_Avoid_: Bozza, fatto provvisorio
+
+**Tipo di fatto**:
+Categoria di fatto ammessa nel registro perché almeno un lettore dichiarato (regola, output obbligatorio, adempimento non stipendiale) la legge. Un nuovo lettore porta un nuovo tipo; un fatto che nessuno legge non entra (per esempio il catalogo dei corsi di formazione).
+_Avoid_: Campo anagrafico
+
+**Canale di input**:
+Via da cui arriva un fatto già strutturato altrove (presenze, attestati di malattia, 730-4); il fatto registrato ne conserva la provenienza. Un canale non è fonte di verità concorrente del registro.
+_Avoid_: Interfaccia, import
+
 **Proposta di movimento contabile**:
-Movimento di contabilità armonizzata (impegno, liquidazione, mandato, reversale) generato dal modello paghe e soggetto a conferma della Ragioneria.
-_Avoid_: Export contabile, flusso contabile
+Impegno o liquidazione generati dal modello paghe e soggetti a conferma della Ragioneria. La liquidazione consuma l'impegno; l'impegno si propone solo quando l'obbligazione nasce da un fatto del registro (fondo, integrativo, arretrati da rinnovo) e non è già coperta dall'impegno automatico del bilancio. Mandato e reversale non si propongono: sono atti della Ragioneria.
+_Avoid_: Export contabile, flusso contabile, proposta di mandato
+
+**Fatto contabile**:
+Fatto comunicato dalla Ragioneria attraverso un canale di input, come un impegno sulla spesa di personale (numero, esercizio, classificazione, atto presupposto, importo). Il modello lo legge e non lo produce.
+_Avoid_: Impegno del modello, anagrafica capitoli
+
+**Abbinamento**:
+Scelta, fatta da una regola dichiarata, dell'impegno che un importo consuma (classificazione, esercizio di esigibilità, atto). Se nessun impegno è capiente scatta un fermo; se l'impegno non è noto, nella proposta è un dato mancante. La Ragioneria può cambiarlo in conferma.
+_Avoid_: Imputazione automatica
+
+**Versione di proposta**:
+Istantanea immutabile delle righe di una proposta al momento dell'invio. Se dopo l'invio cambia un fatto che ne muove gli importi, la versione diventa superata e il modello ne emette una nuova. Stati: inviata, confermata, respinta (con motivo), superata.
+_Avoid_: Bozza contabile, proposta aggiornata
+
+**Conferma**:
+Atto della Ragioneria su una versione di proposta: la accetta, cambiando al più l'abbinamento all'impegno con traccia, oppure la respinge con un motivo. Non corregge mai un importo: l'importo si corregge solo con un fatto.
+_Avoid_: Validazione, approvazione contabile
+
+**Evento di ritorno**:
+Fatto contabile che riporta al modello ciò che è accaduto a una versione di proposta dopo l'invio (conferma o rifiuto, impegno e liquidazione numerati, mandato emesso o annullato, pagamento eseguito con valuta).
+_Avoid_: Esito contabile (l'esito è del modello paghe), ritorno dati
+
+**Assenza**:
+Fatto giornaliero o orario su un rapporto, con una causale di assenza e l'atto o il documento di origine (attestato INPS, domanda, autorizzazione). Un solo fatto produce più effetti, ciascuno letto da un lettore diverso: riduzione stipendiale, comporto, adempimenti.
+_Avoid_: Giustificativo, riepilogo presenze
+
+**Causale di assenza**:
+Elenco del modello, non del fornitore delle presenze, in cui ogni causale ha lettori dichiarati. L'adattatore delle presenze traduce le causali del fornitore in queste.
+_Avoid_: Codice giustificativo
+
+**Contratto neutro**:
+Definizione, indipendente dal fornitore della contabilità, dei messaggi scambiati con la Ragioneria: versioni di proposta in uscita, fatti contabili ed eventi di ritorno in ingresso. Usa le classificazioni ufficiali e il vocabolario OPI; non legge né emette ordinativi. È uno schema versionato e indifferente al trasporto; ogni messaggio ha un identificativo stabile, e un evento ricevuto due volte non produce due fatti.
+_Avoid_: Tracciato, API del fornitore
+
+**Adattatore**:
+Componente dell'ente che traduce il contratto neutro verso una sorgente concreta (contabilità, Giornale di cassa SIOPE+, inserimento manuale). La provenienza di ogni fatto nomina l'adattatore che l'ha portato.
+_Avoid_: Connettore, integrazione
+
+**Riga di proposta**:
+Parte di una proposta per una classificazione ufficiale (missione, programma, piano dei conti di V livello) e un impegno, con l'elenco degli importi che la sommano. Non porta il capitolo.
+_Avoid_: Riga per dipendente, dettaglio contabile
+
+**Mappatura contabile dell'ente**:
+Corrispondenza datata tra classificazione ufficiale e capitolo/articolo del bilancio dell'ente, tenuta dalla Ragioneria e applicata fuori dal modello paghe.
+_Avoid_: Tabella capitoli, piano dei conti dell'ente
+
+**Composizione del pagamento**:
+Dati allegati alla liquidazione che dicono come pagarla: beneficiari e netti, ritenute collegate al mandato, versamenti a terzi. La Ragioneria ne ricava mandati e reversali senza ricostruire il legame netto–ritenute.
+_Avoid_: Distinta, tracciato mandati
 
 **Output obbligatorio**:
 Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, F24EP, CU, 770, Conto Annuale, PASSWEB, conguagli, esiti 730-4).
@@ -43,7 +115,7 @@ Elemento retributivo o trattenuta definito da norma o contratto, con riferimento
 _Avoid_: Voce, codice voce
 
 **Fatto**:
-Evento registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
+Evento su una persona o su un rapporto, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
 _Avoid_: Movimento, variazione anagrafica
 
 **Importo**:
@@ -67,8 +139,12 @@ Periodo dichiarato senza imponibili che dichiara il servizio di un mese pagato i
 _Avoid_: Periodo vuoto, mese a zero
 
 **Data di pagamento**:
-Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto legato all'esito pagato. Decide in quale denuncia entrano gli importi di quell'esito.
-_Avoid_: Data di liquidazione (la liquidazione è una fase contabile)
+Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto legato all'esito pagato e letto dall'evento di ritorno del pagamento eseguito. Decide in quale denuncia entrano gli importi di quell'esito.
+_Avoid_: Data di liquidazione (la liquidazione è una fase contabile), valuta prevista
+
+**Valuta prevista**:
+Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolare ritenute e netti della composizione del pagamento. Se la valuta effettiva è diversa, la differenza si regola sull'esito.
+_Avoid_: Data di pagamento (finché il pagamento non è eseguito)
 
 **Base imponibile**:
 Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR). Una base non deriva da un'altra, salvo che una norma lo dica.
@@ -115,7 +191,7 @@ Documento scritto nel repo che motiva una regola priva di fonte ufficiale puntua
 _Avoid_: Regola di casa
 
 **Esito**:
-Istantanea immutabile di ciò che è stato pagato, dichiarato o versato verso terzi; base del confronto per ogni differenza successiva.
+Istantanea immutabile di ciò che è stato pagato, dichiarato o versato verso terzi; base del confronto per ogni differenza successiva. L'esito pagato nasce dall'evento di ritorno del pagamento eseguito, con le righe della versione di proposta confermata, non dalla conferma; l'esito versato nasce allo stesso modo dall'evento di versamento eseguito, che sia mandato F24EP o regolarizzazione di un provvisorio.
 _Avoid_: Elaborazione chiusa, storico cedolini
 
 **Vista**:

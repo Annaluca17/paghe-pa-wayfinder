@@ -20,5 +20,5 @@ Scelto perché la denuncia dichiara ciò che è stato corrisposto (Circ. INPS 10
 - In un mese senza servizio la denuncia ha un solo periodo con `in_servizio` falso, pari al mese. Il quadro da esporre lo sceglie la vista.
 - I codici come contratto e qualifica sono fatti categoriali (`registra_codice`): restano testo e una formula non li legge. Un periodo dichiarato si apre quando il valore cambia, non quando lo stesso valore viene registrato di nuovo. Le frazioni continuano a seguire ogni fatto.
 - Le regole sul periodo che leggono importi per competenza restano ammesse per i corpus fittizi. Il corpus reale userà solo le basi.
-- Il contributo si calcola dopo la registrazione della data. Per conoscere il netto prima del mandato si registra la valuta prevista e poi, se cambia, la si corregge. Il flusso con la ragioneria resta da definire nella mappa.
+- Il contributo si calcola dopo la registrazione della data. Per conoscere il netto prima del mandato si registra la valuta prevista e poi, se cambia, la si corregge. Il flusso con la ragioneria resta da definire nella mappa. *Definito dall'ADR 0013: la valuta prevista sta nella proposta, l'esito pagato e la data di pagamento nascono dall'evento di ritorno del pagamento eseguito.*
 - `differenze` non confronta ancora le denunce già fissate con le basi ricalcolate: è il V1 di variazione, fuori da questa fetta.
