@@ -101,7 +101,7 @@ def _quadro(x: _Scrittore, q: Quadro, ente: Ente) -> None:
     x.campo("Qualifica", i.qualifica)
     x.campo("RegimeFineServizio", i.regime_fine_servizio)
     x.chiudi("InquadramentoLavPA")
-    if q.pensionistica or q.credito:
+    if q.pensionistica or q.previdenziale or q.credito:
         x.apri("Gestioni")
         if q.pensionistica:
             x.apri("GestPensionistica")
@@ -110,7 +110,17 @@ def _quadro(x: _Scrittore, q: Quadro, ente: Ente) -> None:
             x.campo("Contributo", q.pensionistica.contributo)
             x.campo("Contrib1PerCento", q.contrib_1_per_cento)
             x.chiudi("GestPensionistica")
-        # GestPrevidenziale (TFS e TFR) non è modellata: la vista con il regime è una bozza.
+        if q.previdenziale:
+            p = q.previdenziale
+            x.apri("GestPrevidenziale")  # ordine dell'XSD 4.33.1
+            x.campo("CodGestione", p.cod_gestione)
+            x.campo("ImponibileTFR", p.imponibile_tfr)
+            x.campo("ContributoTFR", p.contributo_tfr)
+            x.campo("ImponibileTFRUlterioriElem", p.imponibile_tfr_ulteriori)
+            x.campo("ContributoTFRUlterioriElem", p.contributo_tfr_ulteriori)
+            x.campo("ImponibileTFS", p.imponibile_tfs)
+            x.campo("ContributoTFS", p.contributo_tfs)
+            x.chiudi("GestPrevidenziale")
         if q.credito:
             x.apri("GestCredito")
             x.campo("CodGestione", GESTIONE_CREDITO)
@@ -119,6 +129,8 @@ def _quadro(x: _Scrittore, q: Quadro, ente: Ente) -> None:
             x.chiudi("GestCredito")
         x.chiudi("Gestioni")
     x.campo("CodiceCessazione", q.codice_cessazione)
+    x.campo("RetribTeoricaTabellareTFR", q.retrib_teorica_tfr)
+    x.campo("RetribValutabileTFR", q.retrib_valutabile_tfr)
     for terna in q.enti_versanti:
         x.apri("EnteVersante")
         x.campo("TipoContributo", terna.tipo_contributo)

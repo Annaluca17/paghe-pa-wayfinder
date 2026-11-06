@@ -22,7 +22,7 @@ python -m paghe
 pip install pytest lxml openpyxl
 ```
 
-La vista ListaPosPA (`lista_pos_pa`) e la sua serializzazione (`paghe.uniemens.in_xml`) sono descritte nell'ADR 0008; un esempio fittizio è in `docs/esempi/`. Lo schema XSD UniEmens 4.33.1 e l'Appendice G v15 si scaricano dalla scheda INPS «Trasmissione UniEmens per enti e amministrazioni» e non stanno nel repo: i test che li usano li cercano in `PAGHE_XSD_UNIEMENS` (file `.xsd`) e `PAGHE_APPENDICE_G` (file `.xlsx`), altrimenti vengono saltati.
+La vista ListaPosPA (`lista_pos_pa`) e la sua serializzazione (`paghe.uniemens.in_xml`) sono descritte nell'ADR 0008; un esempio fittizio, trasmissibile e valido sullo schema, è in `docs/esempi/` (ADR 0011). Lo schema XSD UniEmens 4.33.1 e l'Appendice G v15 si scaricano dalla scheda INPS «Trasmissione UniEmens per enti e amministrazioni» e non stanno nel repo: i test che li usano li cercano in `PAGHE_XSD_UNIEMENS` (file `.xsd`) e `PAGHE_APPENDICE_G` (file `.xlsx`), altrimenti vengono saltati.
 
 ```bash
 python -m pytest

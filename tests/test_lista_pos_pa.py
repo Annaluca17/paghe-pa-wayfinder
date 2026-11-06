@@ -199,22 +199,82 @@ def test_senza_regime_la_denuncia_si_calcola_e_la_vista_lo_chiede(registro, real
     assert mancante.fatto == "regime_fine_servizio"
 
 
-# --- TFS e TFR: bozza non trasmissibile --------------------------------------------------------
+# --- TFS e TFR: GestPrevidenziale (ticket #33, parte 3) ---------------------------------------
+# CodGestione 6 ex INADEL (Allegato tecnico 4.33.1, p. 245); elementi del DT 4.33, p. 183 e 191-193;
+# retribuzioni TFR dalla Circ. INPS 185/2021 § 2.2.1. Importi ricalcolati in test_fine_servizio.py.
 
 
-def test_tfs_e_tfr_non_fermano_la_denuncia_ma_rendono_la_vista_una_bozza(registro, reale, orologio):
+def test_con_il_tfs_la_lista_e_trasmissibile(registro, reale, orologio):
     assumi(registro, regime="3")
     paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
-    assert calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
     vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
-    motivo, = vista.bozza
-    assert "TFS o TFR" in motivo
+    quadro, = vista.quadri
+    assert quadro.previdenziale.cod_gestione == "6"
+    assert quadro.previdenziale.imponibile_tfs == Decimal("1615.70")
+    assert quadro.previdenziale.contributo_tfs == Decimal("98.56")
+    assert quadro.previdenziale.imponibile_tfr is None
+    assert quadro.retrib_teorica_tfr is None
+    assert quadro.retrib_valutabile_tfr is None
+    assert vista.bozza == ()
+    assert vista.trasmissibile
+    xml = in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11))
+    assert "BOZZA" not in xml
+    assert "<ImponibileTFS>1615,70</ImponibileTFS>" in xml
+    assert "<ContributoTFS>98,56</ContributoTFS>" in xml
+
+
+def test_con_il_tfr_gestione_e_retribuzioni_tfr(registro, reale, orologio):
+    assumi(registro, regime="1")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    quadro, = vista.quadri
+    assert quadro.pensionistica.imponibile == Decimal("2051.69")  # la riduzione TFR non entra
+    assert quadro.previdenziale.cod_gestione == "6"
+    assert quadro.previdenziale.imponibile_tfr == Decimal("1615.70")
+    assert quadro.previdenziale.contributo_tfr == Decimal("98.56")
+    assert quadro.previdenziale.imponibile_tfr_ulteriori is None
+    assert quadro.previdenziale.imponibile_tfs is None
+    assert quadro.retrib_teorica_tfr == Decimal("2019.63")
+    assert quadro.retrib_valutabile_tfr == Decimal("2019.63")
+    assert vista.trasmissibile
+
+
+def test_tfr_nel_mese_parziale_la_teorica_e_intera(registro, reale, orologio):
+    assumi(registro, "funzionari", dal=date(2026, 8, 24), regime="1")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 8), Mese(2026, 9)), date(2026, 9, 25))
+    e0, v1 = lista_pos_pa(registro, reale, R, Mese(2026, 9)).quadri
+    assert e0.previdenziale.imponibile_tfr == Decimal("2225.74")
+    assert e0.previdenziale.contributo_tfr == Decimal("135.77")
+    assert e0.retrib_valutabile_tfr == Decimal("2782.18")
+    assert e0.retrib_teorica_tfr == Decimal("2192.02")
+    # Il V1 causale 5 solo giuridico porta la teorica, intera, senza gestioni né valutabile.
+    assert (v1.tipo, v1.causale) == ("V1", "5")
+    assert v1.previdenziale is None
+    assert v1.retrib_teorica_tfr == Decimal("2192.02")
+    assert v1.retrib_valutabile_tfr is None
+
+
+def test_cambio_di_regime_nell_anno_ferma_la_vista(registro, reale, orologio):
+    assumi(registro, regime=None)
+    registro.registra_codice(R, "regime_fine_servizio", "3", date(2026, 1, 1), date(2026, 6, 30))
+    registro.registra_codice(R, "regime_fine_servizio", "1", date(2026, 7, 1))
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    fermo, = vista.fermi
+    assert "regime" in fermo.motivo
     assert not vista.trasmissibile
-    with pytest.raises(VistaFerma, match="bozza"):
-        in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11))
-    xml = in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True)
-    assert "<GestPrevidenziale>" not in xml
-    assert "<!-- BOZZA NON TRASMISSIBILE" in xml
+
+
+def test_nel_mese_di_cessazione_la_teorica_e_intera(registro, reale, orologio):
+    """Cessato il 15/10 in TFR: valutabile per i giorni pagati, teorica sul mese intero."""
+    assumi(registro, al=date(2026, 10, 15), regime="1")
+    registro.registra_codice(R, "codice_cessazione", "1", date(2026, 10, 15), date(2026, 10, 15))
+    ottobre = stipendi(registro, reale, Mese(2026, 10))
+    paga(registro, orologio, ottobre, date(2026, 10, 27))
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 10))
+    quadro, = vista.quadri
+    assert quadro.retrib_teorica_tfr == Decimal("2019.63")  # il tabellare intero, non i 15 giorni
+    assert quadro.retrib_valutabile_tfr == Decimal("1009.82")
 
 
 # --- V1 causale 5 solo giuridico ---------------------------------------------------------------
@@ -360,6 +420,72 @@ def test_xml_con_v1_causale_5_valido_per_lo_schema(registro, reale, orologio):
     assert v1.find("Gestioni") is None
 
 
+def cessato_con_tabellare_a_novembre(registro, reale, orologio, regime):
+    """Servizio fino al 15/10; a ottobre si paga il comparto, il tabellare a novembre."""
+    assumi(registro, al=date(2026, 10, 15), regime=regime)
+    registro.registra_codice(R, "codice_cessazione", "1", date(2026, 10, 15), date(2026, 10, 15))
+    ottobre = stipendi(registro, reale, Mese(2026, 10))
+    paga(registro, orologio, [r for r in ottobre if r.istituto.startswith("comparto")], date(2026, 10, 27))
+    paga(registro, orologio, [r for r in ottobre if r.istituto.startswith("tabellare")], date(2026, 11, 20))
+
+
+def test_arretrato_tfs_a_un_cessato_nella_terna_7(registro, reale, orologio):
+    cessato_con_tabellare_a_novembre(registro, reale, orologio, "3")
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    quadro, = vista.quadri
+    assert (quadro.tipo, quadro.causale) == ("V1", "1")
+    assert quadro.previdenziale.imponibile_tfs == Decimal("807.86")
+    assert quadro.previdenziale.contributo_tfs == Decimal("49.28")
+    terne = {(ev.tipo_contributo, ev.imponibile, ev.contributo) for ev in quadro.enti_versanti}
+    assert ("7", Decimal("807.86"), Decimal("49.28")) in terne
+    assert vista.trasmissibile
+
+
+def test_arretrato_tfr_a_un_cessato_nella_terna_8(registro, reale, orologio):
+    cessato_con_tabellare_a_novembre(registro, reale, orologio, "1")
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    quadro, = vista.quadri
+    assert quadro.previdenziale.imponibile_tfr == Decimal("807.86")
+    assert quadro.retrib_valutabile_tfr == Decimal("1009.82")
+    assert quadro.retrib_teorica_tfr == Decimal("2019.63")
+    terne = {(ev.tipo_contributo, ev.imponibile, ev.contributo) for ev in quadro.enti_versanti}
+    assert ("8", Decimal("807.86"), Decimal("49.28")) in terne
+    documento = valida(in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11)))
+    v1 = documento.find(".//V1_PeriodoPrecedente")
+    assert v1.findtext("Gestioni/GestPrevidenziale/ContributoTFR") == "49,28"
+    assert v1.findtext("RetribValutabileTFR") == "1009,82"
+
+
+def test_xml_con_tfs_valido_per_lo_schema(registro, reale, orologio):
+    assumi(registro, regime="3")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    documento = valida(in_xml([lista_pos_pa(registro, reale, R, Mese(2026, 11))], ENTE, MITTENTE, mese=Mese(2026, 11)))
+    previdenziale = documento.find(".//E0_PeriodoNelMese/Gestioni/GestPrevidenziale")
+    assert [figlio.tag for figlio in previdenziale] == ["CodGestione", "ImponibileTFS", "ContributoTFS"]
+
+
+def test_xml_con_tfr_valido_per_lo_schema(registro, reale, orologio):
+    assumi(registro, "funzionari", dal=date(2026, 8, 24), regime="1")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 8), Mese(2026, 9)), date(2026, 9, 25))
+    documento = valida(in_xml([lista_pos_pa(registro, reale, R, Mese(2026, 9))], ENTE, MITTENTE, mese=Mese(2026, 9)))
+    e0 = documento.find(".//E0_PeriodoNelMese")
+    assert [f.tag for f in e0.find("Gestioni/GestPrevidenziale")] == ["CodGestione", "ImponibileTFR", "ContributoTFR"]
+    assert e0.findtext("RetribTeoricaTabellareTFR") == "2192,02"
+    assert e0.findtext("RetribValutabileTFR") == "2782,18"
+    assert documento.findtext(".//V1_PeriodoPrecedente/RetribTeoricaTabellareTFR") == "2192,02"
+
+
+ESEMPIO = Path(__file__).resolve().parent.parent / "docs" / "esempi" / "lista-pos-pa-2026-09.xml"
+
+
+def test_l_esempio_in_docs_e_quello_prodotto_dalla_vista(registro, reale, orologio):
+    """Assunto il 24/08 in regime TFR, pagato a settembre: E0 di settembre e V1 causale 5 di agosto."""
+    assumi(registro, "funzionari", dal=date(2026, 8, 24), regime="1")
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 8), Mese(2026, 9)), date(2026, 9, 25))
+    xml = in_xml([lista_pos_pa(registro, reale, R, Mese(2026, 9))], ENTE, MITTENTE, mese=Mese(2026, 9))
+    assert ESEMPIO.read_text(encoding="utf-8") == xml
+
+
 def test_xml_con_v1_causale_1_valido_per_lo_schema(registro, reale, orologio):
     cessato_a_meta_ottobre(registro, reale, orologio)
     documento = valida(in_xml([lista_pos_pa(registro, reale, R, Mese(2026, 11))], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True))
@@ -406,3 +532,19 @@ def test_contratto_e_qualifica_correlati_nell_appendice_g(area):
         contratto == "RALN" and qualifica == CODICI_AREA[area] and inizio <= giorno and (fine is None or giorno <= fine)
         for contratto, qualifica, inizio, fine in correlazioni()
     )
+
+
+def test_un_fermo_con_ambito_vista_rende_ancora_la_lista_una_bozza(registro, orologio):
+    """Il corpus reale non ne ha più, ma il meccanismo resta (ADR 0008): corpus reale più un fermo fittizio."""
+    corpus = Corpus.da_toml(
+        CORPUS.read_text(encoding="utf-8")
+        + '\n[[fermo]]\nfatto = "tipo_servizio"\ncaso = "caso di prova"\nambito = "vista"\nriferimento = "fittizio:prova"\n'
+    )
+    assumi(registro, regime="3")
+    paga(registro, orologio, stipendi(registro, corpus, Mese(2026, 11)), date(2026, 11, 27))
+    vista = lista_pos_pa(registro, corpus, R, Mese(2026, 11))
+    motivo, = vista.bozza
+    assert "caso di prova" in motivo
+    with pytest.raises(VistaFerma, match="bozza"):
+        in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11))
+    assert "<!-- BOZZA NON TRASMISSIBILE" in in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True)

@@ -135,7 +135,7 @@ Dato obbligatorio del tracciato che il registro non ha, come il regime di fine s
 _Avoid_: Default, valore di comodo
 
 **Bozza non trasmissibile**:
-Vista completa nei dati, ma con un caso dichiarato dal corpus come non modellato, come TFS e TFR. Si serializza solo se richiesto, con l'avvertenza in testa.
+Vista completa nei dati, ma con un caso dichiarato dal corpus come non modellato, come lo erano TFS e TFR fino al ticket #33. Si serializza solo se richiesto, con l'avvertenza in testa.
 _Avoid_: Anteprima, test
 
 **Regola**:
