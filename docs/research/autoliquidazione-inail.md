@@ -55,15 +55,7 @@ Questo documento riporta fatti riscontrati. Le decisioni spettano all'intervista
 
 ## Sintesi
 
-**Correzioni alla domanda del ticket.** Cinque rimandi o date del ticket non coincidono con quanto letto.
-
-| Nel ticket | Che cosa risulta | Marcatura |
-|---|---|---|
-| Dichiarazione delle retribuzioni entro il 16 febbraio | Il 16 febbraio è la scadenza del **versamento** (premio in unica soluzione o prima rata) e della comunicazione del presunto ridotto. La **dichiarazione delle retribuzioni** scade il **28 febbraio** (29 negli anni bisestili), prorogato al primo giorno lavorativo se cade di sabato o festivo. Nel 2026: 2 marzo. | **norma certa** il testo della guida e dell'istruzione INAIL; il D.M. 9/2/2015 citato non è letto |
-| Rate al 16/2, 16/5, 16/9, 16/11 | Le scadenze sono **16/2, 16/5, 16/8, 16/11**, con gli slittamenti di calendario (nel 2026: 16/2, 18/5, 20/8, 16/11) | **norma certa** art. 44 c. 2-3 D.P.R. 1124/1965 e art. 55 c. 5 L. 144/1999; guida INAIL |
-| Riduzione del presunto: art. 28 c. 2 | È l'art. 28 c. 6. Il testo dice 20 febbraio, l'INAIL istruisce 16 febbraio | testo **norma certa**; il 16 febbraio è **prassi-interpretazione** |
-| Art. 18 D.Lgs. 151/2015 per il certificato di infortunio | L'art. 18 di quel decreto riguarda il lavoro all'estero. La norma pertinente è l'**art. 21** | **norma certa** |
-| Art. 1 c. 3 D.Lgs. 314/1997 per la base imponibile | Il testo che sostituisce l'art. 29 D.P.R. 1124/1965 è l'**art. 6** D.Lgs. 314/1997. L'art. 1 modifica l'art. 46 TUIR | **norma certa** |
+**Precisazione sulle date.** La **dichiarazione delle retribuzioni** scade il **28 febbraio** (29 negli anni bisestili; prorogato al primo giorno lavorativo se cade di sabato o festivo; nel 2026: 2 marzo), non il 16 febbraio. Il 16 febbraio è la scadenza del **versamento** (premio in unica soluzione o prima rata) e della comunicazione per la riduzione del presunto. **norma certa** il testo della guida e dell'istruzione INAIL; il D.M. 9/2/2015 citato non è letto.
 
 **Risposte in breve**
 
@@ -143,7 +135,6 @@ Questo documento riporta fatti riscontrati. Le decisioni spettano all'intervista
 - **Art. 29 D.P.R. 1124/1965** [N1], testo sostituito dall'**art. 6 D.Lgs. 314/1997** [N4]: sono redditi di lavoro dipendente ai fini contributivi quelli dell'art. 46 c. 1 TUIR maturati nel periodo; si applica l'art. 48 TUIR; gli importi sono al lordo di contributi e trattenute; l'elenco delle **esclusioni è tassativo** (c. 5): TFR, somme per incentivare l'esodo, risarcimenti, somme a carico di gestioni previdenziali, previdenza complementare entro i limiti, trattamenti di famiglia; gratifiche, conguagli retroattivi e premi di produzione si contano nel mese di corresponsione (c. 9). **norma certa**.
 - Art. 29 c. 8: restano ferme le norme sul minimale (art. 1 D.L. 338/1989) e sui minimi e massimi imponibili. **norma certa**.
 - La Guida INAIL 2025/2026 [I2] (pagine 2-4) istruisce: retribuzione effettiva = ammontare lordo del reddito di lavoro dipendente (art. 51 TUIR e art. 29 T.U.); va portata al più alto tra minimale contrattuale (art. 1 D.L. 338/1989) e minimale di retribuzione giornaliera (art. 1 D.L. 402/1981, rivalutato Istat); retribuzione convenzionale per categorie con decreto; retribuzione di ragguaglio solo in via residuale; part-time con retribuzione oraria convenzionale. I limiti 2025 sono nelle circolari 29/2025 e 48/2025 (non aperte). **norma certa** il testo della guida. Importi del minimale 2026: **da verificare**.
-- Rispetto alla traccia del ticket: l'art. 1 c. 3 D.Lgs. 314/1997 **non** è la fonte (vedi Sintesi).
 - Il campo «Retribuzioni complessive» del tracciato somma le retribuzioni dei dipendenti, comprese quelle con esenzione inferiore al 100%, e i compensi dei co.co.co. [I2]. **norma certa** il testo.
 - Le retribuzioni «parzialmente esenti» e le riduzioni (Tabella dei codici da H a Y, ecc.) riguardano sgravi per assunzioni e simili. Quali ne spettino a un ente locale: **da verificare**. Non esaminato.
 - Dirigenti: massimale, vedi 2.2.
@@ -283,7 +274,6 @@ Fonte: Guida INAIL 2025/2026, specifiche tecniche (pagine 46-68) [I2]. **norma c
 - **Servizi online.** Il Manuale INAIL [I6] descrive il servizio «Comunicazione di infortunio» (prognosi fino a tre giorni) e il servizio «Denuncia/Comunicazione di infortunio» (prognosi oltre tre giorni), con accesso tramite SPID, CNS o CIE. Il datore di lavoro e i suoi delegati sono abilitati; per intermediari (consulenti del lavoro e simili) c'è un profilo diverso. L'invio può avvenire online o **tramite file** per le gestioni IASPA e conto Stato (specifiche XSD della comunicazione offline, versione 1.6, citate nel manuale, non aperte). **norma certa** il testo del manuale.
 - **Cosa serve all'ente** per compilare: dati del lavoratore, rapporto di lavoro e qualifica assicurativa (codifiche ISTAT del manuale), data e ora dell'evento, luogo e dinamica, riferimenti del certificato medico, retribuzione degli ultimi quindici giorni (art. 53 T.U. [N1]: «ore lavorate e salario percepito» nei quindici giorni precedenti). **norma certa**. Dati disponibili nelle buste paga: ore e importi dei quindici giorni precedenti all'evento.
 - **Intermediario.** Un consulente può inviare per conto dell'ente con delega: profilo «Intermediario del datore di lavoro» [I6].
-- **Riferimento errato nel ticket:** l'art. 18 D.Lgs. 151/2015 non riguarda gli infortuni (vedi Sintesi). La riforma delle comunicazioni è nell'**art. 21**. Il manuale cita invece «art. 3, art. 18 c. 1 lett. r), e art. 21 d.lgs. 81/2008» per la comunicazione statistica.
 - **Regola sugli amministratori:** per chi è tutelato (sindaco no, dipendente in aspettativa sì, secondo Cass. 22036/2025) vedi 2.3. Chi denuncia l'infortunio di un amministratore dipendente in aspettativa e con quale rapporto assicurativo: **da verificare**.
 - Per il ruolo di «ricevute» e di «esiti» INAIL verso l'ente: il manuale parla di un numero progressivo assegnato alla denuncia e di una ricevuta [I6]. Formato machine-readable degli esiti: **da verificare**.
 
