@@ -6,6 +6,23 @@ Wayfinding verso la specifica di un modello alternativo di elaborazione paghe pe
 - Glossario: `CONTEXT.md`.
 - Decisioni architetturali: `docs/adr/`.
 - Findings delle ricerche: `docs/research/`.
+- Nucleo eseguibile: `paghe/`, test in `tests/`.
+
+## Nucleo eseguibile
+
+Registro di fatti, importi con derivazione, esiti e differenze (ADR 0001 e 0002). Il corpus usato finora è **fittizio**: nessun valore è una norma reale. Serve Python 3.12 o successivo; il nucleo non ha dipendenze a runtime.
+
+```bash
+python -m paghe
+```
+
+```bash
+pip install pytest
+```
+
+```bash
+python -m pytest
+```
 
 ## Lavoro in locale
 
