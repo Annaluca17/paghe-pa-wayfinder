@@ -7,6 +7,7 @@ Wayfinding verso la specifica di un modello alternativo di elaborazione paghe pe
 - Decisioni architetturali: `docs/adr/`.
 - Findings delle ricerche: `docs/research/`.
 - Nucleo eseguibile: `paghe/`, test in `tests/`.
+- Note di prassi: `docs/prassi/`; senza dati personali.
 - Normativa: le regole seguono la norma vigente per il periodo di competenza; consultare `vault-pa` in sola lettura prima di codificarle (ADR 0003).
 
 ## Nucleo eseguibile

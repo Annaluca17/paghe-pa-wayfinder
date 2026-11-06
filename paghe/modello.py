@@ -7,7 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from .tempo import Mese, istante_in_testo
+from .tempo import Periodo, istante_in_testo
 
 
 @dataclass(frozen=True)
@@ -68,10 +68,22 @@ class ParametroLetto:
 
 
 @dataclass(frozen=True)
+class Quota:
+    """Come una base mensile o annuale è stata riportata al periodo. `divisore` None: residuo a mese intero."""
+
+    conteggio: str
+    giorni: int
+    divisore: Decimal | None
+    quota: Decimal
+    base: Decimal
+
+
+@dataclass(frozen=True)
 class Derivazione:
     """Da dove viene un importo, fino a norma, parametri e fatti."""
 
     istituto: str
+    maturazione: str
     regola_versione: int
     riferimento: str
     formula: str
@@ -80,31 +92,44 @@ class Derivazione:
     parametri: tuple[ParametroLetto, ...]
     fatti: tuple[Fatto, ...]
     importi: tuple["Importo", ...]
+    quota: Quota | None = None
 
 
 @dataclass(frozen=True)
 class Importo:
     rapporto: str
     istituto: str
-    competenza: Mese
+    periodo: Periodo
     valore: Decimal
     derivazione: Derivazione
     esiti_confrontati: tuple[int, ...] = ()
 
     @property
-    def chiave(self) -> tuple[str, str, Mese]:
-        return (self.rapporto, self.istituto, self.competenza)
+    def chiave(self) -> tuple[str, str, Periodo]:
+        return (self.rapporto, self.istituto, self.periodo)
 
     def in_dizionario(self) -> dict:
         d = self.derivazione
         return {
             "rapporto": self.rapporto,
             "istituto": self.istituto,
-            "competenza": str(self.competenza),
+            "periodo": str(self.periodo),
             "valore": str(self.valore),
             "esiti_confrontati": list(self.esiti_confrontati),
             "derivazione": {
                 "istituto": d.istituto,
+                "maturazione": d.maturazione,
+                "quota": (
+                    {
+                        "conteggio": d.quota.conteggio,
+                        "giorni": d.quota.giorni,
+                        "divisore": str(d.quota.divisore) if d.quota.divisore is not None else None,
+                        "quota": str(d.quota.quota),
+                        "base": str(d.quota.base),
+                    }
+                    if d.quota
+                    else None
+                ),
                 "regola_versione": d.regola_versione,
                 "riferimento": d.riferimento,
                 "formula": d.formula,
@@ -122,14 +147,27 @@ class Importo:
     @classmethod
     def da_dizionario(cls, dati: dict) -> "Importo":
         d = dati["derivazione"]
+        q = d["quota"]
         return cls(
             rapporto=dati["rapporto"],
             istituto=dati["istituto"],
-            competenza=Mese.da_testo(dati["competenza"]),
+            periodo=Periodo.da_testo(dati["periodo"]),
             valore=Decimal(dati["valore"]),
             esiti_confrontati=tuple(dati["esiti_confrontati"]),
             derivazione=Derivazione(
                 istituto=d["istituto"],
+                maturazione=d["maturazione"],
+                quota=(
+                    Quota(
+                        q["conteggio"],
+                        q["giorni"],
+                        Decimal(q["divisore"]) if q["divisore"] is not None else None,
+                        Decimal(q["quota"]),
+                        Decimal(q["base"]),
+                    )
+                    if q
+                    else None
+                ),
                 regola_versione=d["regola_versione"],
                 riferimento=d["riferimento"],
                 formula=d["formula"],

@@ -15,7 +15,7 @@ from typing import Callable, Iterable
 from .errori import ErroreRegistro, ValiditaNonUniforme
 from .modello import Atto, Esito, Fatto, Importo, TipoEsito
 from .riferimento import data_atto, motivo_rifiuto
-from .tempo import Mese, in_utc, istante_in_testo
+from .tempo import Mese, Periodo, in_utc, istante_in_testo
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS fatti (
@@ -173,22 +173,28 @@ class Registro:
         ).fetchall()
         return [_fatto_da_riga(riga) for riga in righe]
 
-    def fatto_nel_mese(self, rapporto: str, tipo: str, competenza: Mese, noto_al: datetime) -> Fatto | None:
-        """Fatto in vigore per tutto il mese: per ogni giorno vale l'ultimo registrato."""
+    def vigenti_per_giorno(self, rapporto: str, tipo: str, periodo: Mese | Periodo, noto_al: datetime) -> list[Fatto | None]:
+        """Per ogni giorno del periodo vale l'ultimo fatto registrato che lo copre."""
         noti = self.fatti_noti(rapporto, tipo, noto_al)
-        vigenti = [
+        return [
             next((fatto for fatto in reversed(noti) if fatto.copre(giorno)), None)
-            for giorno in competenza.giorni()
+            for giorno in periodo.giorni()
         ]
+
+    def fatto_nel_periodo(self, rapporto: str, tipo: str, competenza: Mese | Periodo, noto_al: datetime) -> Fatto | None:
+        """Fatto in vigore per tutto il periodo; se cambia dentro il periodo il calcolo si ferma."""
+        vigenti = self.vigenti_per_giorno(rapporto, tipo, competenza, noto_al)
         distinti = {fatto.id for fatto in vigenti if fatto is not None}
         if not distinti:
             return None
         if len(distinti) > 1 or any(fatto is None for fatto in vigenti):
             raise ValiditaNonUniforme(
                 f"Rapporto {rapporto}, fatto {tipo}: non uniforme in {competenza}; "
-                "i ratei infra-mese non sono ancora modellati"
+                "serve un periodo uniforme"
             )
         return vigenti[0]
+
+    fatto_nel_mese = fatto_nel_periodo
 
     def registra_esito(self, tipo: TipoEsito, data: date, righe: Iterable[Importo]) -> Esito:
         elenco = tuple(righe)

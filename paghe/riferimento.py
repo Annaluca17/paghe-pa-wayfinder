@@ -40,6 +40,7 @@ _TIPI_NORMA = {
 _TIPI_REGIONALI = {"legge", "regolamento"}
 _TIPI_PRASSI = {
     "inps": {"circolare", "messaggio", "documento.tecnico"},
+    "immedia": {"nota"},
     "ade": {"circolare", "risoluzione", "risposta.interpello", "provvedimento", "comunicato.stampa", "istruzioni"},
 }
 
@@ -103,6 +104,11 @@ def motivo_rifiuto(riferimento: str) -> str | None:
         if motivo:
             return motivo
     return None
+
+
+def solo_prassi(riferimento: str) -> bool:
+    """Vero se ogni citazione è una nota di prassi interna: la regola va segnalata (ADR 0004)."""
+    return all(citazione.startswith("prassi:immedia:") for citazione in riferimento.split(" + "))
 
 
 def data_atto(riferimento: str) -> date | None:

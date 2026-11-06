@@ -117,6 +117,7 @@ versione = 1
 dal = {dal}
 riferimento = "fittizio:prova"
 formula = "{formula}"
+maturazione = "evento"
 {extra}
 """
 
