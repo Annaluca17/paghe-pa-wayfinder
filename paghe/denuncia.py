@@ -28,14 +28,14 @@ from .errori import (
     ValiditaNonUniforme,
 )
 from .formula import valuta
-from .modello import ConcorsoLetto, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
+from .modello import MATURAZIONI_FISCALI, ConcorsoLetto, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
 from .registro import Registro
 from .tempo import Mese, Periodo, in_utc
 
 FORMULA_BASE = "somma degli importi pagati nel periodo"
 FORMULA_BASE_MESE = "somma delle basi dei periodi del mese"
 # Derivano dagli importi pagati: non sono retribuzione e non concorrono a una base.
-MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa"}
+MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa"} | MATURAZIONI_FISCALI
 IN_SERVIZIO = "in servizio"
 SU_CESSATO = "su cessato"
 
@@ -420,10 +420,14 @@ def _controlla_cumuli(registro: Registro, corpus: Corpus, denuncia: Denuncia, is
     rapporto, mese = denuncia.rapporto, denuncia.mese
     anno = Periodo(date(mese.anno, 1, 1), date(mese.anno, 12, 31))
     if regole.persona:
-        codici = registro.fatti_noti(rapporto, regole.persona, istante)
-        if not codici:
-            raise FattoMancante(f"Rapporto {rapporto}: manca il fatto {regole.persona}, serve per i cumuli per persona")
-        for altro in registro.rapporti_con_codice(regole.persona, str(codici[-1].valore), istante):
+        persona = registro.persona_del_rapporto(rapporto, istante)
+        if persona is None:
+            raise FattoMancante(f"Rapporto {rapporto}: manca il legame con la persona, serve per i cumuli per persona")
+        if not registro.fatti_persona_noti(persona, regole.persona, istante):
+            raise FattoMancante(
+                f"Persona {persona}: manca il fatto {regole.persona}, serve per i cumuli per persona"
+            )
+        for altro in registro.rapporti_della_persona(persona, istante):
             if altro != rapporto and any(registro.vigenti_per_giorno(altro, corpus.fatto_servizio, anno, istante)):
                 raise CasoNonModellato(
                     f"Rapporto {rapporto}: caso non modellato, più rapporti della stessa persona nel {mese.anno} "

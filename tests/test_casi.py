@@ -174,8 +174,9 @@ def casi():
     return Corpus.da_toml(TESTO)
 
 
-def assumi(registro, rapporto=R, dal=date(2026, 1, 1), al=None, area="bassa", cf=CF):
-    registro.registra_codice(rapporto, "codice_fiscale", cf, dal)
+def assumi(registro, rapporto=R, dal=date(2026, 1, 1), al=None, area="bassa", cf=CF, persona="PERSONA-1"):
+    registro.registra_codice_persona(persona, "codice_fiscale", cf, date(1980, 1, 1))
+    registro.collega_rapporto(rapporto, persona, dal)
     registro.registra_codice(rapporto, "tipo_impiego", "1", dal, al)
     registro.registra_codice(rapporto, "area", area, dal, al)
 
@@ -339,6 +340,7 @@ def test_fermo_con_ambito_ignoto_rifiutato():
 def test_senza_codice_fiscale_la_denuncia_si_ferma(registro, casi, orologio):
     registro.registra_codice(R, "tipo_impiego", "1", date(2026, 1, 1))
     registro.registra_codice(R, "area", "bassa", date(2026, 1, 1))
+    registro.collega_rapporto(R, "PERSONA-1", date(2026, 1, 1))
     paga(registro, orologio, stipendi(registro, casi, Mese(2026, 11)), date(2026, 11, 27))
     with pytest.raises(FattoMancante, match="codice_fiscale"):
         calcola_denuncia(registro, casi, R, Mese(2026, 11))
@@ -361,9 +363,17 @@ def test_un_rapporto_di_un_altro_anno_non_ferma(registro, casi, orologio):
 
 def test_un_altra_persona_non_ferma(registro, casi, orologio):
     assumi(registro)
-    assumi(registro, rapporto=ALTRO, cf="BNCLRA85M41F205C")
+    assumi(registro, rapporto=ALTRO, cf="BNCLRA85M41F205C", persona="PERSONA-2")
     paga(registro, orologio, stipendi(registro, casi, Mese(2026, 11)), date(2026, 11, 27))
     assert calcola_denuncia(registro, casi, R, Mese(2026, 11)).periodi
+
+
+def test_senza_legame_con_la_persona_la_denuncia_si_ferma(registro, casi, orologio):
+    registro.registra_codice(R, "tipo_impiego", "1", date(2026, 1, 1))
+    registro.registra_codice(R, "area", "bassa", date(2026, 1, 1))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 11)), date(2026, 11, 27))
+    with pytest.raises(FattoMancante, match="persona"):
+        calcola_denuncia(registro, casi, R, Mese(2026, 11))
 
 
 def test_il_superamento_del_massimale_nell_anno_ferma_la_denuncia(registro, casi, orologio):

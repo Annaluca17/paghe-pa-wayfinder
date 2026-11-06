@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS fatti (
     atto_riferimento TEXT,
     atto_data TEXT,
     categoriale INTEGER NOT NULL DEFAULT 0,
+    soggetto TEXT NOT NULL DEFAULT 'rapporto',
     CHECK ((atto_riferimento IS NULL) = (atto_data IS NULL))
 );
 CREATE INDEX IF NOT EXISTS fatti_per_rapporto ON fatti (rapporto, tipo);
@@ -51,6 +52,10 @@ CREATE TABLE IF NOT EXISTS esiti (
 
 TABELLE = ("fatti", "annullamenti", "esiti")
 TIPO_DATA_PAGAMENTO = "data_pagamento"
+TIPO_PERSONA = "persona"
+TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
+SOGGETTO_RAPPORTO = "rapporto"
+SOGGETTO_PERSONA = "persona"
 
 
 def _trigger_immutabilita(tabella: str) -> str:
@@ -100,6 +105,9 @@ class Registro:
         if "categoriale" not in colonne:
             with self._db:
                 self._db.execute("ALTER TABLE fatti ADD COLUMN categoriale INTEGER NOT NULL DEFAULT 0")
+        if "soggetto" not in colonne:
+            with self._db:
+                self._db.execute("ALTER TABLE fatti ADD COLUMN soggetto TEXT NOT NULL DEFAULT 'rapporto'")
 
     def _ultimo_istante(self) -> datetime | None:
         unione = " UNION ALL ".join(f"SELECT registrato_il AS r FROM {t}" for t in TABELLE)
@@ -127,6 +135,61 @@ class Registro:
         atto: Atto | None = None,
     ) -> Fatto:
         return self._inserisci_fatto(rapporto, tipo, _in_decimale(valore), False, valido_dal, valido_al, atto)
+
+    def registra_fatto_persona(
+        self,
+        persona: str,
+        tipo: str,
+        valore: Decimal | int | str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Fatto della persona, che non dipende dal titolo di compenso (ADR 0012)."""
+        return self._inserisci_fatto(
+            persona, tipo, _in_decimale(valore), False, valido_dal, valido_al, atto, SOGGETTO_PERSONA
+        )
+
+    def registra_codice_persona(
+        self,
+        persona: str,
+        tipo: str,
+        codice: str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Fatto categoriale della persona, come il codice fiscale."""
+        if not isinstance(codice, str) or not codice.strip():
+            raise ErroreRegistro(f"Codice non valido: {codice!r}")
+        return self._inserisci_fatto(persona, tipo, codice, True, valido_dal, valido_al, atto, SOGGETTO_PERSONA)
+
+    def registra_dichiarazione_sostituito(
+        self, persona: str, detrazioni: str, valido_dal: date, valido_al: date | None, atto: Atto | None
+    ) -> Fatto:
+        """Dichiarazione del sostituito (ADR 0019): fatto della persona con validità e documento di origine.
+
+        `detrazioni` è il codice della detrazione chiesta. Una nuova dichiarazione sostituisce la precedente.
+        """
+        if atto is None:
+            raise ErroreRegistro("La dichiarazione del sostituito vuole il documento di origine")
+        return self.registra_codice_persona(persona, TIPO_DICHIARAZIONE_SOSTITUITO, detrazioni, valido_dal, valido_al, atto)
+
+    def collega_rapporto(
+        self, rapporto: str, persona: str, valido_dal: date, valido_al: date | None = None, atto: Atto | None = None
+    ) -> Fatto:
+        """Il rapporto è di una persona: fatto categoriale del rapporto che porta l'identificativo della persona."""
+        if not isinstance(persona, str) or not persona.strip():
+            raise ErroreRegistro(f"Persona non valida: {persona!r}")
+        return self.registra_codice(rapporto, TIPO_PERSONA, persona, valido_dal, valido_al, atto)
+
+    def persona_del_rapporto(self, rapporto: str, noto_al: datetime) -> str | None:
+        """La persona dell'ultimo legame noto; None se il rapporto non è collegato."""
+        legami = self.fatti_noti(rapporto, TIPO_PERSONA, noto_al)
+        return str(legami[-1].valore) if legami else None
+
+    def rapporti_della_persona(self, persona: str, noto_al: datetime) -> list[str]:
+        return self.rapporti_con_codice(TIPO_PERSONA, persona, noto_al)
 
     def registra_codice(
         self,
@@ -164,6 +227,7 @@ class Registro:
         valido_dal: date,
         valido_al: date | None,
         atto: Atto | None,
+        soggetto: str = SOGGETTO_RAPPORTO,
     ) -> Fatto:
         if not rapporto or not tipo:
             raise ErroreRegistro("Rapporto e tipo sono obbligatori")
@@ -175,7 +239,7 @@ class Registro:
         with self._db:
             cursore = self._db.execute(
                 "INSERT INTO fatti (rapporto, tipo, valore, valido_dal, valido_al, registrato_il,"
-                " atto_riferimento, atto_data, categoriale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " atto_riferimento, atto_data, categoriale, soggetto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     rapporto,
                     tipo,
@@ -186,10 +250,13 @@ class Registro:
                     atto.riferimento if atto else None,
                     atto.data.isoformat() if atto else None,
                     int(categoriale),
+                    soggetto,
                 ),
             )
         self._registra(istante)
-        return Fatto(cursore.lastrowid, rapporto, tipo, valore, valido_dal, valido_al, istante, atto, categoriale)
+        return Fatto(
+            cursore.lastrowid, rapporto, tipo, valore, valido_dal, valido_al, istante, atto, categoriale, soggetto
+        )
 
     def annulla_fatto(self, fatto_id: int, motivo: str) -> None:
         """Un fatto errato senza sostituto si neutralizza con una nuova registrazione."""
@@ -206,19 +273,29 @@ class Registro:
             raise ErroreRegistro(f"Fatto {fatto_id} inesistente o già annullato") from errore
         self._registra(istante)
 
-    def fatti_noti(self, rapporto: str, tipo: str, noto_al: datetime) -> list[Fatto]:
+    def fatti_persona_noti(self, persona: str, tipo: str, noto_al: datetime) -> list[Fatto]:
+        return self.fatti_noti(persona, tipo, noto_al, SOGGETTO_PERSONA)
+
+    def vigente_persona(self, persona: str, tipo: str, giorno: date, noto_al: datetime) -> Fatto | None:
+        """L'ultimo fatto registrato della persona che copre il giorno."""
+        noti = self.fatti_persona_noti(persona, tipo, noto_al)
+        return next((fatto for fatto in reversed(noti) if fatto.copre(giorno)), None)
+
+    def fatti_noti(
+        self, rapporto: str, tipo: str, noto_al: datetime, soggetto: str = SOGGETTO_RAPPORTO
+    ) -> list[Fatto]:
         """Fatti registrati e non annullati all'istante indicato, in ordine di registrazione."""
         limite = istante_in_testo(noto_al)
         righe = self._db.execute(
             """
             SELECT * FROM fatti AS f
-            WHERE f.rapporto = ? AND f.tipo = ? AND f.registrato_il <= ?
+            WHERE f.rapporto = ? AND f.tipo = ? AND f.registrato_il <= ? AND f.soggetto = ?
               AND NOT EXISTS (
                   SELECT 1 FROM annullamenti AS a WHERE a.fatto_id = f.id AND a.registrato_il <= ?
               )
             ORDER BY f.id
             """,
-            (rapporto, tipo, limite, limite),
+            (rapporto, tipo, limite, soggetto, limite),
         ).fetchall()
         return [_fatto_da_riga(riga) for riga in righe]
 
@@ -229,6 +306,7 @@ class Registro:
             """
             SELECT DISTINCT f.rapporto FROM fatti AS f
             WHERE f.tipo = ? AND f.valore = ? AND f.categoriale = 1 AND f.registrato_il <= ?
+              AND f.soggetto = 'rapporto'
               AND NOT EXISTS (
                   SELECT 1 FROM annullamenti AS a WHERE a.fatto_id = f.id AND a.registrato_il <= ?
               )
@@ -307,6 +385,7 @@ def _fatto_da_riga(riga: sqlite3.Row) -> Fatto:
         registrato_il=datetime.fromisoformat(riga["registrato_il"]),
         atto=Atto(riga["atto_riferimento"], date.fromisoformat(riga["atto_data"])) if riga["atto_data"] else None,
         categoriale=categoriale,
+        soggetto=riga["soggetto"],
     )
 
 

@@ -22,6 +22,8 @@ from .registro import Registro
 from .tempo import Mese, Periodo, in_utc
 
 ANAGRAFICA = ("codice_fiscale", "cognome", "nome", "comune_sede_lavoro", "cap_sede_lavoro")
+# Il codice fiscale è un fatto della persona (ADR 0012); gli altri dati restano sul rapporto finché un ticket non li sposta.
+ANAGRAFICA_DELLA_PERSONA = ("codice_fiscale",)
 INQUADRAMENTO = ("tipo_impiego", "tipo_servizio", "contratto", "qualifica", "regime_fine_servizio")
 CODICE_CESSAZIONE = "codice_cessazione"
 
@@ -176,8 +178,13 @@ class _Vista:
     def lavoratore(self) -> Lavoratore:
         """Il dato vigente a fine mese, altrimenti l'ultimo iniziato prima: un cessato resta lo stesso."""
         valori = {}
+        persona = self.registro.persona_del_rapporto(self.rapporto, self.istante)
         for tipo in ANAGRAFICA:
-            noti = [f for f in self.registro.fatti_noti(self.rapporto, tipo, self.istante) if f.valido_dal <= self.mese.ultimo_giorno]
+            if tipo in ANAGRAFICA_DELLA_PERSONA:
+                noti = self.registro.fatti_persona_noti(persona, tipo, self.istante) if persona else []
+            else:
+                noti = self.registro.fatti_noti(self.rapporto, tipo, self.istante)
+            noti = [f for f in noti if f.valido_dal <= self.mese.ultimo_giorno]
             vigente = next((f for f in reversed(noti) if f.copre(self.mese.ultimo_giorno)), noti[-1] if noti else None)
             valori[tipo] = str(vigente.valore) if vigente is not None else None
             if vigente is None:

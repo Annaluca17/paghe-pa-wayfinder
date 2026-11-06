@@ -20,5 +20,5 @@ Scelto da Luca il 06/11/2026 nel grilling del ticket #13, domande 1, 2, 3, 11 e 
 - La gestione della formazione (catalogo, iscrizioni, esami) resta fuori. Le ore di formazione entrano solo se un adempimento le chiede: il contenuto di PIAO 3.3 è **da verificare**.
 - Le causali di assenza sono un elenco del modello con lettori dichiarati. La prima mappatura per fornitore resta manuale (ricerca #7).
 - Un fatto in attesa d'atto si calcola come simulazione e alimenta il prospetto allegato all'atto. Non entra in un esito né in una proposta.
-- Il codice: oggi il corpus reale registra il codice fiscale come fatto del rapporto (`[denuncia]`, ADR 0007), mentre il registro conosce solo rapporti. Il prototipo dovrà introdurre la persona come soggetto dei fatti e spostarvi il codice fiscale.
+- Il codice: la persona è soggetto dei fatti e il codice fiscale è un suo fatto (ticket #49). Il rapporto è legato alla persona da un fatto categoriale `persona`; `[denuncia].persona` nomina il fatto della persona che i cumuli devono trovare. Cognome, nome e sede restano sul rapporto finché un ticket non li sposta.
 - Il ruolo dell'AI nella trascrizione degli atti esterni resta nel ticket sul ruolo dell'AI.

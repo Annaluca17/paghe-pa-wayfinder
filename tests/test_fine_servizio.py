@@ -112,7 +112,8 @@ def fittizio():
 
 def assumi(registro, regime=None, dal=date(2026, 1, 1), al=None):
     fatti = [
-        registro.registra_codice(R, "codice_fiscale", CF, dal),
+        registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1980, 1, 1)),
+        registro.collega_rapporto(R, "PERSONA-1", dal),
         registro.registra_codice(R, "tipo_impiego", "1", dal, al),
     ]
     if regime is not None:
@@ -182,7 +183,8 @@ def reale():
 
 def dipendente(registro, area, regime, dal=date(2026, 1, 1), al=None):
     fatti = [
-        registro.registra_codice(R, "codice_fiscale", CF, dal),
+        registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1980, 1, 1)),
+        registro.collega_rapporto(R, "PERSONA-1", dal),
         registro.registra_codice(R, "tipo_impiego", "1", dal, al),
         registro.registra_codice(R, "area", area, dal, al),
     ]
@@ -266,7 +268,7 @@ def test_recupero_su_cessato_recupera_anche_il_tfs(registro, reale, orologio):
     paga(registro, orologio, stipendi(registro, reale, Mese(2026, 10)), date(2026, 10, 27))
 
     orologio.vai(11, 3)
-    for fatto in fatti[1:]:
+    for fatto in fatti[2:]:  # dopo il codice fiscale e il legame con la persona
         registro.annulla_fatto(fatto.id, "cessazione comunicata in ritardo")
     for tipo, codice in (("tipo_impiego", "1"), ("area", "istruttori"), ("regime_fine_servizio", "3")):
         registro.registra_codice(R, tipo, codice, date(2026, 1, 1), date(2026, 10, 15))
@@ -365,7 +367,7 @@ def test_recupero_su_cessato_in_tfr(registro, reale, orologio):
     paga(registro, orologio, stipendi(registro, reale, Mese(2026, 10)), date(2026, 10, 27))
 
     orologio.vai(11, 3)
-    for fatto in fatti[1:]:
+    for fatto in fatti[2:]:  # dopo il codice fiscale e il legame con la persona
         registro.annulla_fatto(fatto.id, "cessazione comunicata in ritardo")
     for tipo, codice in (("tipo_impiego", "1"), ("area", "istruttori"), ("regime_fine_servizio", "1")):
         registro.registra_codice(R, tipo, codice, date(2026, 1, 1), date(2026, 10, 15))

@@ -15,7 +15,7 @@ from typing import Callable
 from .corpus import Corpus, Regola
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante
 from .formula import PRECISIONE, riferimenti, valuta
-from .modello import Derivazione, Esito, Fatto, Importo, ParametroLetto, Quota, TipoEsito
+from .modello import MATURAZIONI_FISCALI, Derivazione, Esito, Fatto, Importo, ParametroLetto, Quota, TipoEsito
 from .registro import Registro
 from .riferimento import solo_prassi
 from .tempo import Mese, Periodo, in_utc
@@ -374,7 +374,7 @@ class Differenza:
 
 
 def _riga_nel_confronto(riga: Importo, rapporto: str, competenza: Mese | int) -> bool:
-    if riga.rapporto != rapporto:
+    if riga.rapporto != rapporto or riga.derivazione.maturazione in MATURAZIONI_FISCALI:
         return False
     if isinstance(competenza, int):
         return riga.derivazione.maturazione == "annuale" and riga.periodo.dal.year == competenza
