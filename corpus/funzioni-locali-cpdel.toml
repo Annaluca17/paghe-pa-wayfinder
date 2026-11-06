@@ -1,15 +1,19 @@
-# Corpus reale: CPDEL e Fondo Credito di un dipendente del comparto Funzioni Locali.
-# Ticket #29, parte 2. Si carica con Corpus.carica(percorso, reale=True), che rifiuta i
+# Corpus reale: CPDEL, Fondo Credito e TFS di un dipendente del comparto Funzioni Locali.
+# Ticket #29, parte 2; TFS dal ticket #33, parte 1. Si carica con Corpus.carica(percorso, reale=True), che rifiuta i
 # riferimenti fittizi (ADR 0003). Copertura: competenze e pagamenti dal 01/01/2026.
 #
 # Stato delle fonti (riscontro nel ticket #29):
 #   norma certa           aliquote CPDEL e Fondo Credito, aliquota aggiuntiva 1%, prima fascia
 #                         2026, tab. B e C del CCNL 28/10/2026
+#                         TFS ex INADEL 6,10% sull'80%, ente 3,60, iscritto 2,50 (L. 152/1968
+#                         art. 11; msg INPS 2440/2019); comparto escluso dal TFS (art. 33 c. 3
+#                         CCNL 22/01/2004). Riscontro nel ticket #33
 #   da verificare         massimale 2026: letto nella Circ. INPS 6/2026 § 6, la seconda fonte
 #                         è solo una fonte secondaria; qui serve solo a fermare la denuncia.
 #                         Art. 74 c. 4 CCNL 16/11/2022 ancora vigente dopo i CCNL del 2026
 #   prassi-interpretazione  tabellare mensile, divisore del mese parziale, arrotondamento delle
-#                         quote CPDEL, 1% sull'ultimo periodo: note di prassi 1, 2 e 3
+#                         quote CPDEL e TFS, 1% sull'ultimo periodo, imponibile TFS all'80%
+#                         arrotondato prima dell'aliquota: note di prassi 1, 2, 3 e 4
 
 [periodo_dichiarato]
 servizio = "tipo_impiego"
@@ -34,10 +38,19 @@ conguaglio_annuo = ["contributo_aggiuntivo"]
 
 [[fermo]]
 fatto = "regime_fine_servizio"
-caso = "contribuzione TFS o TFR, non modellata"
+caso = "contribuzione TFS o TFR non ancora esposta in GestPrevidenziale"
 # ADR 0008: il regime è obbligatorio nel tracciato. La denuncia si calcola, la vista è una bozza.
+# Il TFS si calcola dalla parte 1 del ticket #33; la parte 3 toglie questo fermo.
 ambito = "vista"
 riferimento = "prassi:inps:circolare:2014-01-16;6 + prassi:immedia:nota:2026-11-06;3"
+
+[[fermo]]
+fatto = "regime_fine_servizio"
+codice = "2"
+caso = "optante TFR, doppio imponibile TFS e TFR non modellato"
+# Decisione di Luca, ticket #33: optanti fuori dalla scheda.
+ambito = "denuncia"
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1 + prassi:immedia:nota:2026-11-06;4"
 
 [[fermo]]
 fatto = "part_time"
@@ -66,6 +79,12 @@ riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circol
 [[base]]
 nome = "fondo_credito"
 riferimento = "prassi:inps:circolare:2014-01-16;6~par19"
+
+# Retribuzione contributiva TFS al 100%: l'80% è la regola imponibile_tfs. Nella parte 2 la
+# stessa base darà l'imponibile TFR delle voci comuni (Circ. INPS 185/2021 § 2.2.1).
+[[base]]
+nome = "tfs"
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:circolare:2021-12-14;185~par2.2.1"
 
 # Aliquote, in punti percentuali
 
@@ -96,6 +115,29 @@ nome = "aliquota_aggiuntiva"
 dal = 1993-01-01
 valore = "1"
 riferimento = "urn:nir:stato:decreto.legge:1992-09-19;384~art3ter + prassi:inps:circolare:2026-01-30;6~par5"
+
+# TFS ex INADEL: 6,10% della retribuzione contributiva considerata all'80%, dal 01/01/1972.
+
+[[parametro]]
+nome = "quota_imponibile_tfs"
+[[parametro.vigenza]]
+dal = 1966-03-01
+valore = "80"
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:messaggio:2019-07-01;2440"
+
+[[parametro]]
+nome = "aliquota_tfs_ente"
+[[parametro.vigenza]]
+dal = 1972-01-01
+valore = "3.60"
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:messaggio:2019-07-01;2440"
+
+[[parametro]]
+nome = "aliquota_tfs_lavoratore"
+[[parametro.vigenza]]
+dal = 1972-01-01
+valore = "2.50"
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:messaggio:2019-07-01;2440"
 
 # Soglie annuali INPS: valgono per l'anno, oltre il calcolo si ferma.
 
@@ -339,6 +381,42 @@ riferimento = "urn:nir:stato:legge:1996-12-23;662~art1-com242 + prassi:inps:circ
 formula = "arrotonda(base.fondo_credito * parametro.aliquota_fondo_credito / 100, 2)"
 maturazione = "periodo"
 
+# TFS solo con il regime 3 (Allegato tecnico UniEmens 4.33.1, p. 243). Imponibile all'80%
+# arrotondato al centesimo (nota di prassi 4); quote come la CPDEL (nota di prassi 3).
+
+[[regola]]
+istituto = "imponibile_tfs"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;4"
+formula = "arrotonda(base.tfs * parametro.quota_imponibile_tfs / 100, 2)"
+maturazione = "periodo"
+applica_se = "regime_fine_servizio=3"
+
+[[regola]]
+istituto = "tfs_totale"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(importo.imponibile_tfs * (parametro.aliquota_tfs_ente + parametro.aliquota_tfs_lavoratore) / 100, 2)"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "tfs_lavoratore"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;3"
+formula = "arrotonda(importo.imponibile_tfs * parametro.aliquota_tfs_lavoratore / 100, 2)"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "tfs_ente"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;3"
+formula = "importo.tfs_totale - importo.tfs_lavoratore"
+maturazione = "periodo"
+
 # 1% sul totale del mese oltre la prima fascia mensile, sull'ultimo periodo (nota di prassi 2).
 
 [[regola]]
@@ -406,3 +484,62 @@ basi = ["cpdel", "fondo_credito"]
 misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+# Concorsi alla base TFS (ticket #33). Il tabellare è «stipendio» (L. 152/1968 art. 11), anche la
+# quota di comparto conglobata dal 2026 (nota di prassi 4). La quota residua di comparto è esclusa.
+
+[[concorso]]
+istituto = "tabellare_funzionari"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;4"
+
+[[concorso]]
+istituto = "tabellare_istruttori"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;4"
+
+[[concorso]]
+istituto = "tabellare_operatori_esperti"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;4"
+
+[[concorso]]
+istituto = "tabellare_operatori"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;4"
+
+[[concorso]]
+istituto = "comparto_funzionari"
+basi = ["tfs"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2004-01-22~art33-com3"
+
+[[concorso]]
+istituto = "comparto_istruttori"
+basi = ["tfs"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2004-01-22~art33-com3"
+
+[[concorso]]
+istituto = "comparto_operatori_esperti"
+basi = ["tfs"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2004-01-22~art33-com3"
+
+[[concorso]]
+istituto = "comparto_operatori"
+basi = ["tfs"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2004-01-22~art33-com3"

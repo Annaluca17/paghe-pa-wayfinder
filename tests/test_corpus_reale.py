@@ -90,6 +90,7 @@ def test_denuncia_di_un_mese_intero(registro, reale, orologio):
     assert importi(periodo) == {
         "base.cpdel": Decimal("2051.69"),
         "base.fondo_credito": Decimal("2051.69"),
+        "base.tfs": Decimal("2019.63"),  # senza regime: base sì, contributo TFS no (ticket #33)
         "cpdel_totale": Decimal("669.88"),
         "cpdel_lavoratore": Decimal("181.57"),
         "cpdel_ente": Decimal("488.31"),

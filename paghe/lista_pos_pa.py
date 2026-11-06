@@ -312,8 +312,9 @@ class _Vista:
             if fermo.ambito != "vista":
                 continue
             if any(
-                any(self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, quadro.periodo, self.istante))
+                fatto is not None and (fermo.codice is None or str(fatto.valore) == fermo.codice)
                 for quadro in quadri
+                for fatto in self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, quadro.periodo, self.istante)
             ):
                 motivi.append(f"{fermo.caso}: bozza non trasmissibile ({fermo.riferimento})")
         return motivi

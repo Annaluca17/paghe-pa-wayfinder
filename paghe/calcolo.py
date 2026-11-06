@@ -79,11 +79,16 @@ class _Lettore:
         for fermo in self.corpus.fermi:
             if fermo.ambito not in ambiti:
                 continue
-            presenti = [f for f in self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al) if f]
+            presenti = [
+                f
+                for f in self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al)
+                if f and (fermo.codice is None or str(f.valore) == fermo.codice)
+            ]
             if presenti:
+                valore = f" = {fermo.codice}" if fermo.codice is not None else ""
                 raise CasoNonModellato(
                     f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
-                    f"(fatto {fermo.fatto} dal {presenti[0].valido_dal}; {fermo.riferimento})"
+                    f"(fatto {fermo.fatto}{valore} dal {presenti[0].valido_dal}; {fermo.riferimento})"
                 )
 
     def parametro(self, nome: str, periodo: Periodo) -> ParametroLetto:

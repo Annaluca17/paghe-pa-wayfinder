@@ -79,7 +79,7 @@ Dichiarazione, con date e riferimento, di come un istituto entra in una base: in
 _Avoid_: Flag imponibile
 
 **Regola di cassa**:
-Regola che legge una base o un'altra regola di cassa. Si sceglie alla data di pagamento, con i parametri vigenti in quel giorno, e produce importi solo nella denuncia.
+Regola che legge una base o un'altra regola di cassa. Si sceglie alla data di pagamento, con i parametri vigenti in quel giorno, e produce importi solo nella denuncia. Con `applica_se` vale solo per un codice, letto sul periodo o, fuori servizio, sull'ultimo giorno di servizio.
 _Avoid_: Contributo per competenza
 
 **Regola sul mese**:
@@ -91,8 +91,12 @@ Importo negativo pagato che entra in una base. Modellati i casi in servizio, det
 _Avoid_: Trattenuta (la trattenuta è un istituto)
 
 **Fermo**:
-Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato.
+Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato. Con un codice, scatta solo per quel valore del fatto.
 _Avoid_: Blocco, errore generico
+
+**Regime di fine servizio**:
+Codice INPS del rapporto: 1 TFR, 2 optante, 3 TFS. Sceglie la contribuzione di fine servizio. TFS e TFR di un Comune stanno entrambi nella gestione ex INADEL.
+_Avoid_: Tipo liquidazione
 
 **Caso**:
 Situazione reale modellata con i suoi fatti, la sua regola, il riferimento e un esempio verificato. Finché un caso non è modellato, il calcolo si ferma e lo nomina.
