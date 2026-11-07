@@ -44,6 +44,7 @@ from .delega import (
 )
 from .esito_730_4 import Esito730, esito_730_4, rimborso_730_4
 from .f24ep import serializza as serializza_f24ep
+from .denuncia_individuale import denuncia_individuale
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
@@ -145,6 +146,7 @@ __all__ = [
     "segnala_scostamento_contributi",
     "stato_delega",
     "stato_versione",
+    "denuncia_individuale",
     "lista_pos_pa",
     "spiega",
 ]

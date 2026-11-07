@@ -523,6 +523,37 @@ class MappaturaEsterna:
 
 
 @dataclass(frozen=True)
+class MappaturaDiFatto:
+    """Codice di un elemento di un sistema esterno, per il valore che un fatto del rapporto ha in un giorno.
+
+    Come `MappaturaEsterna`, ma la chiave non è un istituto: è il valore di un fatto (ADR 0027, ticket #77).
+    """
+
+    sistema: str
+    elemento: str
+    fatto: str
+    valore: str
+    codice: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Mappatura di fatto {self.sistema}.{self.elemento} ({self.fatto}={self.valore})"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        for campo in ("sistema", "elemento", "fatto", "valore", "codice"):
+            valore = getattr(self, campo)
+            if not isinstance(valore, str) or not valore.strip():
+                raise ErroreCorpus(f"{soggetto}: {campo} obbligatorio, scritto come testo")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+
+    @property
+    def chiave(self) -> tuple[str, str, str, str]:
+        return (self.sistema, self.elemento, self.fatto, self.valore)
+
+
+@dataclass(frozen=True)
 class CodiceF24EP:
     """Voce del catalogo dei codici F24EP, con vigenza e fonte (ticket #54).
 
@@ -650,6 +681,7 @@ class Corpus:
         fiscale: RegoleFiscali | None = None,
         composizioni: tuple[DichiarazioneComposizione, ...] = (),
         mappature: tuple[MappaturaEsterna, ...] = (),
+        mappature_di_fatto: tuple[MappaturaDiFatto, ...] = (),
         codici_f24ep: tuple[CodiceF24EP, ...] = (),
         scadenze_f24ep: tuple[RegolaScadenzaF24EP, ...] = (),
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
@@ -662,6 +694,7 @@ class Corpus:
         self._codici_f24ep = tuple(codici_f24ep)
         self._composizioni = tuple(composizioni)
         self._mappature = tuple(mappature)
+        self._mappature_di_fatto = tuple(mappature_di_fatto)
         self.fiscale = fiscale or RegoleFiscali()
         self.fermi = tuple(fermi)
         self.denuncia = denuncia or RegoleDenuncia()
@@ -689,6 +722,7 @@ class Corpus:
         self._convalida_fiscale()
         self._convalida_composizione()
         self._convalida_part_time()
+        self._convalida_mappature_di_fatto()
         self._convalida_catalogo_f24ep()
         if reale:
             self._rifiuta_fittizi()
@@ -709,6 +743,10 @@ class Corpus:
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
+        elenco += [
+            (f"Mappatura di fatto {m.sistema}.{m.elemento} ({m.fatto}={m.valore})", m.riferimento)
+            for m in self._mappature_di_fatto
+        ]
         elenco += [(f"Part-time {t.istituto}", t.riferimento) for t in self._trattamenti_part_time]
         elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
         elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
@@ -756,6 +794,12 @@ class Corpus:
             for altra in self._mappature[indice + 1 :]:
                 if (altra.istituto, altra.sistema) == (mappatura.istituto, mappatura.sistema):
                     _vigenze_sovrapposte([mappatura, altra], soggetto)
+
+    def _convalida_mappature_di_fatto(self) -> None:
+        for indice, mappatura in enumerate(self._mappature_di_fatto):
+            altre = [a for a in self._mappature_di_fatto[indice + 1 :] if a.chiave == mappatura.chiave]
+            if altre:
+                _vigenze_sovrapposte([mappatura, *altre], "Mappatura di fatto {}.{} ({}={})".format(*mappatura.chiave))
 
     def _convalida_part_time(self) -> None:
         noti = self._istituti_noti()
@@ -1027,6 +1071,11 @@ class Corpus:
                 [m.istituto, m.sistema, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
                 for m in self._mappature
             )
+        if self._mappature_di_fatto:
+            contenuto["mappature_di_fatto"] = sorted(
+                [*m.chiave, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
+                for m in self._mappature_di_fatto
+            )
         if self._codici_f24ep:
             contenuto["codici_f24ep"] = sorted(
                 [c.codice, c.sezione, c.codice_campo, c.estremi, c.rif_a, c.rif_b, c.modalita, c.limite_credito,
@@ -1101,6 +1150,14 @@ class Corpus:
         """Codice del sistema esterno: per anno d'imposta, al 31 dicembre, se l'importo lo porta; altrimenti per data di pagamento."""
         giorno = date(anno_imposta, 12, 31) if anno_imposta is not None else data_pagamento
         return _vigente([m for m in self._mappature if (m.istituto, m.sistema) == (istituto, sistema)], giorno)
+
+    def mappatura_di_fatto(
+        self, sistema: str, elemento: str, fatto: str, valore: str, giorno: date
+    ) -> MappaturaDiFatto | None:
+        """Codice dell'elemento per il valore del fatto, vigente al giorno; None se il corpus non lo dichiara."""
+        return _vigente(
+            [m for m in self._mappature_di_fatto if m.chiave == (sistema, elemento, fatto, valore)], giorno
+        )
 
     def codice_f24ep(self, codice: str, giorno: date) -> CodiceF24EP | None:
         """Voce del catalogo vigente alla data; None se il codice non è dichiarato."""
@@ -1181,6 +1238,19 @@ class Corpus:
             fiscale = _fiscale_da_toml(dati)
             composizioni = tuple(_composizione_da_toml(voce) for voce in dati.get("composizione", []))
             mappature = tuple(_mappatura_da_toml(voce) for voce in dati.get("mappatura", []))
+            mappature_di_fatto = tuple(
+                MappaturaDiFatto(
+                    sistema=voce["sistema"],
+                    elemento=voce["elemento"],
+                    fatto=voce["fatto"],
+                    valore=voce["valore"],
+                    codice=voce["codice"],
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                )
+                for voce in dati.get("mappatura_fatto", [])
+            )
             trattamenti_part_time = tuple(
                 DichiarazioneTrattamentoPartTime(
                     istituto=voce["istituto"],
@@ -1218,6 +1288,7 @@ class Corpus:
             fiscale=fiscale,
             composizioni=composizioni,
             mappature=mappature,
+            mappature_di_fatto=mappature_di_fatto,
             codici_f24ep=codici_f24ep,
             scadenze_f24ep=scadenze_f24ep,
             calendari_festivi=calendari_festivi,
