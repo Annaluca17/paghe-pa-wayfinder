@@ -173,18 +173,32 @@ class _Lettore:
             )
         fatti = {fatto.id: fatto for fatto in importo.derivazione.fatti}
         fatti[percentuale.id] = percentuale
+        misura = percentuale
+        if dichiarazione.trattamento == "da_integrativo":
+            misura = self.fatto(dichiarazione.fatto, periodo)
+            if misura is None:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, il trattamento nel part-time di {regola.istituto} "
+                    f"è da integrativo e manca l'input da atto (fatto {dichiarazione.fatto}) per {periodo}"
+                )
+            if misura.atto is None or misura.categoriale:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, il fatto {dichiarazione.fatto} di {regola.istituto} "
+                    f"non è un valore numerico con atto (#{misura.id})"
+                )
+            fatti[misura.id] = misura
         valore = importo.valore
-        if dichiarazione.trattamento == "proporzionale":
+        if dichiarazione.trattamento != "intero":
             with localcontext() as contesto:
                 contesto.prec = PRECISIONE
-                valore = _arrotonda(importo.valore * percentuale.valore / 100, regola.decimali)
+                valore = _arrotonda(importo.valore * misura.valore / 100, regola.decimali)
         return replace(
             importo,
             valore=valore,
             derivazione=replace(
                 importo.derivazione,
                 fatti=tuple(fatti[numero] for numero in sorted(fatti)),
-                part_time=RiduzionePartTime(percentuale.valore, importo.valore, dichiarazione.trattamento),
+                part_time=RiduzionePartTime(misura.valore, importo.valore, dichiarazione.trattamento),
             ),
         )
 

@@ -128,3 +128,34 @@ def test_senza_part_time_non_serve_nessuna_dichiarazione(registro):
     (stipendio,) = calcola(registro, Corpus.da_toml(BASE), R, NOVEMBRE)
     assert stipendio.valore == Decimal("1000.00")
     assert stipendio.derivazione.part_time is None
+
+
+INTEGRATIVO = dichiarazione("da_integrativo", extra='fatto = "misura_stipendio"')
+
+
+def test_da_integrativo_legge_la_misura_fissata_dall_ente_con_un_atto(registro):
+    from paghe import Atto
+
+    assumi_part_time(registro, "60")
+    registro.registra_fatto(
+        R, "misura_stipendio", "80", date(2026, 1, 1), atto=Atto("fittizio:integrativo-1", date(2026, 1, 15))
+    )
+    (stipendio,) = calcola(registro, corpus_con(INTEGRATIVO), R, NOVEMBRE)
+    assert stipendio.valore == Decimal("800.00")
+    assert stipendio.derivazione.part_time.trattamento == "da_integrativo"
+    assert stipendio.derivazione.part_time.importo_pieno == Decimal("1000.00")
+    letto = {fatto.tipo: fatto for fatto in stipendio.derivazione.fatti}
+    assert letto["misura_stipendio"].atto.riferimento == "fittizio:integrativo-1"
+
+
+def test_da_integrativo_senza_misura_ferma_e_nomina_istituto_e_caso(registro):
+    assumi_part_time(registro, "60")
+    with pytest.raises(CasoNonModellato, match="stipendio.*da integrativo.*misura_stipendio"):
+        calcola(registro, corpus_con(INTEGRATIVO), R, NOVEMBRE)
+
+
+def test_da_integrativo_con_misura_senza_atto_ferma(registro):
+    assumi_part_time(registro, "60")
+    registro.registra_fatto(R, "misura_stipendio", "80", date(2026, 1, 1))
+    with pytest.raises(CasoNonModellato, match="stipendio.*atto"):
+        calcola(registro, corpus_con(INTEGRATIVO), R, NOVEMBRE)
