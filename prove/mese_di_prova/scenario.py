@@ -1,4 +1,4 @@
-"""Lo scenario del mese di prova: un ente fittizio e undici rapporti, ognuno per un caso diverso.
+"""Lo scenario del mese di prova: un ente fittizio e dodici rapporti, ognuno per un caso diverso.
 
 Dati esclusivamente fittizi: nomi, codici fiscali (con il carattere di controllo calcolato, vedi `codici`), IBAN di
 prova, nessun ente reale. Lo scenario dice cosa l'Ufficio personale registra e quando; non calcola nulla.
@@ -44,6 +44,7 @@ class Rapporto:
     regime: str | None = None
     al: date | None = None
     detrazioni: bool = True
+    impiego: str = "1"  # TipoImpiego della ListaPosPA: 1 tempo pieno indeterminato, 18 tempo determinato part-time
 
     @property
     def cognome(self) -> str:
@@ -81,6 +82,8 @@ RAPPORTI = (
              date(1972, 10, 9), date(2024, 6, 10)),
     Rapporto("R11", "P11", "LAMBDA", "co.co.co.", "collaboratore coordinato e continuativo",
              date(1988, 1, 27), date(2026, 1, 1)),
+    Rapporto("R12", "P12", "OMICRON", "comparto", "tempo determinato part-time verticale 50% in sostituzione (tipo impiego 18)",
+             date(1991, 5, 19), date(2026, 1, 1), "operatori", "1", al=date(2026, 12, 31), detrazioni=False, impiego="18"),
 )
 
 PER_ID = {r.id: r for r in RAPPORTI}
@@ -92,6 +95,11 @@ RIMBORSO_730 = "150.00"
 ANNO_REDDITI_730 = 2025  # i redditi dichiarati nel 730 il cui esito (730-4) porta il rimborso
 PART_TIME_PERCENTUALE = "60"
 PART_TIME_TIPO = "verticale"  # tre giornate su cinque a orario pieno: lunedi', martedi', mercoledi'
+TD_PERCENTUALE = "50"
+TD_TIPO_PART_TIME = "verticale"  # lunedi', martedi' e mercoledi', tranne una settimana di marzo
+TD_SETTIMANA_NON_LAVORATA = (date(2026, 3, 15), date(2026, 3, 21))  # domenica-sabato: interamente senza ore (TipoCopertura D)
+TD_TERMINE_PER_SOSTITUZIONE = "si"
+TD_PRIMA_ISCRIZIONE_DAL_1996 = "no"
 ORE_GIORNATA_PIENA = Decimal("7.2")  # 36 ore settimanali su cinque giorni
 
 # Atti di fantasia: riferimento nel formato ente:<ente>:<tipo>:<data>;<numero>
@@ -99,13 +107,14 @@ ATTO_PERFORMANCE = Atto("ente:ente_di_prova:determina:2026-03-04;41", date(2026,
 ATTO_PROGRESSIONE = Atto("ente:ente_di_prova:determina:2026-03-05;42", date(2026, 3, 5))
 ATTO_RIMBORSO = Atto("ente:ente_di_prova:comunicazione.730:2026-11-30;7304", date(2026, 11, 30))
 ATTO_PROGRAMMAZIONE = Atto("ente:ente_di_prova:determina:2026-01-09;43", date(2026, 1, 9))
+ATTO_PROGRAMMAZIONE_TD = Atto("ente:ente_di_prova:determina:2026-01-09;44", date(2026, 1, 9))
 ATTO_DETRAZIONI = Atto("ente:ente_di_prova:dichiarazione.detrazioni:2026-01-09;1", date(2026, 1, 9))
 
 
 def fatti_inquadramento(r: Rapporto) -> dict[str, str]:
     """I sei fatti che dicono servizio e inquadramento di un rapporto del comparto."""
     return {
-        "tipo_impiego": "1",
+        "tipo_impiego": r.impiego,
         "tipo_servizio": "4",
         "contratto": "RALN",
         "qualifica": QUALIFICHE[r.area],
@@ -119,5 +128,16 @@ def programmazione_part_time_2026() -> dict[date, Decimal]:
     giorno, fine, ore = date(2026, 1, 1), date(2026, 12, 31), {}
     while giorno <= fine:
         ore[giorno] = ORE_GIORNATA_PIENA if giorno.weekday() < 3 else Decimal(0)
+        giorno += timedelta(days=1)
+    return ore
+
+
+def programmazione_td_2026() -> dict[date, Decimal]:
+    """La programmazione annuale di R12: tre giorni a settimana a orario pieno, la settimana del 15-21 marzo senza ore."""
+    giorno, fine, ore = date(2026, 1, 1), date(2026, 12, 31), {}
+    dal, al = TD_SETTIMANA_NON_LAVORATA
+    while giorno <= fine:
+        lavora = giorno.weekday() < 3 and not dal <= giorno <= al
+        ore[giorno] = ORE_GIORNATA_PIENA if lavora else Decimal(0)
         giorno += timedelta(days=1)
     return ore
