@@ -75,3 +75,10 @@ def test_un_conguaglio_pari_alle_ritenute_da_un_totale_zero_che_non_ferma_la_del
     d = delega_con(registro, corpus, orologio, voci)
     assert d.fermi == () and d.pronta
     assert d.saldo == D("480")
+
+
+def test_un_credito_negativo_ferma_la_delega_e_non_arriva_al_serializzatore(registro, corpus, orologio, ente):
+    d = delega_con(registro, corpus, orologio, [("ritenuta_irpef", "100", R), ("credito_integrativo", "-30", R)])
+    assert not d.pronta
+    (fermo,) = d.fermi
+    assert fermo.caso == "credito_negativo" and "170E" in fermo.motivo and "-30" in fermo.motivo

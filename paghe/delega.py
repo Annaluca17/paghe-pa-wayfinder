@@ -529,6 +529,14 @@ def costruisci_delega(
                 f"ha un totale a debito di {riga.debito}: i conguagli a credito superano le ritenute della delega. "
                 "Il recupero dell'eccedenza non ha ancora una fonte, la delega non si trasmette",
             )
+    for riga in crediti:
+        if riga.credito < 0:
+            ferma(
+                "credito_negativo",
+                "/".join(riga.chiave),
+                f"Il codice {riga.tributo} (sezione {riga.sezione}) ha un totale a credito di {riga.credito}: "
+                "un credito negativo non e' un caso modellato, la delega non si trasmette",
+            )
     righe, compensazioni, residui = _compensa(debiti, crediti)
     if crediti and not debiti:
         ferma(
