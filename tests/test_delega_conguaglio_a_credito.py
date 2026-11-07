@@ -68,3 +68,10 @@ def test_la_delega_con_un_debito_negativo_non_si_trasmette_e_non_arriva_al_seria
     with pytest.raises(VistaFerma, match="debito negativo|100E"):
         trasmetti_delega(registro, corpus, "DELEGA-1", ADATTATORE, FEB)
     assert registro.evento("delega:DELEGA-1") is None
+
+
+def test_un_conguaglio_pari_alle_ritenute_da_un_totale_zero_che_non_ferma_la_delega(registro, corpus, orologio, ente):
+    voci = [("ritenuta_irpef", "100", R), ("conguaglio_irpef", "-100", R), ("contributo_ente", "480", R)]
+    d = delega_con(registro, corpus, orologio, voci)
+    assert d.fermi == () and d.pronta
+    assert d.saldo == D("480")
