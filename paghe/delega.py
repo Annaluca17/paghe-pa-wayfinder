@@ -16,7 +16,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from .corpus import Corpus
-from .errori import ErroreCalcolo, ErroreRegistro, ParametroMancante, VistaFerma
+from .errori import ErroreRegistro, ParametroMancante, VistaFerma
 from .f24ep import problemi_dati_ente
 from .f24ep import FornituraF24EP, ModelloF24EP, ModuloF24EP, RigaF24EP, serializza
 from .modello import Esito, Evento, Importo, TipoEsito
@@ -25,7 +25,6 @@ from .proposta import (
     TIPO_VERSAMENTO_ESEGUITO,
     DatoMancante,
     RiferimentoRiga,
-    RigaComposizione,
     StatoDelega,
     _evento_gia_noto,
     leggi_versione,
