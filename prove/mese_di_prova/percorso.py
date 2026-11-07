@@ -342,7 +342,7 @@ def _registra_ente(c: _Contesto) -> None:
 
 
 def _registra_rapporto(c: _Contesto, r: S.Rapporto) -> dict[str, object]:
-    """Anagrafica e inquadramento di un rapporto. Per i titoli senza regime (sindaco, co.co.co.) c'e' solo il compenso: nessun lettore."""
+    """Anagrafica e inquadramento di un rapporto; per sindaco e co.co.co. i fatti del loro regime (`_registra_regime`)."""
     u = c.ufficio
     u.codice_persona(r.persona, "codice_fiscale", r.cf, r.nascita)
     u.codice_persona(r.persona, "cognome", r.cognome, r.nascita)
