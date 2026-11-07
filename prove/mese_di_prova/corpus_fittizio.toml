@@ -58,6 +58,24 @@ versione = 1
 dal = 2025-01-01
 riferimento = "fittizio:conguaglio-irpef"
 
+# Dichiarazione ASSUNTA: i contributi a carico del lavoratore riducono l'imponibile fiscale (art. 51 c. 2 lett. a TUIR,
+# letto su riproduzione; nel corpus reale il riferimento va riletto su Normattiva).
+
+[[deduzione_fiscale]]
+istituto = "cpdel_lavoratore"
+dal = 2025-01-01
+riferimento = "fittizio:deduzione-cpdel-lavoratore"
+
+[[deduzione_fiscale]]
+istituto = "fondo_credito"
+dal = 2025-01-01
+riferimento = "fittizio:deduzione-fondo-credito"
+
+[[deduzione_fiscale]]
+istituto = "tfs_lavoratore"
+dal = 2025-01-01
+riferimento = "fittizio:deduzione-tfs-lavoratore"
+
 # --- Due istituti che leggono un fatto (input da atto), senza regola di calcolo ---
 # La performance e' di competenza 2025 e pagata nel 2026: pagamento fisiologico dichiarato qui sotto.
 # Il rimborso da 730-4 ha maturazione `periodo`: e' l'unica maturazione che non produce reddito imponibile ne' entra
