@@ -47,12 +47,16 @@ class Avviso:
 
 @dataclass(frozen=True)
 class ImponibileFiscale:
-    """Base per persona e anno d'imposta: gli esiti pagati di tutti i suoi rapporti, in regime ordinario."""
+    """Base per persona e anno d'imposta: gli esiti pagati di tutti i suoi rapporti, in regime ordinario.
+
+    `valore` è la somma dei redditi (`righe`) meno gli importi che l'istituto dichiara riduttivi (`deduzioni`).
+    """
 
     persona: str
     anno: int
     valore: Decimal
     righe: tuple[Importo, ...]
+    deduzioni: tuple[Importo, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -200,16 +204,31 @@ def _controlla_anno(riga: Importo) -> None:
         )
 
 
-def imponibile_fiscale(registro: Registro, persona: str, anno: int, noto_al: datetime | None = None) -> ImponibileFiscale:
-    """Somma gli esiti pagati di tutti i rapporti della persona attribuiti all'anno, con l'anno congelato."""
+def imponibile_fiscale(
+    registro: Registro, persona: str, anno: int, noto_al: datetime | None = None, *, corpus: Corpus | None = None
+) -> ImponibileFiscale:
+    """Somma gli esiti pagati di tutti i rapporti della persona attribuiti all'anno, con l'anno congelato.
+
+    Con il `corpus`, toglie gli importi pagati che l'istituto dichiara riduttivi dell'imponibile fiscale
+    (i contributi del lavoratore), scelti con la data di pagamento. Senza il corpus non ci sono dichiarazioni
+    da leggere e l'imponibile resta la somma dei redditi.
+    """
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
     righe = []
+    deduzioni = []
     for pagata in _pagati(registro, persona, istante):
         if _e_reddito(pagata.riga):
             _controlla_anno(pagata.riga)
             if pagata.riga.anno_imposta == anno:
                 righe.append(pagata.riga)
-    return ImponibileFiscale(persona, anno, sum((riga.valore for riga in righe), Decimal(0)), tuple(righe))
+        elif (
+            corpus is not None
+            and _e_deduzione(corpus, pagata.riga, pagata.data or pagata.valuta)
+            and _anno_della_deduzione(pagata) == anno
+        ):
+            deduzioni.append(pagata.riga)
+    valore = sum((riga.valore for riga in righe), Decimal(0)) - sum((riga.valore for riga in deduzioni), Decimal(0))
+    return ImponibileFiscale(persona, anno, valore, tuple(righe), tuple(deduzioni))
 
 
 @dataclass(frozen=True)

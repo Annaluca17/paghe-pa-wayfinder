@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import pytest
 
-from paghe import Corpus, Mese, TipoEsito, attribuisci_reddito, calcola_fiscale, emetti_esito
+from paghe import Corpus, Mese, TipoEsito, attribuisci_reddito, calcola_fiscale, emetti_esito, imponibile_fiscale
 from paghe.errori import ErroreCorpus
 
 from test_fiscale import TESTO, assumi, stipendio
@@ -158,3 +158,26 @@ def test_la_ritenuta_di_un_secondo_pagamento_del_mese_deduce_anche_i_contributi_
         registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 5), "500"), "40", date(2026, 6, 27)
     )
     assert (primo.ritenuta.valore, secondo.ritenuta.valore) == (Decimal("192.67"), Decimal("92.00"))
+
+
+# Effetto sull'imponibile fiscale per persona e anno d'imposta
+
+def test_l_imponibile_fiscale_dell_anno_e_al_netto_dei_contributi_del_lavoratore(registro, con_deduzione, orologio):
+    assumi(registro)
+    paga_con_contributo(
+        registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 3)), "120", date(2026, 3, 27)
+    )
+    paga_con_contributo(
+        registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 4), "1000"), "80", date(2026, 4, 27)
+    )
+    base = imponibile_fiscale(registro, "PERSONA-1", 2026, corpus=con_deduzione)
+    assert base.valore == Decimal("2300")
+    assert imponibile_fiscale(registro, "PERSONA-1", 2027, corpus=con_deduzione).valore == Decimal(0)
+
+
+def test_senza_il_corpus_l_imponibile_fiscale_non_conosce_le_deduzioni(registro, con_deduzione, orologio):
+    assumi(registro)
+    paga_con_contributo(
+        registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 3)), "120", date(2026, 3, 27)
+    )
+    assert imponibile_fiscale(registro, "PERSONA-1", 2026).valore == Decimal("1500")
