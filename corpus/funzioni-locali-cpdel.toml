@@ -129,6 +129,26 @@ ambito = "calcolo"
 solo_se = "area=dirigente"
 riferimento = "ccnl:S105:2026-02-23~art22-com6 + prassi:immedia:nota:2026-11-07;9"
 
+# Co.co.co. (ticket #73, PR B): casi che la prima fetta non modella (nota di prassi 10).
+
+[[fermo]]
+fatto = "cumulo_altri_committenti"
+caso = "cumulo del collaboratore con altri committenti verso il massimale della gestione separata, non modellato"
+ambito = "calcolo"
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com18 + prassi:inps:circolare:2026-02-03;8~par6.1 + prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "inail_dovuta"
+caso = "INAIL su collaboratori e amministratori, non modellata"
+ambito = "calcolo"
+riferimento = "prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "irap_dovuta"
+caso = "IRAP sul compenso, scadenza e riparto per regione non modellati"
+ambito = "calcolo"
+riferimento = "prassi:immedia:nota:2026-11-07;10"
+
 # Basi imponibili (ADR 0005)
 
 [[base]]
@@ -149,6 +169,13 @@ riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:circolare:
 [[base]]
 nome = "tfr_ulteriori"
 riferimento = "prassi:inps:messaggio:2019-07-01;2440 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com6"
+
+# Gestione separata INPS (ticket #73, PR B): base propria dei compensi di collaborazione. Nessun altro istituto
+# vi concorre; gli istituti del lavoro dipendente ne sono esclusi per dichiarazione (art. 2 c. 26 L. 335/1995).
+[[base]]
+nome = "gestione_separata"
+massimale = "massimale_annuo_gs"
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par1"
 
 # Aliquote, in punti percentuali
 
@@ -255,6 +282,61 @@ dal = 2026-01-01
 al = 2026-12-31
 valore = "122295.00"
 riferimento = "prassi:inps:circolare:2026-01-30;6~par6 + urn:nir:stato:legge:1995-08-08;335~art2-com18"
+
+# Gestione separata 2026, in punti percentuali (Circ. INPS 8/2026 par. 1; ricerca regimi-titolo-cifre-2026.md sez. 3).
+# Collaboratori presso PP.AA. senza altra copertura e non pensionati: 33,00 IVS + 0,72 aggiuntive (0,50 + 0,22) + 1,31
+# DIS-COLL = 35,03. Valgono per l'anno: oltre il 31/12/2026 il calcolo si ferma finche' la circolare 2027 non e' nel corpus.
+
+[[parametro]]
+nome = "aliquota_gs_ivs"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "33.00"
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par1"
+
+# Pensionati o iscritti ad altra forma obbligatoria: IVS al 24% (art. 1 c. 79 L. 247/2007, Circ. INPS 8/2026 par. 1) piu' le
+# aggiuntive. Se la DIS-COLL si applichi a chi ha altra copertura e' da verificare (nota di prassi 10): qui non e' applicata.
+[[parametro]]
+nome = "aliquota_gs_ivs_ridotta"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "24.00"
+riferimento = "urn:nir:stato:legge:2007-12-24;247~art1-com79 + prassi:inps:circolare:2026-02-03;8~par1"
+
+[[parametro]]
+nome = "aliquota_gs_aggiuntive"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "0.72"
+riferimento = "urn:nir:stato:legge:1997-12-27;449~art59-com16 + prassi:inps:circolare:2026-02-03;8~par1"
+
+[[parametro]]
+nome = "aliquota_gs_dis_coll"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "1.31"
+riferimento = "urn:nir:stato:decreto.legislativo:2015-03-04;22~art15-com15quinquies + prassi:inps:circolare:2026-02-03;8~par1"
+
+# Ripartizione del contributo: 2/3 a carico del committente, 1/3 del collaboratore. Il divisore e' il terzo.
+[[parametro]]
+nome = "divisore_quota_collaboratore_gs"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "3"
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com30 + prassi:inps:circolare:2026-02-03;8~par4.1"
+
+# Massimale annuo 2026, due fonti: Circ. INPS 8/2026 par. 6.1 e Circ. INPS 14/2026.
+[[parametro]]
+nome = "massimale_annuo_gs"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "122295.00"
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com18 + prassi:inps:circolare:2026-02-03;8~par6.1 + prassi:inps:circolare:2026-02-09;14"
 
 # Orario settimanale del tempo pieno, in ore: serve alla DenunciaIndividuale dei tempi determinati per le settimane
 # utili e le ore lavorabili del part-time (ADR 0027, ticket #77). 36 ore settimanali nel comparto Funzioni Locali
@@ -725,6 +807,60 @@ riferimento = "urn:nir:stato:decreto.legge:1992-09-19;384~art3ter + prassi:inps:
 formula = "arrotonda(max(base.cpdel - parametro.prima_fascia_mensile, 0) * parametro.aliquota_aggiuntiva / 100, 2)"
 maturazione = "mese"
 
+# Gestione separata del collaboratore (ticket #73, PR B): il totale al tasso della posizione previdenziale, un terzo al
+# collaboratore (arrotondato) e il resto all'ente, per differenza come la CPDEL (nota di prassi 3). Nota di prassi 10.
+
+[[regola]]
+istituto = "gs_totale_piena"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par1 + prassi:immedia:nota:2026-11-07;10"
+formula = "arrotonda(base.gestione_separata * (parametro.aliquota_gs_ivs + parametro.aliquota_gs_aggiuntive + parametro.aliquota_gs_dis_coll) / 100, 2)"
+maturazione = "periodo"
+applica_se = "posizione_previdenziale=gestione_separata"
+
+[[regola]]
+istituto = "gs_totale_pensionato"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:2007-12-24;247~art1-com79 + prassi:inps:circolare:2026-02-03;8~par1 + prassi:immedia:nota:2026-11-07;10"
+formula = "arrotonda(base.gestione_separata * (parametro.aliquota_gs_ivs_ridotta + parametro.aliquota_gs_aggiuntive) / 100, 2)"
+maturazione = "periodo"
+applica_se = "posizione_previdenziale=pensionato"
+
+[[regola]]
+istituto = "gs_totale_altra_cassa"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:2007-12-24;247~art1-com79 + prassi:inps:circolare:2026-02-03;8~par1 + prassi:immedia:nota:2026-11-07;10"
+formula = "arrotonda(base.gestione_separata * (parametro.aliquota_gs_ivs_ridotta + parametro.aliquota_gs_aggiuntive) / 100, 2)"
+maturazione = "periodo"
+applica_se = "posizione_previdenziale=altra_cassa"
+
+[[regola]]
+istituto = "gs_totale"
+versione = 1
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2026-02-03;8~par4.1 + prassi:immedia:nota:2026-11-07;10"
+formula = "importo.gs_totale_piena + importo.gs_totale_pensionato + importo.gs_totale_altra_cassa"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "gs_lavoratore"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com30 + prassi:inps:circolare:2026-02-03;8~par4.1 + prassi:immedia:nota:2026-11-07;10"
+formula = "arrotonda(importo.gs_totale / parametro.divisore_quota_collaboratore_gs, 2)"
+maturazione = "periodo"
+
+[[regola]]
+istituto = "gs_ente"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com30 + prassi:inps:circolare:2026-02-03;8~par4.1 + prassi:immedia:nota:2026-11-07;10"
+formula = "importo.gs_totale - importo.gs_lavoratore"
+maturazione = "periodo"
+
 # Concorsi: tabellare e comparto entrano per intero in entrambe le basi.
 
 [[concorso]]
@@ -1029,6 +1165,121 @@ basi = ["tfr_ulteriori"]
 misura = "escluso"
 dal = 2026-01-01
 riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+# Gestione separata (ticket #73, PR B): gli istituti del lavoro dipendente ne sono esclusi, la rata del collaboratore vi
+# concorre per intero e non concorre alle basi della gestione dipendenti pubblici.
+
+[[concorso]]
+istituto = "tabellare_funzionari"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tabellare_istruttori"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tabellare_operatori_esperti"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tabellare_operatori"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "comparto_funzionari"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "comparto_istruttori"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "comparto_operatori_esperti"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "comparto_operatori"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tabellare_dirigenti"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "posizione_dirigenti"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tabellare_segretario_a"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tabellare_segretario_b"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tabellare_segretario_c"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "posizione_segretario"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "compenso_collaborazione"
+basi = ["gestione_separata"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par4.1"
+
+[[concorso]]
+istituto = "compenso_collaborazione"
+basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
 
 # Trattamento nel part-time (ADR 0026, ticket #72). Riferimento letto sul testo ARAN: CCNL 16/11/2022, art. 62, c. 10,
 # «il trattamento economico del personale con rapporto di lavoro a tempo parziale è proporzionale alla prestazione
