@@ -707,3 +707,16 @@ def test_il_corpus_reale_rifiuta_il_riferimento_fittizio_del_pagamento_fisiologi
     testo = CORPUS_REALE.read_text(encoding="utf-8") + FISIOLOGICO.replace('"stipendio"', f'"{reale.istituti()[0]}"')
     with pytest.raises(ErroreCorpus, match="Pagamento fisiologico.*fittizio"):
         Corpus.da_toml(testo, reale=True)
+
+
+def test_la_versione_del_corpus_cambia_con_la_dichiarazione_fisiologica():
+    senza = Corpus.da_toml(TESTO)
+    con = Corpus.da_toml(TESTO + FISIOLOGICO)
+    altra = Corpus.da_toml(TESTO + FISIOLOGICO.replace("fisiologico-stipendio", "fisiologico-altro"))
+    assert len({senza.versione, con.versione, altra.versione}) == 3
+
+
+def test_la_versione_dei_corpus_senza_dichiarazione_fisiologica_non_cambia():
+    """Valori letti prima della modifica: l'impronta tiene conto della dichiarazione solo se c'è."""
+    assert Corpus.da_toml(TESTO).versione == "e41b25349377cf4c"
+    assert Corpus.carica(CORPUS_REALE, reale=True).versione == "6fc5c8ad64937294"

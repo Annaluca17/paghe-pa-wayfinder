@@ -930,6 +930,11 @@ class Corpus:
                     for c in fiscale.conguagli
                 ),
             }
+            if fiscale.fisiologici:
+                contenuto["fiscale"]["fisiologici"] = sorted(
+                    [f.istituto, f.dal.isoformat(), f.al.isoformat() if f.al else "", f.riferimento]
+                    for f in fiscale.fisiologici
+                )
         if self._composizioni:
             contenuto["composizioni"] = sorted(
                 [c.istituto, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.natura or "", c.effetto or "",
