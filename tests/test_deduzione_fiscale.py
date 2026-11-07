@@ -59,3 +59,10 @@ def test_due_deduzioni_dello_stesso_istituto_non_si_sovrappongono():
     adiacenti = DEDUZIONE.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2025-12-31") + seconda
     corpus = Corpus.da_toml(TESTO + CONTRIBUTO + adiacenti)
     assert corpus.deduzione_fiscale("contributo_lavoratore", date(2026, 1, 1)).riferimento == "fittizio:deduzione-bis"
+
+
+def test_la_versione_del_corpus_cambia_con_la_deduzione_e_resta_senza():
+    senza = Corpus.da_toml(TESTO + CONTRIBUTO)
+    con = Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE)
+    altra = Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE.replace("deduzione-contributo-lavoratore", "deduzione-altra"))
+    assert len({senza.versione, con.versione, altra.versione}) == 3

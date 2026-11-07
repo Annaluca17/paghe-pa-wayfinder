@@ -669,6 +669,7 @@ class Corpus:
         elenco += [(f"Categoria {c.nome}", v.riferimento) for c in fiscale.categorie for v in c.cassa_allargata]
         elenco += [(f"Reddito {r.istituto}", r.riferimento) for r in fiscale.redditi]
         elenco += [(f"Pagamento fisiologico {f.istituto}", f.riferimento) for f in fiscale.fisiologici]
+        elenco += [(f"Deduzione fiscale {d.istituto}", d.riferimento) for d in fiscale.deduzioni]
         elenco += [(f"Ritenuta {r.istituto}", r.riferimento) for r in fiscale.ritenute]
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
@@ -959,6 +960,11 @@ class Corpus:
                 contenuto["fiscale"]["fisiologici"] = sorted(
                     [f.istituto, f.dal.isoformat(), f.al.isoformat() if f.al else "", f.riferimento]
                     for f in fiscale.fisiologici
+                )
+            if fiscale.deduzioni:
+                contenuto["fiscale"]["deduzioni"] = sorted(
+                    [d.istituto, d.dal.isoformat(), d.al.isoformat() if d.al else "", d.riferimento]
+                    for d in fiscale.deduzioni
                 )
         if self._composizioni:
             contenuto["composizioni"] = sorted(
