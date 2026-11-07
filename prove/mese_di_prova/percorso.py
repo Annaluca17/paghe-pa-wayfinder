@@ -440,20 +440,6 @@ def _controlla_fiscale(c: _Contesto, versione) -> None:
                 "dedurli. Da confermare con chi conosce il fisco: se l'imponibile IRPEF e' al netto dei contributi "
                 "obbligatori, la ritenuta e' calcolata troppo alta.",
             )
-        riduzione = next((riga.importo for riga in righe if riga.istituto == "riduzione_tfr"), None)
-        if riduzione is not None and riduzione.istituto not in lette:
-            esecuzione.difetto(
-                "La riduzione del lordo TFR non riduce l'imponibile fiscale",
-                f"{r.id}, {versione.valuta_prevista}: la riduzione {_soldi(riduzione.valore)} abbassa il netto ma la ritenuta "
-                f"e' calcolata su {_soldi(imponibile)}, il lordo prima della riduzione: la riduzione ha maturazione "
-                "`periodo`, derivata, e quindi non e' reddito. Aperto (ticket #70): la Corte costituzionale (sent. 213/2018, "
-                "punto 1.1, che descrive il DPCM 20/12/1999) dice che la soppressione del contributo non incide "
-                "sull'imponibile fiscale, cioe' invarianza rispetto al TFS, che con la riduzione del lordo si ottiene "
-                "solo se la riduzione entra nell'imponibile; gli ADR 0010 e 0015 dicono invece senza effetti fiscali. "
-                "Il nucleo non cambia la ritenuta e segnala il caso con l'avviso riduzione_tfr_senza_effetto_fiscale. "
-                "La dichiarazione di deduzione sottrae l'importo: per una riduzione, che e' negativa, servirebbe l'effetto "
-                "opposto.",
-            )
         for riga in righe:
             if riga.natura == "rimborso_730" and riga.effetto == "nessuno":
                 netto = next(n.netto for n in versione.netti if n.rapporto == r.id)

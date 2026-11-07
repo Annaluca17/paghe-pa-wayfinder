@@ -32,9 +32,6 @@ ULTIMO_GIORNO_CONGUAGLIO = (2, 28)  # entro il 28 febbraio (art. 23 c. 3 DPR 600
 
 AVVISO_SENZA_DICHIARAZIONE = "senza_dichiarazione_sostituito"
 AVVISO_PROIEZIONE = "proiezione_conguaglio"
-AVVISO_RIDUZIONE_TFR = "riduzione_tfr_senza_effetto_fiscale"
-# Nome convenzionale dell'istituto della riduzione del lordo TFR (ADR 0010), com'è nel corpus: serve solo all'avviso.
-ISTITUTO_RIDUZIONE_TFR = "riduzione_tfr"
 
 
 @dataclass(frozen=True)
@@ -564,19 +561,6 @@ def calcola_fiscale(
                 anno,
             )
         )
-    for riga in righe:
-        if riga.istituto == ISTITUTO_RIDUZIONE_TFR and not _e_deduzione(corpus, riga, data_pagamento):
-            avvisi.append(
-                Avviso(
-                    AVVISO_RIDUZIONE_TFR,
-                    f"Persona {persona}: la riduzione TFR di {riga.valore} non riduce l'imponibile fiscale della "
-                    "ritenuta: il DPCM 20/12/1999 e la sentenza Corte cost. 213/2018 parlano di invarianza della "
-                    "retribuzione netta e dell'imponibile fiscale rispetto al TFS, effetto da verificare (ticket #70)",
-                    persona,
-                    anno,
-                    riga.valore,
-                )
-            )
     conguaglio = None
     if ultimo_dell_anno:
         _controlla_ultimo(registro, persona, anno, data_pagamento, istante)

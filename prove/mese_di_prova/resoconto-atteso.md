@@ -171,7 +171,6 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
   - avviso proiezione_conguaglio: R01, R02, R03, R06, R07
-  - avviso riduzione_tfr_senza_effetto_fiscale: R06
   - avviso senza_dichiarazione_sostituito: R06
 
 **Conferma della Ragioneria**
@@ -292,7 +291,6 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Su dati fittizi:
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
-  - avviso riduzione_tfr_senza_effetto_fiscale: R06
   - avviso senza_dichiarazione_sostituito: R06
 
 **Conferma della Ragioneria**
@@ -355,9 +353,8 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 ## Difetti del nucleo trovati
 
-1. **La riduzione del lordo TFR non riduce l'imponibile fiscale.** R06, 2026-03-27: la riduzione -19.35 abbassa il netto ma la ritenuta e' calcolata su 1072.59, il lordo prima della riduzione: la riduzione ha maturazione `periodo`, derivata, e quindi non e' reddito. Aperto (ticket #70): la Corte costituzionale (sent. 213/2018, punto 1.1, che descrive il DPCM 20/12/1999) dice che la soppressione del contributo non incide sull'imponibile fiscale, cioe' invarianza rispetto al TFS, che con la riduzione del lordo si ottiene solo se la riduzione entra nell'imponibile; gli ADR 0010 e 0015 dicono invece senza effetti fiscali. Il nucleo non cambia la ritenuta e segnala il caso con l'avviso riduzione_tfr_senza_effetto_fiscale. La dichiarazione di deduzione sottrae l'importo: per una riduzione, che e' negativa, servirebbe l'effetto opposto.
-2. **Il rimborso 730 non puo' essere insieme nel netto e a credito nella delega.** R07, 2026-12-18: il rimborso 150.00 e' una riga con un solo effetto. Dichiarato a credito F24EP (effetto nessuno sul netto), il netto resta 1838.79 e il lavoratore non lo riceve; dichiarato sul netto, il sostituto non avrebbe il credito da compensare. Servirebbero due righe dallo stesso importo, e la struttura ne ammette una.
-3. **Una delega con un debito negativo risulta pronta.** 2026-12: la riga F 100E ha debito -177.14. I conguagli a credito dei lavoratori (ritenuta con segno meno nella composizione) superano le ritenute del mese e la somma per codice va sotto zero; `costruisci_delega` non lo segnala e il serializzatore la rifiuta (File F24EP: modello 1, modulo 1, riga 1: importo a debito: importo non ammesso, Decimal('-177.14')). L'esempio nasce dall'anno fittizio con soli due pagamenti, ma il caso e' raggiungibile.
+1. **Il rimborso 730 non puo' essere insieme nel netto e a credito nella delega.** R07, 2026-12-18: il rimborso 150.00 e' una riga con un solo effetto. Dichiarato a credito F24EP (effetto nessuno sul netto), il netto resta 1838.79 e il lavoratore non lo riceve; dichiarato sul netto, il sostituto non avrebbe il credito da compensare. Servirebbero due righe dallo stesso importo, e la struttura ne ammette una.
+2. **Una delega con un debito negativo risulta pronta.** 2026-12: la riga F 100E ha debito -177.14. I conguagli a credito dei lavoratori (ritenuta con segno meno nella composizione) superano le ritenute del mese e la somma per codice va sotto zero; `costruisci_delega` non lo segnala e il serializzatore la rifiuta (File F24EP: modello 1, modulo 1, riga 1: importo a debito: importo non ammesso, Decimal('-177.14')). L'esempio nasce dall'anno fittizio con soli due pagamenti, ma il caso e' raggiungibile.
 
 ## Non esercitato dal mese
 
