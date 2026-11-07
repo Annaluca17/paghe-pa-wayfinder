@@ -82,6 +82,8 @@ TIPO_DATA_PAGAMENTO = "data_pagamento"
 TIPO_PERSONA = "persona"
 TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
 TIPO_IBAN = "iban"
+# Esito 730-4 minimo: fatto della persona, valore JSON con il rimborso e l'anno dei redditi dichiarati.
+TIPO_ESITO_730_4 = "esito_730_4"
 # Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
 # Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
 TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
@@ -316,6 +318,23 @@ class Registro:
         if atto is None:
             raise ErroreRegistro("La dichiarazione del sostituito vuole il documento di origine")
         return self.registra_codice_persona(persona, TIPO_DICHIARAZIONE_SOSTITUITO, detrazioni, valido_dal, valido_al, atto)
+
+    def registra_esito_730_4(
+        self, persona: str, rimborso: Decimal, anno_redditi: int, valido_dal: date, atto: Atto | None
+    ) -> Fatto:
+        """Esito 730-4 della persona: il rimborso che il sostituto operera' e l'anno dei redditi dichiarati.
+
+        Un 730-4 rettificativo e' un nuovo fatto e sostituisce il precedente. Rate, acconti e debiti non sono
+        modellati: un importo che non e' un rimborso e' rifiutato.
+        """
+        if atto is None:
+            raise ErroreRegistro("L'esito 730-4 vuole il documento di origine")
+        if not isinstance(rimborso, Decimal) or not rimborso.is_finite() or rimborso <= 0:
+            raise ErroreRegistro(f"Esito 730-4: il rimborso e' un importo positivo, {rimborso!r}; debiti e rate non sono modellati")
+        if not isinstance(anno_redditi, int) or isinstance(anno_redditi, bool):
+            raise ErroreRegistro(f"Esito 730-4: l'anno dei redditi dichiarati e' un numero intero, {anno_redditi!r}")
+        valore = json.dumps({"anno_redditi": anno_redditi, "rimborso": str(rimborso)}, sort_keys=True)
+        return self.registra_codice_persona(persona, TIPO_ESITO_730_4, valore, valido_dal, None, atto)
 
     def collega_rapporto(
         self, rapporto: str, persona: str, valido_dal: date, valido_al: date | None = None, atto: Atto | None = None
