@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Callable, Iterable
@@ -107,6 +108,7 @@ class Registro:
         self._db.executescript(SCHEMA + "".join(_trigger_immutabilita(t) for t in TABELLE))
         self._aggiorna_schema()
         self._ultimo = self._ultimo_istante()
+        self._in_atomico = False
 
     def _aggiorna_schema(self) -> None:
         """Un registro creato prima dei codici riceve la colonna: i dati non cambiano."""
@@ -129,6 +131,27 @@ class Registro:
         if self._ultimo is not None and istante < self._ultimo:
             raise ErroreRegistro(f"Orologio indietro: {istante} precede {self._ultimo}")
         return istante
+
+    @contextmanager
+    def atomico(self):
+        """Più scritture in una transazione sola: se una fallisce, nessuna resta."""
+        if self._in_atomico:
+            yield
+            return
+        ultimo = self._ultimo
+        self._in_atomico = True
+        try:
+            with self._db:
+                yield
+        except BaseException:
+            self._ultimo = ultimo
+            raise
+        finally:
+            self._in_atomico = False
+
+    def _scrittura(self):
+        """Dentro `atomico` la transazione è dell'esterno; fuori, ogni scrittura è la sua."""
+        return nullcontext() if self._in_atomico else self._db
 
     def _registra(self, istante: datetime) -> str:
         self._ultimo = istante
@@ -308,7 +331,7 @@ class Registro:
         if atto is not None:
             _controlla_atto(atto)
         istante = self.adesso()
-        with self._db:
+        with self._scrittura():
             cursore = self._db.execute(
                 "INSERT INTO fatti (rapporto, tipo, valore, valido_dal, valido_al, registrato_il,"
                 " atto_riferimento, atto_data, categoriale, soggetto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -336,7 +359,7 @@ class Registro:
             raise ErroreRegistro("Il motivo dell'annullamento è obbligatorio")
         istante = self.adesso()
         try:
-            with self._db:
+            with self._scrittura():
                 self._db.execute(
                     "INSERT INTO annullamenti (fatto_id, motivo, registrato_il) VALUES (?, ?, ?)",
                     (fatto_id, motivo, istante_in_testo(istante)),
@@ -415,12 +438,13 @@ class Registro:
         elenco = tuple(righe)
         if not elenco:
             raise ErroreRegistro("Un esito deve contenere almeno un importo")
-        chiavi = [riga.chiave for riga in elenco]
+        # Un contributo per differenza è un altro importo: ha la stessa chiave ma confronta altri esiti.
+        chiavi = [(riga.chiave, riga.esiti_confrontati) for riga in elenco]
         if len(set(chiavi)) != len(chiavi):
             raise ErroreRegistro("Un esito non può contenere due volte lo stesso importo")
         istante = self.adesso()
         testo = json.dumps([riga.in_dizionario() for riga in elenco], ensure_ascii=False, sort_keys=True)
-        with self._db:
+        with self._scrittura():
             cursore = self._db.execute(
                 "INSERT INTO esiti (tipo, data, registrato_il, righe) VALUES (?, ?, ?, ?)",
                 (tipo.value, data.isoformat(), istante_in_testo(istante), testo),

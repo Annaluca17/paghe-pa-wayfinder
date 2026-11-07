@@ -373,8 +373,11 @@ class Differenza:
         return replace(self._base, valore=self.valore, esiti_confrontati=self.esiti)
 
 
-def _riga_nel_confronto(riga: Importo, rapporto: str, competenza: Mese | int) -> bool:
+def _riga_nel_confronto(riga: Importo, rapporto: str, competenza: Mese | int, corpus: Corpus) -> bool:
+    """Le righe che derivano dal pagato (ritenute, contributi di cassa) non sono dovuto per competenza."""
     if riga.rapporto != rapporto or riga.derivazione.maturazione in MATURAZIONI_FISCALI:
+        return False
+    if riga.istituto in corpus.istituti_di_cassa:
         return False
     if isinstance(competenza, int):
         return riga.derivazione.maturazione == "annuale" and riga.periodo.dal.year == competenza
@@ -382,13 +385,13 @@ def _riga_nel_confronto(riga: Importo, rapporto: str, competenza: Mese | int) ->
 
 
 def _esiti_di_confronto(
-    registro: Registro, rapporto: str, competenza: Mese | int, tipo: TipoEsito, istante: datetime
+    registro: Registro, corpus: Corpus, rapporto: str, competenza: Mese | int, tipo: TipoEsito, istante: datetime
 ) -> list[Esito]:
     """Pagato e versato si sommano; una dichiarazione sostituisce per intero il periodo."""
     interessati = [
         esito
         for esito in registro.esiti(tipo, istante)
-        if any(_riga_nel_confronto(riga, rapporto, competenza) for riga in esito.righe)
+        if any(_riga_nel_confronto(riga, rapporto, competenza, corpus) for riga in esito.righe)
     ]
     if tipo is TipoEsito.DICHIARATO:
         return interessati[-1:]
@@ -440,9 +443,9 @@ def differenze(
     esitati: dict[str, Decimal] = {}
     fonti: dict[str, list[int]] = {}
     ultima_riga: dict[str, Importo] = {}
-    for esito in _esiti_di_confronto(registro, rapporto, competenza, tipo, istante):
+    for esito in _esiti_di_confronto(registro, corpus, rapporto, competenza, tipo, istante):
         for riga in esito.righe:
-            if _riga_nel_confronto(riga, rapporto, competenza):
+            if _riga_nel_confronto(riga, rapporto, competenza, corpus):
                 esitati[riga.istituto] = esitati.get(riga.istituto, Decimal(0)) + riga.valore
                 fonti.setdefault(riga.istituto, [])
                 if esito.id not in fonti[riga.istituto]:
