@@ -47,6 +47,7 @@ RIF_A_F24EP = frozenset({"nessuno", "mese_pagamento", "periodo_inizio"})
 RIF_B_F24EP = frozenset({"nessuno", "anno_pagamento", "anno_imposta", "periodo_fine"})
 MODALITA_F24EP = frozenset({"debito", "debito_credito"})
 LIMITI_CREDITO_F24EP = frozenset({"nessuno", "non_modellato"})
+FONTI_SCADENZA = frozenset({"norma", "prassi"})
 
 
 @dataclass(frozen=True)
@@ -510,6 +511,65 @@ class CodiceF24EP:
         return self.dal <= giorno and (self.al is None or giorno <= self.al)
 
 
+@dataclass(frozen=True)
+class ProrogaScadenza:
+    """Le scadenze di un mese tra due giorni slittano a un giorno fisso (la proroga di agosto).
+
+    `fonte` dice se la regola regge su una norma o solo su una prassi: il modello lo segnala.
+    """
+
+    mese: int
+    dal_giorno: int
+    al_giorno: int
+    fonte: str
+    riferimento: str
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, "Proroga della scadenza F24EP")
+        if self.fonte not in FONTI_SCADENZA:
+            raise ErroreCorpus(f"Proroga della scadenza F24EP: fonte obbligatoria, una di {sorted(FONTI_SCADENZA)}")
+        if not 1 <= self.mese <= 12 or not 1 <= self.dal_giorno <= self.al_giorno <= 31:
+            raise ErroreCorpus("Proroga della scadenza F24EP: proroga incoerente, mese o giorni non validi")
+
+
+@dataclass(frozen=True)
+class RegolaScadenzaF24EP:
+    """Il versamento F24EP scade il `giorno` del mese successivo al pagamento; con la fonte e la vigenza."""
+
+    dal: date
+    riferimento: str
+    giorno: int = 16
+    proroga: ProrogaScadenza | None = None
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, "Scadenza F24EP")
+        if type(self.giorno) is not int or not 1 <= self.giorno <= 28:
+            raise ErroreCorpus("Scadenza F24EP: giorno non valido, da 1 a 28")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus("Scadenza F24EP: vigenza invertita")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
+class CalendarioFestivi:
+    """Giorni festivi infrasettimanali di un anno, dichiarati: un anno senza calendario non ha festivi noti."""
+
+    anno: int
+    giorni: tuple[date, ...]
+    riferimento: str
+
+    def __post_init__(self) -> None:
+        soggetto = f"Calendario dei festivi {self.anno}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if any(giorno.year != self.anno for giorno in self.giorni):
+            raise ErroreCorpus(f"{soggetto}: un giorno non cade nell'anno {self.anno}")
+        if len(set(self.giorni)) != len(self.giorni):
+            raise ErroreCorpus(f"{soggetto}: giorni ripetuti")
+
+
 class Corpus:
     """Insieme coerente e immutabile; la versione è l'impronta del contenuto."""
 
@@ -528,8 +588,12 @@ class Corpus:
         composizioni: tuple[DichiarazioneComposizione, ...] = (),
         mappature: tuple[MappaturaEsterna, ...] = (),
         codici_f24ep: tuple[CodiceF24EP, ...] = (),
+        scadenze_f24ep: tuple[RegolaScadenzaF24EP, ...] = (),
+        calendari_festivi: tuple[CalendarioFestivi, ...] = (),
     ):
         self.reale = reale
+        self._scadenze_f24ep = tuple(scadenze_f24ep)
+        self._calendari_festivi = tuple(calendari_festivi)
         self._codici_f24ep = tuple(codici_f24ep)
         self._composizioni = tuple(composizioni)
         self._mappature = tuple(mappature)
@@ -575,6 +639,9 @@ class Corpus:
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
         elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
+        elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
+        elenco += [("Proroga della scadenza F24EP", r.proroga.riferimento) for r in self._scadenze_f24ep if r.proroga]
+        elenco += [(f"Calendario dei festivi {c.anno}", c.riferimento) for c in self._calendari_festivi]
         return elenco
 
     def _rifiuta_fittizi(self) -> None:
@@ -623,6 +690,11 @@ class Corpus:
             for altra in self._codici_f24ep[indice + 1 :]:
                 if altra.codice == voce.codice:
                     _vigenze_sovrapposte([voce, altra], f"Codice F24EP {voce.codice}")
+        _vigenze_sovrapposte(self._scadenze_f24ep, "Scadenza F24EP")
+        anni = [calendario.anno for calendario in self._calendari_festivi]
+        for anno in set(anni):
+            if anni.count(anno) > 1:
+                raise ErroreCorpus(f"Calendario dei festivi {anno}: dichiarato più volte")
 
     def _convalida_fiscale(self) -> None:
         fiscale = self.fiscale
@@ -851,6 +923,17 @@ class Corpus:
                  c.dal.isoformat(), c.al.isoformat() if c.al else "", c.riferimento]
                 for c in self._codici_f24ep
             )
+        if self._scadenze_f24ep:
+            contenuto["scadenze_f24ep"] = sorted(
+                [r.dal.isoformat(), r.al.isoformat() if r.al else "", r.giorno, r.riferimento,
+                 [r.proroga.mese, r.proroga.dal_giorno, r.proroga.al_giorno, r.proroga.fonte, r.proroga.riferimento]
+                 if r.proroga else None]
+                for r in self._scadenze_f24ep
+            )
+        if self._calendari_festivi:
+            contenuto["calendari_festivi"] = sorted(
+                [c.anno, sorted(g.isoformat() for g in c.giorni), c.riferimento] for c in self._calendari_festivi
+            )
         testo = json.dumps(contenuto, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(testo.encode("utf-8")).hexdigest()[:16]
 
@@ -900,6 +983,13 @@ class Corpus:
     def codice_f24ep(self, codice: str, giorno: date) -> CodiceF24EP | None:
         """Voce del catalogo vigente alla data; None se il codice non è dichiarato."""
         return _vigente([c for c in self._codici_f24ep if c.codice == codice], giorno)
+
+    def regola_scadenza_f24ep(self, giorno: date) -> RegolaScadenzaF24EP | None:
+        """Regola di scadenza vigente alla data; None se non ce n'è."""
+        return _vigente(self._scadenze_f24ep, giorno)
+
+    def calendario_festivi(self, anno: int) -> CalendarioFestivi | None:
+        return next((c for c in self._calendari_festivi if c.anno == anno), None)
 
     def regola_iniziata(self, istituto: str, giorno: date) -> bool:
         """Vero se l'istituto ha già una regola decorrente a quella data, anche se oggi scaduta."""
@@ -969,6 +1059,15 @@ class Corpus:
             composizioni = tuple(_composizione_da_toml(voce) for voce in dati.get("composizione", []))
             mappature = tuple(_mappatura_da_toml(voce) for voce in dati.get("mappatura", []))
             codici_f24ep = tuple(_codice_f24ep_da_toml(voce) for voce in dati.get("codice_f24ep", []))
+            scadenze_f24ep = tuple(_scadenza_f24ep_da_toml(voce) for voce in dati.get("scadenza_f24ep", []))
+            calendari_festivi = tuple(
+                CalendarioFestivi(
+                    voce["anno"],
+                    tuple(_data(giorno, "giorni") for giorno in voce["giorni"]),
+                    voce["riferimento"],
+                )
+                for voce in dati.get("calendario_festivi", [])
+            )
         except (tomllib.TOMLDecodeError, KeyError, TypeError, AttributeError) as errore:
             raise ErroreCorpus(f"Corpus TOML non valido: {errore!r}") from errore
         periodo = dati.get("periodo_dichiarato", {})
@@ -986,6 +1085,8 @@ class Corpus:
             composizioni=composizioni,
             mappature=mappature,
             codici_f24ep=codici_f24ep,
+            scadenze_f24ep=scadenze_f24ep,
+            calendari_festivi=calendari_festivi,
         )
 
     @classmethod
@@ -1025,6 +1126,23 @@ def _codice_f24ep_da_toml(voce: dict) -> CodiceF24EP:
         limite_credito=voce.get("limite_credito", "nessuno"),
         dal=_data(voce["dal"], "dal"),
         riferimento=voce["riferimento"],
+        al=_data(voce["al"], "al") if "al" in voce else None,
+    )
+
+
+def _scadenza_f24ep_da_toml(voce: dict) -> RegolaScadenzaF24EP:
+    proroga = voce.get("proroga")
+    return RegolaScadenzaF24EP(
+        dal=_data(voce["dal"], "dal"),
+        riferimento=voce["riferimento"],
+        giorno=voce["giorno"],
+        proroga=(
+            ProrogaScadenza(
+                proroga["mese"], proroga["dal_giorno"], proroga["al_giorno"], proroga.get("fonte"), proroga["riferimento"]
+            )
+            if proroga
+            else None
+        ),
         al=_data(voce["al"], "al") if "al" in voce else None,
     )
 
