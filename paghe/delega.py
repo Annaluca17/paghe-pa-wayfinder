@@ -21,6 +21,7 @@ from .f24ep import problemi_dati_ente
 from .f24ep import FornituraF24EP, ModelloF24EP, ModuloF24EP, RigaF24EP, serializza
 from .modello import Esito, Evento, Importo, TipoEsito
 from .proposta import (
+    NATURE_A_CREDITO,
     TIPO_PAGAMENTO_ESEGUITO,
     TIPO_VERSAMENTO_ESEGUITO,
     DatoMancante,
@@ -132,7 +133,6 @@ ORDINE_SEZIONI = "FIRSNQWGP5"  # l'ordine delle sezioni nella delega
 RIGHE_PER_MODULO = 22
 # Scelta del modello (Luca, 07/11/2026): i crediti si compensano prima contro le ritenute, poi contro gli altri debiti.
 CODICE_PRIMA_COMPENSAZIONE = "100E"
-NATURE_A_CREDITO = frozenset({"rimborso_730", "credito_sostituto"})
 TIPI_DATI_ENTE = ("codice_fiscale", "denominazione", "email", "iban_tesoreria")
 
 
