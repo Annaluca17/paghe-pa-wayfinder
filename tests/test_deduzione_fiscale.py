@@ -104,3 +104,32 @@ def test_la_ritenuta_si_calcola_sull_imponibile_al_netto_dei_contributi_del_lavo
     attribuite = attribuisci_reddito(con_deduzione, [riga], giorno)
     fiscale = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", [*attribuite, contributo(riga, "120")], giorno)
     assert fiscale.ritenuta.valore == Decimal("192.67")
+
+
+def test_senza_dichiarazione_i_contributi_non_riducono_l_imponibile(registro, orologio):
+    corpus = Corpus.da_toml(TESTO + CONTRIBUTO)
+    assumi(registro)
+    giorno = date(2026, 6, 27)
+    (riga,) = stipendio(registro, corpus, Mese(2026, 6))
+    attribuite = attribuisci_reddito(corpus, [riga], giorno)
+    fiscale = calcola_fiscale(registro, corpus, "RAPPORTO-1", [*attribuite, contributo(riga, "120")], giorno)
+    assert fiscale.ritenuta.valore == Decimal("216.67")
+
+
+def test_la_dichiarazione_vale_alla_data_di_pagamento(registro, orologio):
+    corpus = Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE.replace("dal = 2020-01-01", "dal = 2026-07-01"))
+    assumi(registro)
+    giorno = date(2026, 6, 27)
+    (riga,) = stipendio(registro, corpus, Mese(2026, 6))
+    attribuite = attribuisci_reddito(corpus, [riga], giorno)
+    fiscale = calcola_fiscale(registro, corpus, "RAPPORTO-1", [*attribuite, contributo(riga, "120")], giorno)
+    assert fiscale.ritenuta.valore == Decimal("216.67")
+
+
+def test_la_derivazione_della_ritenuta_porta_i_contributi_dedotti(registro, con_deduzione, orologio):
+    assumi(registro)
+    giorno = date(2026, 6, 27)
+    (riga,) = stipendio(registro, con_deduzione, Mese(2026, 6))
+    attribuite = attribuisci_reddito(con_deduzione, [riga], giorno)
+    fiscale = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", [*attribuite, contributo(riga, "120")], giorno)
+    assert [i.istituto for i in fiscale.ritenuta.derivazione.importi] == ["stipendio", "contributo_lavoratore"]
