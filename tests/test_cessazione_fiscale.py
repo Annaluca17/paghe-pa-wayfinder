@@ -51,3 +51,30 @@ def test_il_pagamento_dopo_la_cessazione_porta_il_conguaglio_senza_il_fatto_dell
     )
     assert [a.tipo for a in versione.avvisi if a.tipo == "proiezione_conguaglio"] == []
     assert versione.dati_mancanti == ()
+
+
+def test_chi_ha_ancora_servizio_dopo_il_pagamento_non_ha_il_conguaglio(registro, corpus_c, orologio):
+    assumi_fino_al(registro, R, P, al=date(2026, 3, 31))
+    importi = stipendio_fino_al(registro, corpus_c, Mese(2026, 3), date(2026, 3, 31))
+    orologio.vai(3, 20)
+    versione = emetti_versione(registro, corpus_c, date(2026, 3, 27), importi)
+    assert "conguaglio_irpef" not in per_istituto(versione.righe)
+    assert [a.tipo for a in versione.avvisi if a.tipo == "proiezione_conguaglio"] == ["proiezione_conguaglio"]
+
+
+def test_il_conguaglio_e_della_persona_se_un_altro_rapporto_ha_ancora_servizio_niente_conguaglio(registro, corpus_c, orologio):
+    assumi_fino_al(registro, R, P, al=date(2026, 3, 14))
+    assumi_fino_al(registro, "RAPPORTO-2", P)
+    importi = stipendio_fino_al(registro, corpus_c, Mese(2026, 3), date(2026, 3, 14))
+    orologio.vai(3, 20)
+    versione = emetti_versione(registro, corpus_c, date(2026, 3, 27), importi)
+    assert "conguaglio_irpef" not in per_istituto(versione.righe)
+
+
+def test_chiuso_anche_l_altro_rapporto_il_pagamento_di_chi_cessa_per_ultimo_porta_il_conguaglio(registro, corpus_c, orologio):
+    assumi_fino_al(registro, R, P, al=date(2026, 3, 14))
+    assumi_fino_al(registro, "RAPPORTO-2", P, al=date(2026, 3, 20))
+    importi = stipendio_fino_al(registro, corpus_c, Mese(2026, 3), date(2026, 3, 14))
+    orologio.vai(3, 20)
+    versione = emetti_versione(registro, corpus_c, date(2026, 3, 27), importi)
+    assert "conguaglio_irpef" in per_istituto(versione.righe)
