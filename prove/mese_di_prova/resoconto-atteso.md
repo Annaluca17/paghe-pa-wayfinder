@@ -158,18 +158,19 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Versione di proposta**
 
 - Riuscito:
-  - versione 2: 53 righe di composizione, valuta prevista 2026-03-27, 6 rapporti
-  - netto R01: 1918.62
-  - netto R02: 2056.15
-  - netto R03: 2082.76
+  - versione 2: 54 righe di composizione, valuta prevista 2026-03-27, 6 rapporti
+  - netto R01: 1945.99
+  - netto R02: 2085.69
+  - netto R03: 2111.25
   - netto R05: 841.19
-  - netto R06: 856.11
-  - netto R07: 1781.10
+  - netto R06: 866.05
+  - netto R07: 1806.31
+  - conguaglio fiscale sull'ultimo pagamento: R05 0.00
 - Fermi: nessuno
 - Su dati fittizi:
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
-  - avviso proiezione_conguaglio: R01, R02, R03, R05, R06, R07
+  - avviso proiezione_conguaglio: R01, R02, R03, R06, R07
   - avviso senza_dichiarazione_sostituito: R06
 
 **Conferma della Ragioneria**
@@ -183,7 +184,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Pagamento eseguito**
 
 - Riuscito:
-  - esito pagato 2: 53 righe, valuta 2026-03-27
+  - esito pagato 2: 54 righe, valuta 2026-03-27
 - Fermi: nessuno
 - Su dati fittizi:
   - l'evento di pagamento eseguito e' simulato dal percorso, con valuta uguale alla prevista
@@ -219,12 +220,12 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - scadenza 2026-04-16, data di versamento scelta 2026-04-16
-  - riga F 100E: debito 281.45, credito 0.00
+  - riga F 100E: debito 160.90, credito 0.00
   - riga Q P201: debito 3604.03, credito 0.00
   - riga Q P607: debito 454.07, credito 0.00
   - riga Q P608: debito 47.21, credito 0.00
   - riga Q P909: debito 38.63, credito 0.00
-  - saldo 4425.39
+  - saldo 4304.84
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
 - Su dati fittizi:
@@ -249,7 +250,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 4: 35 righe, 4425.39 versati il 2026-04-16
+  - esito versato 4: 36 righe, 4304.84 versati il 2026-04-16
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:
@@ -280,17 +281,16 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - versione 3: 46 righe di composizione, valuta prevista 2026-12-18, 5 rapporti
-  - netto R01: 2040.38
-  - netto R02: 2101.26
-  - netto R03: 1702.80
-  - netto R06: 1636.77
-  - netto R07: 1864.00
-  - conguaglio fiscale sull'ultimo pagamento: R01 -121.76, R02 -182.64, R03 -98.84, R06 -125.39, R07 -82.90
+  - netto R01: 2013.01
+  - netto R02: 2046.51
+  - netto R03: 1674.31
+  - netto R06: 1626.83
+  - netto R07: 1838.79
+  - conguaglio fiscale sull'ultimo pagamento: R01 -67.02, R02 -100.52, R03 -53.93, R06 -96.99, R07 -32.48
 - Fermi: nessuno
 - Su dati fittizi:
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
-  - avviso persona_assente_dall_ultimo_pagamento: R05
   - avviso senza_dichiarazione_sostituito: R06
 
 **Conferma della Ragioneria**
@@ -328,7 +328,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Su dati fittizi:
   - mappatura dei codici, catalogo dei codici F24EP, scadenza e festivi del corpus fittizio
 - Note:
-  - righe costruite ma non trasmissibili: 100E -322.90, P201 3316.16, P607 400.17, P608 87.67, P909 35.54
+  - righe costruite ma non trasmissibili: 100E -177.14, P201 3316.16, P607 400.17, P608 87.67, P909 35.54
 
 **File telematico**
 
@@ -353,11 +353,8 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 ## Difetti del nucleo trovati
 
-1. **L'imponibile fiscale non e' ridotto dai contributi del lavoratore.** R01, 2026-03-27: la ritenuta si calcola su 2228.35 (somma degli importi retributivi), mentre nello stesso pagamento il lavoratore versa 248.85 di contributi (CPDEL, Fondo Credito, TFS). La formula della ritenuta legge solo `fisco.imponibile`: non puo' dedurli. Da confermare con chi conosce il fisco: se l'imponibile IRPEF e' al netto dei contributi obbligatori, la ritenuta e' calcolata troppo alta.
-2. **Il conguaglio fiscale alla cessazione non c'e'.** R05 cessa il 2026-03-14: il suo ultimo pagamento (2026-03-27) ha solo la ritenuta e un avviso di proiezione del conguaglio. Il nucleo riconosce l'ultimo pagamento solo dalla data scelta dall'ente per l'anno (`registra_ultimo_pagamento`); il CONTEXT dice che il conguaglio si fa anche sull'ultimo pagamento alla cessazione, e a dicembre la persona e' assente dal pagamento.
-3. **La riduzione del lordo TFR non riduce l'imponibile fiscale.** R06, 2026-03-27: la riduzione -19.35 abbassa il netto ma la ritenuta e' calcolata su 982.22, il lordo prima della riduzione: la riduzione ha maturazione `periodo`, derivata, e quindi non e' reddito.
-4. **Il rimborso 730 non puo' essere insieme nel netto e a credito nella delega.** R07, 2026-12-18: il rimborso 150.00 e' una riga con un solo effetto. Dichiarato a credito F24EP (effetto nessuno sul netto), il netto resta 1864.00 e il lavoratore non lo riceve; dichiarato sul netto, il sostituto non avrebbe il credito da compensare. Servirebbero due righe dallo stesso importo, e la struttura ne ammette una.
-5. **Una delega con un debito negativo risulta pronta.** 2026-12: la riga F 100E ha debito -322.90. I conguagli a credito dei lavoratori (ritenuta con segno meno nella composizione) superano le ritenute del mese e la somma per codice va sotto zero; `costruisci_delega` non lo segnala e il serializzatore la rifiuta (File F24EP: modello 1, modulo 1, riga 1: importo a debito: importo non ammesso, Decimal('-322.90')). L'esempio nasce dall'anno fittizio con soli due pagamenti, ma il caso e' raggiungibile.
+1. **Il rimborso 730 non puo' essere insieme nel netto e a credito nella delega.** R07, 2026-12-18: il rimborso 150.00 e' una riga con un solo effetto. Dichiarato a credito F24EP (effetto nessuno sul netto), il netto resta 1838.79 e il lavoratore non lo riceve; dichiarato sul netto, il sostituto non avrebbe il credito da compensare. Servirebbero due righe dallo stesso importo, e la struttura ne ammette una.
+2. **Una delega con un debito negativo risulta pronta.** 2026-12: la riga F 100E ha debito -177.14. I conguagli a credito dei lavoratori (ritenuta con segno meno nella composizione) superano le ritenute del mese e la somma per codice va sotto zero; `costruisci_delega` non lo segnala e il serializzatore la rifiuta (File F24EP: modello 1, modulo 1, riga 1: importo a debito: importo non ammesso, Decimal('-177.14')). L'esempio nasce dall'anno fittizio con soli due pagamenti, ma il caso e' raggiungibile.
 
 ## Non esercitato dal mese
 

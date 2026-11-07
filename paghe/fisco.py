@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import calendar
 from dataclasses import dataclass, replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
@@ -47,12 +47,16 @@ class Avviso:
 
 @dataclass(frozen=True)
 class ImponibileFiscale:
-    """Base per persona e anno d'imposta: gli esiti pagati di tutti i suoi rapporti, in regime ordinario."""
+    """Base per persona e anno d'imposta: gli esiti pagati di tutti i suoi rapporti, in regime ordinario.
+
+    `valore` è la somma dei redditi (`righe`) meno gli importi che l'istituto dichiara riduttivi (`deduzioni`).
+    """
 
     persona: str
     anno: int
     valore: Decimal
     righe: tuple[Importo, ...]
+    deduzioni: tuple[Importo, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -69,6 +73,8 @@ class FiscaleDelPagamento:
 class _Pagata:
     riga: Importo
     data: date | None
+    valuta: date
+    anno_esito: int | None
 
 
 def anno_imposta(corpus: Corpus, categoria: str, data_pagamento: date) -> int:
@@ -170,8 +176,20 @@ def _pagati(registro: Registro, persona: str, istante: datetime) -> list[_Pagata
         for riga in esito.righe:
             if riga.rapporto in pagamenti:
                 fatto = pagamenti[riga.rapporto].get(esito.id)
-                pagate.append(_Pagata(riga, fatto.valido_dal if fatto else None))
+                anni = {r.anno_imposta for r in esito.righe if r.rapporto == riga.rapporto and _e_reddito(r)}
+                anno_esito = anni.pop() if len(anni) == 1 else None
+                pagate.append(_Pagata(riga, fatto.valido_dal if fatto else None, esito.data, anno_esito))
     return pagate
+
+
+def _e_deduzione(corpus: Corpus, riga: Importo, giorno: date) -> bool:
+    """Un importo derivato dal pagato che l'istituto dichiara riduttivo dell'imponibile fiscale alla data di pagamento."""
+    return not _e_reddito(riga) and corpus.deduzione_fiscale(riga.istituto, giorno) is not None
+
+
+def _anno_della_deduzione(pagata: _Pagata) -> int:
+    """L'anno d'imposta del reddito pagato insieme alla deduzione; senza reddito, l'anno della data di pagamento."""
+    return pagata.riga.anno_imposta or pagata.anno_esito or (pagata.data or pagata.valuta).year
 
 
 def _e_reddito(riga: Importo) -> bool:
@@ -186,16 +204,31 @@ def _controlla_anno(riga: Importo) -> None:
         )
 
 
-def imponibile_fiscale(registro: Registro, persona: str, anno: int, noto_al: datetime | None = None) -> ImponibileFiscale:
-    """Somma gli esiti pagati di tutti i rapporti della persona attribuiti all'anno, con l'anno congelato."""
+def imponibile_fiscale(
+    registro: Registro, persona: str, anno: int, noto_al: datetime | None = None, *, corpus: Corpus | None = None
+) -> ImponibileFiscale:
+    """Somma gli esiti pagati di tutti i rapporti della persona attribuiti all'anno, con l'anno congelato.
+
+    Con il `corpus`, toglie gli importi pagati che l'istituto dichiara riduttivi dell'imponibile fiscale
+    (i contributi del lavoratore), scelti con la data di pagamento. Senza il corpus non ci sono dichiarazioni
+    da leggere e l'imponibile resta la somma dei redditi.
+    """
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
     righe = []
+    deduzioni = []
     for pagata in _pagati(registro, persona, istante):
         if _e_reddito(pagata.riga):
             _controlla_anno(pagata.riga)
             if pagata.riga.anno_imposta == anno:
                 righe.append(pagata.riga)
-    return ImponibileFiscale(persona, anno, sum((riga.valore for riga in righe), Decimal(0)), tuple(righe))
+        elif (
+            corpus is not None
+            and _e_deduzione(corpus, pagata.riga, pagata.data or pagata.valuta)
+            and _anno_della_deduzione(pagata) == anno
+        ):
+            deduzioni.append(pagata.riga)
+    valore = sum((riga.valore for riga in righe), Decimal(0)) - sum((riga.valore for riga in deduzioni), Decimal(0))
+    return ImponibileFiscale(persona, anno, valore, tuple(righe), tuple(deduzioni))
 
 
 @dataclass(frozen=True)
@@ -297,6 +330,7 @@ def _ritenuta(
     righe: tuple[Importo, ...],
     data_pagamento: date,
     istante: datetime,
+    deduzioni: tuple[Importo, ...] = (),
 ) -> tuple[Importo, RegolaRitenuta, date, Fatto | None]:
     anno = righe[0].anno_imposta
     regola, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
@@ -310,7 +344,17 @@ def _ritenuta(
     ]
     gia_operate = [riga for riga in del_periodo if riga.istituto == regola.istituto]
     gia_pagate = [riga for riga in del_periodo if _e_reddito(riga)]
-    imponibile = sum((riga.valore for riga in (*gia_pagate, *righe)), Decimal(0))
+    gia_dedotte = [
+        pagata.riga
+        for pagata in _pagati(registro, persona, istante)
+        if pagata.data is not None
+        and (pagata.data.year, pagata.data.month) == (data_pagamento.year, data_pagamento.month)
+        and _e_deduzione(corpus, pagata.riga, pagata.data)
+        and _anno_della_deduzione(pagata) == anno
+    ]
+    imponibile = sum((riga.valore for riga in (*gia_pagate, *righe)), Decimal(0)) - sum(
+        (riga.valore for riga in (*gia_dedotte, *deduzioni)), Decimal(0)
+    )
     dichiarazione = _dichiarazione(registro, persona, regola, data_pagamento, istante)
     calcolo = _calcola(corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione)
     operato = sum((riga.valore for riga in gia_operate), Decimal(0))
@@ -335,7 +379,7 @@ def _ritenuta(
             noto_al=istante,
             parametri=calcolo.parametri,
             fatti=calcolo.fatti,
-            importi=(*gia_pagate, *righe, *gia_operate),
+            importi=(*gia_pagate, *righe, *gia_dedotte, *deduzioni, *gia_operate),
         ),
     )
     return importo, regola, riferimento, dichiarazione
@@ -367,12 +411,14 @@ def _annuale(
     istante: datetime,
     righe_nuove: tuple[Importo, ...] = (),
     ritenute_nuove: tuple[Importo, ...] = (),
+    deduzioni_nuove: tuple[Importo, ...] = (),
 ) -> _Annuale:
     """Imposta dell'anno sull'imponibile fiscale della persona, meno ritenute e conguagli già operati."""
     regola_ritenuta, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
     regola = _regola_conguaglio(corpus, riferimento)
-    base = imponibile_fiscale(registro, persona, anno, istante)
+    base = imponibile_fiscale(registro, persona, anno, istante, corpus=corpus)
     reddito = (*base.righe, *righe_nuove)
+    deduzioni = (*base.deduzioni, *deduzioni_nuove)
     for riga in reddito:
         if riga.categoria_reddito not in regola_ritenuta.categorie:
             raise CasoNonModellato(
@@ -389,10 +435,15 @@ def _annuale(
     operate += list(ritenute_nuove)
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
     calcolo = _calcola(
-        corpus, regola_ritenuta, sum((riga.valore for riga in reddito), Decimal(0)), 1, riferimento, dichiarazione
+        corpus,
+        regola_ritenuta,
+        sum((riga.valore for riga in reddito), Decimal(0)) - sum((riga.valore for riga in deduzioni), Decimal(0)),
+        1,
+        riferimento,
+        dichiarazione,
     )
     return _Annuale(
-        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *operate), regola, regola_ritenuta
+        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta
     )
 
 
@@ -424,6 +475,30 @@ def _importo_conguaglio(
             importi=annuale.righe,
         ),
     )
+
+
+def pagamento_finale(
+    registro: Registro, corpus: Corpus, persona: str, anno: int, valuta: date, noto_al: datetime | None = None
+) -> bool:
+    """Un pagamento della persona alla `valuta` dopo il quale nessun suo rapporto ha servizio nell'anno d'imposta.
+
+    La fine del servizio è la fine del fatto di servizio del corpus (ADR 0019: alla cessazione il conguaglio si fa
+    sul pagamento finale); il registro non ha un fatto «cessazione». Vale per la persona: se un altro suo rapporto
+    ha ancora servizio, non è finale. Serve che la persona abbia avuto servizio fino alla valuta. Per una valuta
+    oltre il 31 dicembre (cassa allargata) conta il servizio del giorno dopo la valuta.
+    """
+    if corpus.fatto_servizio is None:
+        return False
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    dopo = valuta + timedelta(days=1)
+    seguente = Periodo(dopo, max(date(anno, 12, 31), dopo))
+    avuto = False
+    for rapporto in registro.rapporti_della_persona(persona, istante):
+        if any(fatto.valido_dal <= valuta for fatto in registro.fatti_noti(rapporto, corpus.fatto_servizio, istante)):
+            avuto = True
+        if any(fatto is not None for fatto in registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, seguente, istante)):
+            return False
+    return avuto
 
 
 def _controlla_ultimo(registro: Registro, persona: str, anno: int, data_pagamento: date, istante: datetime) -> None:
@@ -471,7 +546,10 @@ def calcola_fiscale(
         raise ErroreCalcolo(f"Rapporto {rapporto}: nessun importo da tassare nel pagamento")
     reddito = _controlla_righe(registro, rapporto, persona, righe, regola_provvisoria, istante)
     anno = reddito[0].anno_imposta
-    ritenuta, regola, _, dichiarazione = _ritenuta(registro, corpus, rapporto, persona, reddito, data_pagamento, istante)
+    deduzioni = tuple(riga for riga in righe if _e_deduzione(corpus, riga, data_pagamento))
+    ritenuta, regola, _, dichiarazione = _ritenuta(
+        registro, corpus, rapporto, persona, reddito, data_pagamento, istante, deduzioni
+    )
     avvisi: list[Avviso] = []
     if dichiarazione is None:
         avvisi.append(
@@ -486,10 +564,14 @@ def calcola_fiscale(
     conguaglio = None
     if ultimo_dell_anno:
         _controlla_ultimo(registro, persona, anno, data_pagamento, istante)
-        annuale = _annuale(registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,))
+        annuale = _annuale(
+            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
+        )
         conguaglio = _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
     else:
-        annuale = _annuale(registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,))
+        annuale = _annuale(
+            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
+        )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
     return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi))
 

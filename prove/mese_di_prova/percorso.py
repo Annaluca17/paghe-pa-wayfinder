@@ -440,14 +440,6 @@ def _controlla_fiscale(c: _Contesto, versione) -> None:
                 "dedurli. Da confermare con chi conosce il fisco: se l'imponibile IRPEF e' al netto dei contributi "
                 "obbligatori, la ritenuta e' calcolata troppo alta.",
             )
-        riduzione = next((riga.importo for riga in righe if riga.istituto == "riduzione_tfr"), None)
-        if riduzione is not None and riduzione.istituto not in lette:
-            esecuzione.difetto(
-                "La riduzione del lordo TFR non riduce l'imponibile fiscale",
-                f"{r.id}, {versione.valuta_prevista}: la riduzione {_soldi(riduzione.valore)} abbassa il netto ma la ritenuta "
-                f"e' calcolata su {_soldi(imponibile)}, il lordo prima della riduzione: la riduzione ha maturazione "
-                "`periodo`, derivata, e quindi non e' reddito.",
-            )
         for riga in righe:
             if riga.natura == "rimborso_730" and riga.effetto == "nessuno":
                 netto = next(n.netto for n in versione.netti if n.rapporto == r.id)
