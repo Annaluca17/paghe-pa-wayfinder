@@ -92,9 +92,11 @@ RAPPORTI = (
              date(1970, 4, 14), date(2019, 1, 1), "dirigente", "1", posizione=POSIZIONE_DIRIGENTE),
     Rapporto("R09", "P09", "IOTA", "segretario", "segretario comunale in fascia B, posizione da atto",
              date(1968, 6, 21), date(2019, 1, 1), "segretario", "1", posizione=POSIZIONE_SEGRETARIO, fascia="B"),
-    Rapporto("R10", "P10", "KAPPA", "sindaco", "sindaco, mandato di amministratore",
+    Rapporto("R10", "P10", "KAPPA", "sindaco",
+             "sindaco, lavoratore autonomo iscritto alla gestione separata senza altra cassa: indennita' e quota dell'art. 86",
              date(1972, 10, 9), date(2024, 6, 10)),
-    Rapporto("R11", "P11", "LAMBDA", "co.co.co.", "collaboratore coordinato e continuativo",
+    Rapporto("R11", "P11", "LAMBDA", "co.co.co.",
+             "collaboratore coordinato e continuativo, senza altra cassa: rata di marzo attestata, rata di dicembre no",
              date(1988, 1, 27), date(2026, 1, 1)),
     Rapporto("R12", "P12", "OMICRON", "comparto", "tempo determinato part-time verticale 50% in sostituzione (tipo impiego 18)",
              date(1991, 5, 19), date(2026, 1, 1), "operatori", "1", al=date(2026, 12, 31), detrazioni=False, impiego="18"),
@@ -103,7 +105,10 @@ RAPPORTI = (
 PER_ID = {r.id: r for r in RAPPORTI}
 
 # Importi di fantasia dei fatti che l'Ufficio personale registra: nessuno e' una norma.
-COMPENSI_SENZA_REGIME = {"R10": "3000.00", "R11": "1500.00"}
+MISURA_INDENNITA_SINDACO = "3000.00"  # misura mensile piena dell'indennita' di funzione, deliberata dall'ente
+RATA_COCOCO = "1500.00"  # rata del piano di collaborazione
+RATA_DI_MARZO = date(2026, 3, 20)  # attestata dal responsabile
+RATA_DI_DICEMBRE = date(2026, 12, 10)  # senza attestazione: resta calcolata ma fuori dalla versione
 PERFORMANCE_2025 = "600.00"
 RIMBORSO_730 = "150.00"
 ANNO_REDDITI_730 = 2025  # i redditi dichiarati nel 730 il cui esito (730-4) porta il rimborso
@@ -125,6 +130,10 @@ ATTO_PROGRAMMAZIONE_TD = Atto("ente:ente_di_prova:determina:2026-01-09;44", date
 ATTO_POSIZIONE_DIRIGENTE = Atto("ente:ente_di_prova:determina:2026-01-09;45", date(2026, 1, 9))
 ATTO_POSIZIONE_SEGRETARIO = Atto("ente:ente_di_prova:decreto:2026-01-09;46", date(2026, 1, 9))
 ATTO_FASCIA_SEGRETARIO = Atto("ente:ente_di_prova:decreto:2026-01-09;47", date(2026, 1, 9))
+ATTO_MISURA_INDENNITA = Atto("ente:ente_di_prova:delibera:2026-01-09;48", date(2026, 1, 9))
+ATTO_MANDATO = Atto("ente:ente_di_prova:verbale:2024-06-10;1", date(2024, 6, 10))
+ATTO_PIANO_DI_RATE = Atto("ente:ente_di_prova:contratto:2026-01-09;49", date(2026, 1, 9))
+ATTO_ATTESTAZIONE_MARZO = Atto("ente:ente_di_prova:attestazione:2026-03-17;50", date(2026, 3, 17))
 ATTO_DETRAZIONI = Atto("ente:ente_di_prova:dichiarazione.detrazioni:2026-01-09;1", date(2026, 1, 9))
 
 

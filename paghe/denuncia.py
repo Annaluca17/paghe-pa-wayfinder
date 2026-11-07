@@ -35,7 +35,8 @@ from .tempo import Mese, Periodo, in_utc
 FORMULA_BASE = "somma degli importi pagati nel periodo"
 FORMULA_BASE_MESE = "somma delle basi dei periodi del mese"
 # Derivano dagli importi pagati: non sono retribuzione e non concorrono a una base.
-MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa"} | MATURAZIONI_FISCALI
+# `onere`: a carico dell'ente, non e' retribuzione della persona (ticket #73).
+MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere"} | MATURAZIONI_FISCALI
 IN_SERVIZIO = "in servizio"
 SU_CESSATO = "su cessato"
 
@@ -255,6 +256,48 @@ def _base_del_periodo(
     )
 
 
+def _base_dei_mesi_prima(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, base: Base, istante: datetime) -> Decimal:
+    """Somma, senza limite, di cio' che e' entrato nella base nei mesi dell'anno prima di questo (massimale della base)."""
+    inizio = date(mese.anno, 1, 1)
+    pagamenti = registro.pagamenti(rapporto, istante)
+    totale = Decimal(0)
+    for esito in registro.esiti(TipoEsito.PAGATO, istante):
+        fatto = pagamenti.get(esito.id)
+        if fatto is None or not inizio <= fatto.valido_dal < mese.primo_giorno:
+            continue
+        for riga in esito.righe:
+            if riga.rapporto != rapporto or riga.derivazione.maturazione in MATURAZIONI_DERIVATE:
+                continue
+            concorso = corpus.concorso(riga.istituto, base.nome, fatto.valido_dal)
+            if concorso is not None and concorso.misura == "intero":
+                totale += riga.valore
+    return totale
+
+
+def _con_massimale(
+    importo: Importo | None, base: Base, cumulato: dict[str, Decimal], corpus: Corpus, mese: Mese, dei_mesi_prima
+) -> Importo | None:
+    """La base di un mese si limita a cio' che resta sotto il massimale annuo; il parametro resta nella derivazione.
+
+    Il cumulo dei mesi prima si legge solo se la base del mese ha importi: `dei_mesi_prima(base)` lo calcola.
+    """
+    if importo is None or base.massimale is None:
+        return importo
+    if base.nome not in cumulato:
+        cumulato[base.nome] = dei_mesi_prima(base)
+    vigenza = corpus.parametro(base.massimale).vigenza_per(Periodo(mese.ultimo_giorno, mese.ultimo_giorno))
+    spazio = max(vigenza.valore - cumulato[base.nome], Decimal(0))
+    cumulato[base.nome] += importo.valore
+    letto = ParametroLetto(base.massimale, vigenza.valore, vigenza.dal, vigenza.riferimento)
+    return replace(
+        importo,
+        valore=min(importo.valore, spazio),
+        derivazione=replace(
+            importo.derivazione, formula=f"{FORMULA_BASE}, fino al massimale annuo", parametri=(letto,)
+        ),
+    )
+
+
 class _Contributi:
     """Regole di cassa di un periodo, valutate alle date di pagamento degli importi nelle basi.
 
@@ -315,6 +358,8 @@ class _Contributi:
             if condizione is None or not self.lettore.soddisfa(regola, condizione):
                 return None
             fatti[condizione.id] = condizione
+            if not self.lettore.condizioni_aggiuntive(regola, self.condizione_su, fatti):
+                return None
 
         def risolvi(origine: str, nome: str) -> Decimal:
             if origine == "fatto":
@@ -394,11 +439,21 @@ def _denuncia(
 
     sul_periodo = corpus.istituti_di_cassa - corpus.istituti_sul_mese
     condizione_su = None if in_servizio else _ultimo_giorno_di_servizio(registro, corpus, rapporto, mese, istante)
+    cumulato: dict[str, Decimal] = {}
+
+    def dei_mesi_prima(base: Base) -> Decimal:
+        return _base_dei_mesi_prima(registro, corpus, rapporto, mese, base, istante)
+
     risultato: list[PeriodoDenuncia] = []
     for periodo in periodi:
         basi = tuple(
             importo
-            for importo in (_base_del_periodo(base, gruppi[periodo], periodo, corpus, istante) for base in corpus.basi())
+            for importo in (
+                _con_massimale(
+                    _base_del_periodo(base, gruppi[periodo], periodo, corpus, istante), base, cumulato, corpus, mese, dei_mesi_prima
+                )
+                for base in corpus.basi()
+            )
             if importo is not None
         )
         contributi = _Contributi(lettore, periodo, basi, condizione_su).tutti(sul_periodo) if basi else ()
@@ -443,6 +498,44 @@ def periodi_in_servizio(registro: Registro, corpus: Corpus, rapporto: str, mese:
 def righe_pagate(registro: Registro, rapporto: str, mese: Mese, istante: datetime) -> list[Importo]:
     """Righe degli esiti pagati nel mese, con la loro data di pagamento."""
     return [riga.importo for riga in _righe_pagate(registro, rapporto, mese, istante)[0]]
+
+
+def rapporti_della_vista(
+    registro: Registro, corpus: Corpus, vista: str, mese: Mese, rapporti, noto_al: datetime | None = None
+) -> tuple[str, ...]:
+    """I `rapporti` che il regime assegna alla vista nel mese, nell'ordine dato (ADR 0015).
+
+    Un rapporto e' della vista se nel mese ha un importo pagato che concorre per intero a una delle basi dichiarate, o di
+    uno degli istituti dichiarati. La vista non conosce i titoli. Senza dichiarazione per la vista il corpus e' incompleto.
+    """
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    dichiarazione = corpus.output(vista, mese.ultimo_giorno)
+    if dichiarazione is None:
+        raise ErroreCorpus(f"Il corpus non dichiara quali rapporti assegna alla vista {vista} per {mese}")
+    risultato = []
+    for rapporto in rapporti:
+        pagamenti = registro.pagamenti(rapporto, istante)
+        for esito in registro.esiti(TipoEsito.PAGATO, istante):
+            fatto = pagamenti.get(esito.id)
+            if fatto is None or not mese.primo_giorno <= fatto.valido_dal <= mese.ultimo_giorno:
+                continue
+            if any(
+                riga.rapporto == rapporto and _assegnata(corpus, dichiarazione, riga, fatto.valido_dal) for riga in esito.righe
+            ):
+                risultato.append(rapporto)
+                break
+    return tuple(risultato)
+
+
+def _assegnata(corpus: Corpus, dichiarazione, riga: Importo, giorno: date) -> bool:
+    if riga.istituto in dichiarazione.istituti:
+        return True
+    if riga.derivazione.maturazione in MATURAZIONI_DERIVATE:
+        return False
+    return any(
+        (concorso := corpus.concorso(riga.istituto, base, giorno)) is not None and concorso.misura == "intero"
+        for base in dichiarazione.basi
+    )
 
 
 def _controlla_cumuli(registro: Registro, corpus: Corpus, denuncia: Denuncia, istante: datetime) -> None:
