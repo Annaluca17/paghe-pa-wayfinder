@@ -15,7 +15,18 @@ from typing import Callable
 from .corpus import Corpus, Regola
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante
 from .formula import PRECISIONE, riferimenti, valuta
-from .modello import MATURAZIONI_FISCALI, Derivazione, Esito, Fatto, Importo, ParametroLetto, Quota, TipoEsito
+from .modello import (
+    FATTO_PART_TIME,
+    MATURAZIONI_FISCALI,
+    Derivazione,
+    Esito,
+    Fatto,
+    Importo,
+    ParametroLetto,
+    Quota,
+    RiduzionePartTime,
+    TipoEsito,
+)
 from .registro import Registro
 from .riferimento import solo_prassi
 from .tempo import Mese, Periodo, in_utc
@@ -147,6 +158,30 @@ class _Lettore:
         )
 
 
+    def con_part_time(self, regola: Regola, periodo: Periodo, importo: Importo) -> Importo:
+        """Rapporto in part-time: l'importo pieno della frazione si riduce secondo il trattamento dichiarato (ADR 0026)."""
+        if riferimenti(regola.formula).importi:
+            return importo  # deriva da importi già ridotti
+        percentuale = self.fatto(FATTO_PART_TIME, periodo)
+        if percentuale is None:
+            return importo
+        dichiarazione = self.corpus.trattamento_part_time(regola.istituto, periodo.dal)
+        fatti = {fatto.id: fatto for fatto in importo.derivazione.fatti}
+        fatti[percentuale.id] = percentuale
+        with localcontext() as contesto:
+            contesto.prec = PRECISIONE
+            valore = _arrotonda(importo.valore * percentuale.valore / 100, regola.decimali)
+        return replace(
+            importo,
+            valore=valore,
+            derivazione=replace(
+                importo.derivazione,
+                fatti=tuple(fatti[numero] for numero in sorted(fatti)),
+                part_time=RiduzionePartTime(percentuale.valore, importo.valore, dichiarazione.trattamento),
+            ),
+        )
+
+
 class _Calcolo:
     def __init__(self, lettore: _Lettore, competenza: Mese):
         self.lettore = lettore
@@ -197,7 +232,7 @@ class _Calcolo:
 
             importo = self.lettore.importo(regola, frazione, leggi)
             if importo is not None:
-                righe[indice] = importo
+                righe[indice] = self.lettore.con_part_time(regola, frazione, importo)
         righe = self._applica_quote(istituto, righe)
         self._righe_frazione[istituto] = righe
         return righe

@@ -86,3 +86,26 @@ def test_la_dichiarazione_entra_nell_impronta_solo_se_presente():
 def test_il_corpus_reale_rifiuta_il_riferimento_fittizio_del_part_time():
     with pytest.raises(ErroreCorpus, match="fittizio"):
         Corpus.da_toml(BASE.replace("fittizio:", "prassi:immedia:nota:2026-11-06;1 + fittizio:") + dichiarazione(), reale=True)
+
+
+def assumi_part_time(registro, percentuale="60", tipo="orizzontale", dal=date(2026, 1, 1)):
+    registro.registra_fatto(R, "mensile", "1000.00", date(2026, 1, 1))
+    registro.registra_fatto(R, "part_time", percentuale, dal)
+    registro.registra_codice(R, "tipo_part_time", tipo, dal)
+
+
+def test_il_proporzionale_vale_l_importo_pieno_per_la_percentuale(registro):
+    assumi_part_time(registro, "60")
+    (stipendio,) = calcola(registro, corpus_con(dichiarazione("proporzionale")), R, NOVEMBRE)
+    assert stipendio.valore == Decimal("600.00")
+    riduzione = stipendio.derivazione.part_time
+    assert (riduzione.percentuale, riduzione.importo_pieno, riduzione.trattamento) == (
+        Decimal("60"), Decimal("1000.00"), "proporzionale",
+    )
+    assert "part_time" in [fatto.tipo for fatto in stipendio.derivazione.fatti]
+
+
+def test_il_proporzionale_arrotonda_come_la_regola(registro):
+    assumi_part_time(registro, "66.6667")
+    (stipendio,) = calcola(registro, corpus_con(dichiarazione()), R, NOVEMBRE)
+    assert stipendio.valore == Decimal("666.67")
