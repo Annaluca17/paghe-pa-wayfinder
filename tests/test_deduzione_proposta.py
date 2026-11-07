@@ -40,3 +40,16 @@ def test_la_ritenuta_della_proposta_deduce_i_contributi_del_lavoratore_del_pagam
     versione = _versione(registro, Corpus.da_toml(CORPUS_PROPOSTA + DEDUZIONE), orologio)
     assert _valore(versione, "contributo_lavoratore") == Decimal("120.00")
     assert (_valore(versione, "ritenuta_irpef"), versione.netti[0].netto) == (Decimal("76.00"), Decimal("1304.00"))
+
+
+def test_un_secondo_pagamento_del_mese_deduce_i_contributi_anche_del_primo(registro, orologio):
+    """Il secondo pagamento paga 500 di arretrato di maggio, contributo 40: imponibile del mese 2000 - 160 = 1840,
+    ritenuta del mese (1840 - 1000) * 0,20 = 168,00, già operati 76,00, quindi 92,00."""
+    from materiale_proposta import paga
+
+    corpus = Corpus.da_toml(CORPUS_PROPOSTA + DEDUZIONE)
+    assumi(registro)
+    paga(registro, corpus, orologio, stipendio(registro, corpus, Mese(2026, 6)), date(2026, 6, 20), "pag-1")
+    versione = emetti_versione(registro, corpus, date(2026, 6, 27), stipendio(registro, corpus, Mese(2026, 5), "500"))
+    assert _valore(versione, "contributo_lavoratore") == Decimal("40.00")
+    assert _valore(versione, "ritenuta_irpef") == Decimal("92.00")
