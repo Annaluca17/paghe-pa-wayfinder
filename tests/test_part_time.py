@@ -109,3 +109,9 @@ def test_il_proporzionale_arrotonda_come_la_regola(registro):
     assumi_part_time(registro, "66.6667")
     (stipendio,) = calcola(registro, corpus_con(dichiarazione()), R, NOVEMBRE)
     assert stipendio.valore == Decimal("666.67")
+
+
+def test_l_intero_non_cambia(registro):
+    assumi_part_time(registro, "60")
+    (stipendio,) = calcola(registro, corpus_con(dichiarazione("intero")), R, NOVEMBRE)
+    assert stipendio.valore == Decimal("1000.00")

@@ -168,9 +168,11 @@ class _Lettore:
         dichiarazione = self.corpus.trattamento_part_time(regola.istituto, periodo.dal)
         fatti = {fatto.id: fatto for fatto in importo.derivazione.fatti}
         fatti[percentuale.id] = percentuale
-        with localcontext() as contesto:
-            contesto.prec = PRECISIONE
-            valore = _arrotonda(importo.valore * percentuale.valore / 100, regola.decimali)
+        valore = importo.valore
+        if dichiarazione.trattamento == "proporzionale":
+            with localcontext() as contesto:
+                contesto.prec = PRECISIONE
+                valore = _arrotonda(importo.valore * percentuale.valore / 100, regola.decimali)
         return replace(
             importo,
             valore=valore,
