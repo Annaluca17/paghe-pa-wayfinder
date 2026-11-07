@@ -11,19 +11,24 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from .corpus import Corpus
-from .errori import ErroreCalcolo, ParametroMancante
+from .errori import ErroreCalcolo, ErroreRegistro, ParametroMancante, VistaFerma
 from .f24ep import problemi_dati_ente
-from .modello import Importo
+from .f24ep import FornituraF24EP, ModelloF24EP, ModuloF24EP, RigaF24EP, serializza
+from .modello import Evento, Importo, TipoEsito
 from .proposta import (
     TIPO_PAGAMENTO_ESEGUITO,
+    TIPO_VERSAMENTO_ESEGUITO,
     DatoMancante,
     RiferimentoRiga,
     RigaComposizione,
+    StatoDelega,
+    _evento_gia_noto,
     leggi_versione,
+    stato_delega,
 )
 from .registro import Registro
 from .tempo import Mese, in_utc
@@ -36,6 +41,7 @@ TIPO_DELEGA_ANNULLATA = "delega_annullata"
 AVVISO_SCADENZA_PER_PRASSI = "scadenza_per_prassi"
 AVVISO_PROROGA_SU_FESTIVO = "proroga_su_festivo"
 AVVISO_VERSAMENTO_TARDIVO = "versamento_dopo_la_scadenza"
+AVVISO_TRASMISSIONE_TARDIVA = "trasmissione_oltre_il_termine"
 
 
 @dataclass(frozen=True)
@@ -205,6 +211,7 @@ class Delega:
     avvisi: tuple[AvvisoDelega, ...]
     compensazioni: tuple[Compensazione, ...] = ()
     residui: tuple[CreditoResiduo, ...] = ()
+    altre_deleghe: tuple[str, ...] = ()
 
     @property
     def totale_debito(self) -> Decimal:
@@ -236,6 +243,45 @@ def _formato(formato: str, importo: Importo, pagamento: date) -> str:
     if formato == "periodo_inizio":
         return f"{importo.periodo.dal.month:02d}{importo.periodo.dal.year:04d}"
     return f"{importo.periodo.al.month:02d}{importo.periodo.al.year:04d}"  # periodo_fine
+
+
+def _riferimento_da_dizionario(dati: dict) -> RiferimentoRiga:
+    return RiferimentoRiga(
+        dati["versione"], dati["rapporto"], dati["istituto"], dati["periodo"], tuple(dati["esiti_confrontati"])
+    )
+
+
+def _righe_versate(registro: Registro, istante: datetime) -> set[RiferimentoRiga]:
+    return {
+        _riferimento_da_dizionario(riga)
+        for evento in registro.eventi(TIPO_VERSAMENTO_ESEGUITO, istante)
+        for riga in evento.contenuto["righe"]
+    }
+
+
+def _chiave_delega(delega_id: str) -> str:
+    return f"delega:{delega_id}"
+
+
+def delega_attiva(registro: Registro, delega_id: str, noto_al: datetime | None = None) -> bool:
+    """La delega è stata trasmessa e non è né scartata da una ricevuta né annullata."""
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    if registro.evento(_chiave_delega(delega_id)) is None:
+        return False
+    annullate = {e.contenuto["delega"] for e in registro.eventi(TIPO_DELEGA_ANNULLATA, istante)}
+    return delega_id not in annullate and stato_delega(registro, delega_id, istante) is not StatoDelega.SCARTATA
+
+
+def _righe_in_deleghe_attive(registro: Registro, istante: datetime, ignorando: str | None) -> dict[RiferimentoRiga, str]:
+    """Le righe di composizione tenute da una delega attiva, con l'identificativo della delega."""
+    tenute: dict[RiferimentoRiga, str] = {}
+    for evento in registro.eventi(TIPO_DELEGA_TRASMESSA, istante):
+        delega_id = evento.contenuto["id"]
+        if delega_id == ignorando or not delega_attiva(registro, delega_id, istante):
+            continue
+        for riga in evento.contenuto["sorgenti"]:
+            tenute[_riferimento_da_dizionario(riga)] = delega_id
+    return tenute
 
 
 def _righe_candidate(registro: Registro, mese: Mese, istante: datetime):
@@ -299,9 +345,23 @@ def _compensa(
     return sorted(righe, key=_ordine_riga), compensazioni, residui
 
 
-def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, noto_al: datetime | None = None) -> Delega:
-    """La delega dei pagamenti eseguiti nel mese: funzione pura di registro, corpus e istante; non scrive nulla."""
+def costruisci_delega(
+    registro: Registro,
+    corpus: Corpus,
+    mese_pagamento: Mese,
+    noto_al: datetime | None = None,
+    ignorando_delega: str | None = None,
+) -> Delega:
+    """La delega dei pagamenti eseguiti nel mese: funzione pura di registro, corpus e istante; non scrive nulla.
+
+    Le righe già versate, o tenute da un'altra delega attiva (trasmessa e non scartata né annullata), non
+    entrano: lo stesso importo non sta in due deleghe. `ignorando_delega` rilegge la vista come la vedeva
+    quella delega, per confrontarla con ciò che ha trasmesso.
+    """
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    versate = _righe_versate(registro, istante)
+    tenute = _righe_in_deleghe_attive(registro, istante, ignorando_delega)
+    altre: list[str] = []
     fermi: dict[tuple[str, str], FermoDelega] = {}
 
     def ferma(caso: str, soggetto: str, motivo: str) -> None:
@@ -320,6 +380,12 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
     serve_provincia = False
 
     for riga, riferimento, pagamento in _righe_candidate(registro, mese_pagamento, istante):
+        if riferimento in versate:
+            continue
+        if riferimento in tenute:
+            if tenute[riferimento] not in altre:
+                altre.append(tenute[riferimento])
+            continue
         istituto, importo = riga.istituto, riga.importo
         if riga.natura == "irap":
             ferma(
@@ -443,5 +509,249 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
         )
     return Delega(
         mese_pagamento, scadenza, data_versamento, tuple(righe), tuple(sorgenti), ente, tuple(mancanti),
-        tuple(fermi.values()), tuple(avvisi), tuple(compensazioni), tuple(residui),
+        tuple(fermi.values()), tuple(avvisi), tuple(compensazioni), tuple(residui), tuple(altre),
     )
+
+
+# Delega trasmessa: esito dichiarato, file telematico, annullamento
+
+@dataclass(frozen=True)
+class DelegaTrasmessa:
+    """La delega com'è stata trasmessa: un esito dichiarato, che non cambia più. Si rilegge dal registro."""
+
+    id: str
+    mese_pagamento: Mese
+    scadenza: date
+    data_versamento: date
+    righe: tuple[RigaDelega, ...]
+    compensazioni: tuple[Compensazione, ...]
+    residui: tuple[CreditoResiduo, ...]
+    ente: DatiEnte
+    sorgenti: tuple[RiferimentoRiga, ...]
+    riporti_usati: tuple[int, ...]
+    esito_id: int
+    avvisi: tuple[AvvisoDelega, ...]
+    file: bytes
+
+    @property
+    def totale_debito(self) -> Decimal:
+        return sum((r.debito for r in self.righe), Decimal(0))
+
+    @property
+    def totale_credito(self) -> Decimal:
+        return sum((r.credito for r in self.righe), Decimal(0))
+
+    @property
+    def saldo(self) -> Decimal:
+        return self.totale_debito - self.totale_credito
+
+
+def _origine_in_dizionario(origine: Origine) -> dict:
+    return {
+        "valore": str(origine.valore),
+        "riferimento": origine.riferimento.in_dizionario() if origine.riferimento else None,
+        "riporto": origine.riporto,
+    }
+
+
+def _origine_da_dizionario(dati: dict) -> Origine:
+    riferimento = _riferimento_da_dizionario(dati["riferimento"]) if dati["riferimento"] else None
+    return Origine(Decimal(dati["valore"]), riferimento, dati["riporto"])
+
+
+def _riga_in_dizionario(riga: RigaDelega) -> dict:
+    return {
+        "chiave": list(riga.chiave),
+        "debito": str(riga.debito),
+        "credito": str(riga.credito),
+        "origine": [_origine_in_dizionario(o) for o in riga.origine],
+    }
+
+
+def _riga_da_dizionario(dati: dict) -> RigaDelega:
+    sezione, tributo, codice, estremi, rif_a, rif_b = dati["chiave"]
+    return RigaDelega(
+        sezione, tributo, codice, estremi, rif_a, rif_b,
+        Decimal(dati["debito"]), Decimal(dati["credito"]), tuple(_origine_da_dizionario(o) for o in dati["origine"]),
+    )
+
+
+def _contenuto_della_delega(delega_id: str, delega: Delega, riporti_usati: tuple[int, ...], avvisi) -> dict:
+    return {
+        "id": delega_id,
+        "mese": str(delega.mese_pagamento),
+        "scadenza": delega.scadenza.data.isoformat(),
+        "scadenza_riferimento": delega.scadenza.riferimento,
+        "data_versamento": delega.data_versamento.isoformat(),
+        "righe": [_riga_in_dizionario(r) for r in delega.righe],
+        "compensazioni": [
+            {"credito": list(c.credito), "debito": list(c.debito), "importo": str(c.importo)}
+            for c in delega.compensazioni
+        ],
+        "residui": [
+            {"chiave": list(r.chiave), "importo": str(r.importo), "origine": [_origine_in_dizionario(o) for o in r.origine]}
+            for r in delega.residui
+        ],
+        "ente": {tipo: getattr(delega.ente, tipo) for tipo in (*TIPI_DATI_ENTE, "sigla_provincia")},
+        "sorgenti": [r.in_dizionario() for r in delega.sorgenti],
+        "riporti_usati": list(riporti_usati),
+        "avvisi": [{"tipo": a.tipo, "messaggio": a.messaggio} for a in avvisi],
+    }
+
+
+def _file_telematico(ente: DatiEnte, data_versamento: date, righe) -> bytes:
+    modulo = ModuloF24EP(
+        tuple(
+            RigaF24EP(r.sezione, r.tributo, r.codice, r.estremi, r.rif_a, r.rif_b, r.debito, r.credito) for r in righe
+        )
+    )
+    modello = ModelloF24EP(
+        ente.codice_fiscale, ente.denominazione, ente.email, ente.iban_tesoreria, data_versamento, (modulo,)
+    )
+    return serializza(FornituraF24EP((modello,)))
+
+
+def _trasmessa_dal_contenuto(esito_id: int, dati: dict) -> DelegaTrasmessa:
+    ente = DatiEnte(**dati["ente"])
+    righe = tuple(_riga_da_dizionario(r) for r in dati["righe"])
+    data_versamento = date.fromisoformat(dati["data_versamento"])
+    return DelegaTrasmessa(
+        id=dati["id"],
+        mese_pagamento=Mese.da_testo(dati["mese"]),
+        scadenza=date.fromisoformat(dati["scadenza"]),
+        data_versamento=data_versamento,
+        righe=righe,
+        compensazioni=tuple(
+            Compensazione(tuple(c["credito"]), tuple(c["debito"]), Decimal(c["importo"])) for c in dati["compensazioni"]
+        ),
+        residui=tuple(
+            CreditoResiduo(tuple(r["chiave"]), Decimal(r["importo"]), tuple(_origine_da_dizionario(o) for o in r["origine"]))
+            for r in dati["residui"]
+        ),
+        ente=ente,
+        sorgenti=tuple(_riferimento_da_dizionario(r) for r in dati["sorgenti"]),
+        riporti_usati=tuple(dati["riporti_usati"]),
+        esito_id=esito_id,
+        avvisi=tuple(AvvisoDelega(a["tipo"], a["messaggio"]) for a in dati["avvisi"]),
+        file=_file_telematico(ente, data_versamento, righe),
+    )
+
+
+def leggi_delega_trasmessa(registro: Registro, delega_id: str) -> DelegaTrasmessa:
+    evento = registro.evento(_chiave_delega(delega_id))
+    if evento is None or evento.tipo != TIPO_DELEGA_TRASMESSA:
+        raise ErroreRegistro(f"Delega {delega_id}: inesistente")
+    return _trasmessa_dal_contenuto(evento.esito_id, evento.contenuto)
+
+
+# Termini dell'Allegato 2 (par. 3, lettere c e d), in ora italiana
+
+def _ultima_domenica(anno: int, mese: int) -> date:
+    giorno = date(anno, mese, 31)
+    return giorno - timedelta(days=(giorno.weekday() + 1) % 7)
+
+
+def _ora_italiana_in_utc(giorno: date, ore: int) -> datetime:
+    """L'istante UTC di `ore` ore dopo la mezzanotte italiana di `giorno`: l'ora legale va da fine marzo a fine ottobre."""
+    inizio = datetime.combine(_ultima_domenica(giorno.year, 3), datetime.min.time(), UTC) + timedelta(hours=1)
+    fine = datetime.combine(_ultima_domenica(giorno.year, 10), datetime.min.time(), UTC) + timedelta(hours=1)
+    mezzanotte_cet = datetime.combine(giorno, datetime.min.time(), UTC) - timedelta(hours=1)
+    istante = mezzanotte_cet + timedelta(hours=ore)
+    return istante - timedelta(hours=1) if inizio <= istante < fine else istante
+
+
+def _giorno_lavorativo_prima(corpus: Corpus, giorno: date, quanti: int) -> date:
+    while quanti:
+        giorno -= timedelta(days=1)
+        if _e_lavorativo(corpus, giorno):
+            quanti -= 1
+    return giorno
+
+
+def termine_trasmissione(corpus: Corpus, data_versamento: date, saldo: Decimal) -> datetime:
+    """Saldo maggiore di zero: le 20:00 del secondo giorno lavorativo prima. Saldo zero: le 24:00 del giorno di versamento."""
+    if saldo > 0:
+        return _ora_italiana_in_utc(_giorno_lavorativo_prima(corpus, data_versamento, 2), 20)
+    return _ora_italiana_in_utc(data_versamento + timedelta(days=1), 0)
+
+
+def termine_annullamento(corpus: Corpus, data_versamento: date, saldo: Decimal) -> datetime:
+    """Saldo maggiore di zero: le 22:00 del secondo giorno lavorativo prima. Saldo zero: le 24:00 del giorno di versamento."""
+    if saldo > 0:
+        return _ora_italiana_in_utc(_giorno_lavorativo_prima(corpus, data_versamento, 2), 22)
+    return _ora_italiana_in_utc(data_versamento + timedelta(days=1), 0)
+
+
+def _importo_della_riga(registro: Registro, riferimento: RiferimentoRiga) -> Importo:
+    versione = leggi_versione(registro, riferimento.versione_id)
+    riga = next(r for r in versione.righe if versione.riferimento(r) == riferimento)
+    return riga.importo
+
+
+def _ragioni_di_fermo(delega: Delega) -> list[str]:
+    ragioni = [f.motivo for f in delega.fermi]
+    ragioni += [f"dato mancante {d.tipo}: {d.motivo}" for d in delega.dati_mancanti]
+    if not delega.righe and not delega.fermi:
+        gia = f" (già nelle deleghe {', '.join(delega.altre_deleghe)})" if delega.altre_deleghe else ""
+        ragioni.append("nessuna riga da versare" + gia)
+    return ragioni
+
+
+def trasmetti_delega(
+    registro: Registro, corpus: Corpus, delega_id: str, adattatore: str, mese_pagamento: Mese
+) -> DelegaTrasmessa:
+    """Trasmette la delega dei pagamenti del mese: l'esito dichiarato nasce qui e non cambia più.
+
+    Con lo stesso identificativo e la stessa delega non ha effetto; con una delega diversa è un errore: una
+    correzione è una nuova delega, dopo lo scarto o l'annullamento della precedente. Una delega ferma o con
+    dati mancanti non si trasmette.
+    """
+    if not isinstance(delega_id, str) or not delega_id.strip():
+        raise ErroreRegistro("La delega ha un identificativo")
+    chiave = _chiave_delega(delega_id)
+    delega = costruisci_delega(registro, corpus, mese_pagamento, ignorando_delega=delega_id)
+    gia = registro.evento(chiave)
+    if gia is not None:
+        nuovo = _contenuto_della_delega(delega_id, delega, (), ()) if delega.pronta else None
+        vecchio = {k: v for k, v in gia.contenuto.items() if k != "avvisi"}
+        if nuovo is None or {k: v for k, v in nuovo.items() if k != "avvisi"} != vecchio:
+            raise ErroreRegistro(f"Evento {chiave}: stesso identificativo con contenuto diverso, rifiutato")
+        return _trasmessa_dal_contenuto(gia.esito_id, gia.contenuto)
+    if not delega.pronta:
+        raise VistaFerma(f"Delega {delega_id} non trasmissibile: " + "; ".join(_ragioni_di_fermo(delega)))
+    istante = registro.adesso()
+    avvisi = list(delega.avvisi)
+    if istante > termine_trasmissione(corpus, delega.data_versamento, delega.saldo):
+        avvisi.append(
+            AvvisoDelega(
+                AVVISO_TRASMISSIONE_TARDIVA,
+                f"La delega è trasmessa oltre il termine per la data di versamento {delega.data_versamento}: "
+                "sarà eseguita il secondo giorno lavorativo successivo alla ricezione (Allegato 2, par. 3, lettera c)",
+            )
+        )
+    contenuto = _contenuto_della_delega(delega_id, delega, (), avvisi)
+    with registro.atomico():
+        esito = registro.registra_esito(
+            TipoEsito.DICHIARATO, istante.date(), [_importo_della_riga(registro, r) for r in delega.sorgenti]
+        )
+        evento = registro.registra_evento(chiave, TIPO_DELEGA_TRASMESSA, contenuto, adattatore, esito_id=esito.id)
+    return _trasmessa_dal_contenuto(evento.esito_id, evento.contenuto)
+
+
+def annulla_delega(registro: Registro, corpus: Corpus, chiave: str, adattatore: str, delega_id: str) -> Evento:
+    """L'annullamento chiesto entro il termine dell'Allegato 2 è un fatto a sé: le righe tornano da versare."""
+    contenuto = {"delega": delega_id}
+    gia = _evento_gia_noto(registro, chiave, TIPO_DELEGA_ANNULLATA, contenuto)
+    if gia is not None:
+        return gia
+    trasmessa = leggi_delega_trasmessa(registro, delega_id)
+    istante = registro.adesso()
+    if any(e.contenuto["delega"] == delega_id for e in registro.eventi(TIPO_DELEGA_ANNULLATA, istante)):
+        raise ErroreRegistro(f"Delega {delega_id}: già annullata")
+    termine = termine_annullamento(corpus, trasmessa.data_versamento, trasmessa.saldo)
+    if istante > termine:
+        raise ErroreRegistro(
+            f"Delega {delega_id}: l'annullamento è fuori termine, scaduto il {termine:%Y-%m-%d %H:%M} UTC: "
+            "il termine dell'Allegato 2 è passato"
+        )
+    return registro.registra_evento(chiave, TIPO_DELEGA_ANNULLATA, contenuto, adattatore)
