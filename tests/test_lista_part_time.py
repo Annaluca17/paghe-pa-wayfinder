@@ -1,7 +1,7 @@
 """ListaPosPA di un rapporto in part-time (ADR 0026, ticket #72; ricerca in docs/research/part-time-lista-pos-pa.md).
 
-Corpus reale CPDEL senza il fermo sul part-time e con dichiarazioni di trattamento fittizie: valori e fonti di
-prova. Persone e codici fiscali di fantasia.
+Corpus reale CPDEL, che dichiara il trattamento nel part-time di tabellare e comparto. Persone e codici fiscali di
+fantasia.
 """
 
 import re
@@ -16,21 +16,11 @@ from test_lista_pos_pa import CORPUS, ENTE, MITTENTE, R, assumi, paga, stipendi
 from paghe.uniemens import in_xml
 
 NOVEMBRE = Mese(2026, 11)
-ISTITUTI_DEL_COMPARTO = [
-    f"{nome}_{area}" for nome in ("tabellare", "comparto") for area in ("funzionari", "istruttori", "operatori_esperti", "operatori")
-]
 
 
 @pytest.fixture(scope="module")
 def corpus():
-    testo = CORPUS.read_text(encoding="utf-8")
-    testo = re.sub(r'\[\[fermo\]\]\nfatto = "part_time".*?\n\n', "", testo, flags=re.S)
-    dichiarazioni = "".join(
-        f'\n[[part_time]]\nistituto = "{istituto}"\ntrattamento = "proporzionale"\ndal = 2026-01-01\n'
-        f'riferimento = "fittizio:part-time"\n'
-        for istituto in ISTITUTI_DEL_COMPARTO
-    )
-    return Corpus.da_toml(testo + dichiarazioni)
+    return Corpus.carica(CORPUS, reale=True)
 
 
 def in_part_time(registro, orologio, corpus, tipo, percentuale="60", impiego="8"):

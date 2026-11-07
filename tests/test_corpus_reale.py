@@ -151,11 +151,25 @@ def test_prima_fascia_2027_non_ancora_nel_corpus(registro, reale, orologio):
         calcola_denuncia(registro, reale, R, Mese(2027, 1))
 
 
-def test_part_time_ferma_il_calcolo(registro, reale):
-    assumi(registro, "istruttori")
+@pytest.mark.parametrize(
+    ("area", "tabellare", "comparto"),
+    [
+        ("funzionari", "1096.01", "18.17"),
+        ("istruttori", "1009.82", "16.03"),
+        ("operatori_esperti", "898.30", "13.76"),
+        ("operatori", "862.11", "11.34"),
+    ],
+)
+def test_part_time_al_50_per_cento_riduce_competenze_fisse_e_periodiche(registro, reale, area, tabellare, comparto):
+    """CCNL 16/11/2022 art. 62 c. 10, ora art. 55 c. 10 del CCNL 23/02/2026: proporzionali (ADR 0026, ticket #72)."""
+    assumi(registro, area)
     registro.registra_fatto(R, "part_time", "50", date(2026, 11, 1))
-    with pytest.raises(CasoNonModellato, match="part-time"):
-        calcola(registro, reale, R, Mese(2026, 11))
+    righe = calcola(registro, reale, R, Mese(2026, 11))
+    assert {riga.istituto: riga.valore for riga in righe} == {
+        f"tabellare_{area}": Decimal(tabellare),
+        f"comparto_{area}": Decimal(comparto),
+    }
+    assert all(riga.derivazione.part_time.trattamento == "proporzionale" for riga in righe)
 
 
 def test_recupero_su_cessato_per_cessazione_retroattiva(registro, reale, orologio):

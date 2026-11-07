@@ -58,18 +58,20 @@ def test_il_resoconto_e_deterministico(resoconto):
 def test_il_percorso_di_marzo_arriva_all_esito_versato_per_chi_non_si_ferma(esecuzione):
     arrivi = {r: a for (m, r), a in esecuzione.arrivi.items() if m == "2026-03"}
     assert [r for r, a in arrivi.items() if a == "completo"] == ["R01", "R02", "R03", "R05", "R06", "R07"]
-    assert arrivi["R04"] == "calcolo"
+    # R04, a tempo parziale al 60% (verticale), supera il calcolo e arriva alla ListaPosPA, ma e' una bozza (ticket #72).
+    assert arrivi["R04"] == "lista_pos_pa"
     assert {arrivi[r] for r in ("R08", "R09", "R10", "R11")} == {"calcolo"}
 
 
 def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
     per_causa = {g["causa"]: g for g in cause_ordinate(esecuzione)}
     assert per_causa["regime del titolo assente nel corpus"]["bloccati"] == {"R08", "R09", "R10", "R11"}
-    assert per_causa["part-time, riproporzionamento non modellato"]["bloccati"] == {"R04"}
+    assert "part-time, riproporzionamento non modellato" not in per_causa
+    assert per_causa["bozza non trasmissibile"]["bloccati"] == {"R04"}
     # Il rimborso 730 di R07 non ferma piu' la delega di dicembre: il fermo e' il debito negativo del 100E, nominato.
     assert not [causa for causa in per_causa if "150E" in causa]
     (stop_debito,) = [g for causa, g in per_causa.items() if causa.startswith("debito_negativo")]
-    assert "100E" in stop_debito["causa"] and stop_debito["bloccati"] == {"R01", "R02", "R03", "R06", "R07"}
+    assert "100E" in stop_debito["causa"] and stop_debito["bloccati"] == {"R01", "R02", "R03", "R04", "R06", "R07"}
 
 
 def test_il_rimborso_730_di_r07_e_sul_netto_e_credito_nella_delega_di_dicembre(esecuzione, resoconto):

@@ -37,6 +37,7 @@ from paghe import (
 )
 from paghe import delega as modulo_delega
 from paghe.errori import ErrorePaghe, VistaFerma
+from paghe.part_time import registra_programmazione
 from paghe.uniemens import Ente, Mittente, in_xml
 
 from . import scenario as S
@@ -160,6 +161,11 @@ class Ufficio:
     def fatto(self, rapporto, tipo, valore, dal, al=None, atto=None):
         self._conta_fatto(f"rapporto {rapporto}: {tipo}")
         return self.registro.registra_fatto(rapporto, tipo, valore, dal, al, atto)
+
+    def programmazione_part_time(self, rapporto, ore_per_giorno, atto):
+        """Un atto, un passaggio: l'Ufficio fissa la programmazione di un periodo, un fatto per giorno nel registro."""
+        self.conta(self._categoria, self._quando, f"rapporto {rapporto}: programmazione del part-time")
+        registra_programmazione(self.registro, rapporto, ore_per_giorno, atto)
 
     def esito_730_4(self, persona, rimborso, anno_redditi, dal, atto):
         self._conta_fatto(f"persona {persona}: esito 730-4")
@@ -358,6 +364,8 @@ def _fatti_di_avvio(c: _Contesto) -> dict[str, dict[str, object]]:
                 continue  # assunto a marzo
             fatti[r.id] = _registra_rapporto(c, r)
         c.ufficio.fatto("R04", "part_time", S.PART_TIME_PERCENTUALE, date(2026, 1, 1))
+        c.ufficio.codice("R04", "tipo_part_time", S.PART_TIME_TIPO, date(2026, 1, 1))
+        c.ufficio.programmazione_part_time("R04", S.programmazione_part_time_2026(), S.ATTO_PROGRAMMAZIONE)
     return fatti
 
 
