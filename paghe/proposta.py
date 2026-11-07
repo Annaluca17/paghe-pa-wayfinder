@@ -347,10 +347,11 @@ def _rapporto(
     (anno,) = anni
 
     ultimo, manca_ultimo = _ultimo_dell_anno(registro, anno, valuta, istante)
-    fiscale = calcola_fiscale(registro, corpus, rapporto, attribuiti, valuta, ultimo, istante)
+    # I contributi leggono solo le basi previdenziali, mai la ritenuta: si calcolano prima, perché la ritenuta li deduce.
+    contributi = _contributi_per_differenza(registro, corpus, rapporto, valuta, reddito, istante)
+    fiscale = calcola_fiscale(registro, corpus, rapporto, [*attribuiti, *contributi], valuta, ultimo, istante)
     fiscali = [fiscale.ritenuta] + ([fiscale.conguaglio] if fiscale.conguaglio is not None else [])
     fiscali = [replace(i, esiti_confrontati=_esiti_con_la_stessa_chiave(registro, i, istante)) for i in fiscali]
-    contributi = _contributi_per_differenza(registro, corpus, rapporto, valuta, reddito, istante)
 
     righe = _righe_di_composizione(corpus, [*attribuiti, *fiscali, *contributi], valuta)
     netto = sum((riga.sul_netto for riga in righe), Decimal(0))
