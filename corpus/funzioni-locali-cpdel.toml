@@ -587,6 +587,12 @@ formula = "fatto.rata_collaborazione"
 maturazione = "evento"
 applica_se = "rata_collaborazione"
 
+[[condizione_di_proposta]]
+istituto = "compenso_collaborazione"
+fatto = "attestazione_prestazione"
+dal = 2026-01-01
+riferimento = "prassi:immedia:nota:2026-11-07;10"
+
 # Contributi. Totale e quota del lavoratore arrotondati, quota dell'ente per differenza
 # (ricerca #15, proposta B3; nota di prassi 3).
 

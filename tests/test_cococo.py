@@ -44,3 +44,9 @@ def test_la_rata_del_piano_matura_come_evento_nel_giorno_della_scadenza(registro
     (riga,) = calcola(registro, reale, R, Mese(2026, 11))
     assert (riga.istituto, riga.valore, riga.derivazione.maturazione) == ("compenso_collaborazione", Decimal("1500.00"), "evento")
     assert riga.periodo.dal == riga.periodo.al == date(2026, 11, 30)
+
+
+def test_l_attestazione_della_prestazione_e_la_condizione_di_proposta_della_rata(reale):
+    condizione = reale.condizione_di_proposta("compenso_collaborazione", date(2026, 11, 27))
+    assert condizione is not None and condizione.fatto == "attestazione_prestazione"
+    assert reale.condizione_di_proposta("tabellare_funzionari", date(2026, 11, 27)) is None

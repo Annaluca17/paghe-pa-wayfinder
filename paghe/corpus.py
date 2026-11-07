@@ -524,6 +524,32 @@ class DichiarazioneComposizione:
 
 
 @dataclass(frozen=True)
+class CondizioneDiProposta:
+    """Un fatto che il corpus richiede perche' un importo dell'istituto entri in una versione di proposta (ADR 0015).
+
+    Senza il fatto per tutto il periodo dell'importo, l'importo resta calcolato e visibile tra gli esclusi.
+    Esempio: l'attestazione della prestazione di una rata di collaborazione. Date e fonte come ogni dichiarazione.
+    """
+
+    istituto: str
+    fatto: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Condizione di proposta {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if not isinstance(self.fatto, str) or not self.fatto.strip() or self.fatto != self.fatto.strip():
+            raise ErroreCorpus(f"{soggetto}: il fatto richiesto va nominato")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
 class MappaturaEsterna:
     """Corrispondenza datata tra un istituto e un codice di un sistema esterno: codice tributo, causale, SICO, punto CU."""
 
@@ -712,8 +738,10 @@ class Corpus:
         scadenze_f24ep: tuple[RegolaScadenzaF24EP, ...] = (),
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
         trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
+        condizioni_di_proposta: tuple[CondizioneDiProposta, ...] = (),
     ):
         self.reale = reale
+        self._condizioni_di_proposta = tuple(condizioni_di_proposta)
         self._trattamenti_part_time = tuple(trattamenti_part_time)
         self._scadenze_f24ep = tuple(scadenze_f24ep)
         self._calendari_festivi = tuple(calendari_festivi)
@@ -748,6 +776,7 @@ class Corpus:
         self._convalida_fiscale()
         self._convalida_composizione()
         self._convalida_part_time()
+        self._convalida_condizioni_di_proposta()
         self._convalida_mappature_di_fatto()
         self._convalida_catalogo_f24ep()
         if reale:
@@ -774,6 +803,7 @@ class Corpus:
             for m in self._mappature_di_fatto
         ]
         elenco += [(f"Part-time {t.istituto}", t.riferimento) for t in self._trattamenti_part_time]
+        elenco += [(f"Condizione di proposta {c.istituto}", c.riferimento) for c in self._condizioni_di_proposta]
         elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
         elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
         elenco += [("Proroga della scadenza F24EP", r.proroga.riferimento) for r in self._scadenze_f24ep if r.proroga]
@@ -820,6 +850,14 @@ class Corpus:
             for altra in self._mappature[indice + 1 :]:
                 if (altra.istituto, altra.sistema) == (mappatura.istituto, mappatura.sistema):
                     _vigenze_sovrapposte([mappatura, altra], soggetto)
+
+    def _convalida_condizioni_di_proposta(self) -> None:
+        for indice, condizione in enumerate(self._condizioni_di_proposta):
+            if condizione.istituto not in self._regole:
+                raise ErroreCorpus(f"Condizione di proposta {condizione.istituto}: istituto senza regola")
+            for altra in self._condizioni_di_proposta[indice + 1 :]:
+                if altra.istituto == condizione.istituto:
+                    _vigenze_sovrapposte([condizione, altra], f"Condizione di proposta {condizione.istituto}")
 
     def _convalida_mappature_di_fatto(self) -> None:
         for indice, mappatura in enumerate(self._mappature_di_fatto):
@@ -1095,6 +1133,11 @@ class Corpus:
                 [t.istituto, t.trattamento, t.dal.isoformat(), t.al.isoformat() if t.al else "", t.fatto or "", t.riferimento]
                 for t in self._trattamenti_part_time
             )
+        if self._condizioni_di_proposta:
+            contenuto["condizioni_di_proposta"] = sorted(
+                [c.istituto, c.fatto, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.riferimento]
+                for c in self._condizioni_di_proposta
+            )
         if self._mappature:
             contenuto["mappature"] = sorted(
                 [m.istituto, m.sistema, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
@@ -1168,6 +1211,10 @@ class Corpus:
     def composizione(self, istituto: str, giorno: date) -> DichiarazioneComposizione | None:
         """Dichiarazione di composizione vigente alla data; None se l'istituto non ne dichiara."""
         return _vigente([c for c in self._composizioni if c.istituto == istituto], giorno)
+
+    def condizione_di_proposta(self, istituto: str, giorno: date) -> CondizioneDiProposta | None:
+        """Condizione vigente alla data della valuta; None se l'istituto non ne richiede."""
+        return _vigente([c for c in self._condizioni_di_proposta if c.istituto == istituto], giorno)
 
     def trattamento_part_time(self, istituto: str, giorno: date) -> DichiarazioneTrattamentoPartTime | None:
         """Trattamento nel part-time vigente alla data; None se l'istituto non lo dichiara."""
@@ -1293,6 +1340,16 @@ class Corpus:
                 )
                 for voce in dati.get("part_time", [])
             )
+            condizioni_di_proposta = tuple(
+                CondizioneDiProposta(
+                    istituto=voce["istituto"],
+                    fatto=voce["fatto"],
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                )
+                for voce in dati.get("condizione_di_proposta", [])
+            )
             codici_f24ep = tuple(_codice_f24ep_da_toml(voce) for voce in dati.get("codice_f24ep", []))
             scadenze_f24ep = tuple(_scadenza_f24ep_da_toml(voce) for voce in dati.get("scadenza_f24ep", []))
             calendari_festivi = tuple(
@@ -1324,6 +1381,7 @@ class Corpus:
             scadenze_f24ep=scadenze_f24ep,
             calendari_festivi=calendari_festivi,
             trattamenti_part_time=trattamenti_part_time,
+            condizioni_di_proposta=condizioni_di_proposta,
         )
 
     @classmethod

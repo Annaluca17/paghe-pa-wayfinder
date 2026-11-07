@@ -408,6 +408,20 @@ def _persone_assenti(registro: Registro, anno: int, presenti: set[str], istante:
     ]
 
 
+def _condizione_mancante(registro: Registro, corpus: Corpus, importo: Importo, valuta: date, istante: datetime) -> str | None:
+    """Il motivo per cui l'importo non entra in una versione: il fatto che il corpus richiede manca nel suo periodo."""
+    condizione = corpus.condizione_di_proposta(importo.istituto, valuta)
+    if condizione is None:
+        return None
+    vigenti = registro.vigenti_per_giorno(importo.rapporto, condizione.fatto, importo.periodo, istante)
+    if all(fatto is not None for fatto in vigenti):
+        return None
+    return (
+        f"manca il fatto {condizione.fatto} per {importo.periodo}: l'importo resta calcolato ma non entra in una "
+        f"versione di proposta ({condizione.riferimento})"
+    )
+
+
 def _costruisci(
     registro: Registro, corpus: Corpus, valuta: date, importi, esclusi, istante: datetime
 ) -> ContenutoVersione:
@@ -418,8 +432,12 @@ def _costruisci(
     for importo in importi:
         if not importo.esiti_confrontati and importo.chiave in gia_pagati:
             elenco_esclusi.append(Escluso(importo, MOTIVO_GIA_PAGATO))
-        else:
-            per_rapporto.setdefault(importo.rapporto, []).append(importo)
+            continue
+        motivo = _condizione_mancante(registro, corpus, importo, valuta, istante)
+        if motivo is not None:
+            elenco_esclusi.append(Escluso(importo, motivo))
+            continue
+        per_rapporto.setdefault(importo.rapporto, []).append(importo)
     persone = {rapporto: registro.persona_del_rapporto(rapporto, istante) for rapporto in per_rapporto}
 
     righe: list[RigaComposizione] = []
