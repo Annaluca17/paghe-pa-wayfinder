@@ -11,6 +11,7 @@ Su dodici pagamenti di 1500 il reddito è 18000: imposta annua 2600, detrazione 
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -39,6 +40,7 @@ from paghe.errori import (
     RedditoMancante,
 )
 
+CORPUS_REALE = Path(__file__).resolve().parent.parent / "corpus" / "funzioni-locali-cpdel.toml"
 CF = "RSSMRA80A01H501U"
 P = "PERSONA-1"
 R = "RAPPORTO-1"
@@ -690,3 +692,18 @@ def test_due_dichiarazioni_fisiologiche_dello_stesso_istituto_non_si_sovrappongo
         Corpus.da_toml(TESTO + FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2026-06-30") + seconda)
     adiacenti = FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2025-12-31") + seconda
     assert Corpus.da_toml(TESTO + adiacenti).pagamento_fisiologico("stipendio", date(2026, 1, 1)).riferimento == "fittizio:fisiologico-bis"
+
+
+def test_il_pagamento_fisiologico_senza_riferimento_e_rifiutato():
+    senza = FISIOLOGICO.replace('riferimento = "fittizio:fisiologico-stipendio"', 'riferimento = ""')
+    with pytest.raises(ErroreCorpus, match="riferimento normativo obbligatorio"):
+        Corpus.da_toml(TESTO + senza)
+
+
+def test_il_corpus_reale_rifiuta_il_riferimento_fittizio_del_pagamento_fisiologico():
+    """Anche con tutto il resto reale: l'unico riferimento fittizio è quello della dichiarazione."""
+    reale = Corpus.carica(CORPUS_REALE, reale=True)
+    assert reale.versione
+    testo = CORPUS_REALE.read_text(encoding="utf-8") + FISIOLOGICO.replace('"stipendio"', f'"{reale.istituti()[0]}"')
+    with pytest.raises(ErroreCorpus, match="Pagamento fisiologico.*fittizio"):
+        Corpus.da_toml(testo, reale=True)
