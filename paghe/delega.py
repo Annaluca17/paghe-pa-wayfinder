@@ -119,6 +119,7 @@ def calcola_scadenza(corpus: Corpus, mese_pagamento: Mese) -> Scadenza:
 # Vista della delega
 
 ORDINE_SEZIONI = "FIRSNQWGP5"  # l'ordine delle sezioni nella delega
+RIGHE_PER_MODULO = 22
 NATURE_A_CREDITO = frozenset({"rimborso_730", "credito_sostituto"})
 TIPI_DATI_ENTE = ("codice_fiscale", "denominazione", "email", "iban_tesoreria")
 
@@ -241,20 +242,78 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
     ente = _dati_ente(registro, data_versamento or scadenza.data, istante)
     somme: dict[tuple, list] = {}
     sorgenti: list[RiferimentoRiga] = []
+    fermi: dict[tuple[str, str], FermoDelega] = {}
+
+    def ferma(caso: str, soggetto: str, motivo: str) -> None:
+        fermi.setdefault((caso, soggetto), FermoDelega(caso, motivo))
+
     for riga, riferimento, pagamento in _righe_candidate(registro, mese_pagamento, istante):
-        codice = corpus.mappatura(riga.istituto, SISTEMA_F24EP, pagamento, riga.importo.anno_imposta).codice
+        istituto, importo = riga.istituto, riga.importo
+        if riga.natura == "irap":
+            ferma(
+                "irap",
+                istituto,
+                f"Istituto {istituto}: riga IRAP nella delega, la scadenza e il riparto per regione non sono ancora modellati",
+            )
+            continue
+        mappatura = corpus.mappatura(istituto, SISTEMA_F24EP, pagamento, importo.anno_imposta)
+        if mappatura is None:
+            ferma(
+                "mappatura_mancante",
+                istituto,
+                f"Istituto {istituto}: importo pagato il {pagamento} con canale F24EP senza codice tributo o causale",
+            )
+            continue
+        codice = mappatura.codice
         voce = corpus.codice_f24ep(codice, pagamento)
-        valore_codice = ente.sigla_provincia if voce.codice_campo == "provincia" else ""
+        if voce is None:
+            ferma(
+                "codice_fuori_catalogo",
+                istituto,
+                f"Istituto {istituto}: il codice {codice} non è nel catalogo dei codici F24EP vigente il {pagamento}",
+            )
+            continue
+        a_credito = riga.natura in NATURE_A_CREDITO
+        if a_credito and not voce.a_credito:
+            ferma(
+                "credito_su_codice_a_debito",
+                istituto,
+                f"Istituto {istituto}: credito su {codice}, un codice che il catalogo ammette solo a debito",
+            )
+            continue
+        if a_credito and voce.limite_credito == "non_modellato":
+            ferma(
+                "limite_credito",
+                istituto,
+                f"Istituto {istituto}: credito su {codice}, di cui il limite di compensazione non è ancora modellato",
+            )
+            continue
+        if voce.codice_campo in ("regione", "catastale"):
+            cosa = "codice catastale del comune" if voce.codice_campo == "catastale" else "codice della regione"
+            ferma(
+                "codice_non_modellato",
+                istituto,
+                f"Istituto {istituto}: il codice {codice} vuole il {cosa} di residenza del sostituito, "
+                "che nessun fatto del registro porta: caso non modellato",
+            )
+            continue
+        if "anno_imposta" in (voce.rif_a, voce.rif_b) and importo.anno_imposta is None:
+            ferma(
+                "anno_imposta_mancante",
+                istituto,
+                f"Istituto {istituto}: il codice {codice} vuole l'anno d'imposta e l'importo non lo porta",
+            )
+            continue
         chiave = (
             voce.sezione,
             codice,
-            valore_codice or "",
+            (ente.sigla_provincia or "") if voce.codice_campo == "provincia" else "",
             "",
-            _formato(voce.rif_a, riga.importo, pagamento),
-            _formato(voce.rif_b, riga.importo, pagamento),
-            riga.natura in NATURE_A_CREDITO,
+            _formato(voce.rif_a, importo, pagamento),
+            _formato(voce.rif_b, importo, pagamento),
+            a_credito,
         )
-        somme.setdefault(chiave, []).append(Origine(riga.importo.valore, riferimento))
+        somme.setdefault(chiave, []).append(Origine(importo.valore, riferimento))
         sorgenti.append(riferimento)
     righe = []
     for (sezione, tributo, codice_campo, estremi, rif_a, rif_b, a_credito), origine in somme.items():
@@ -266,7 +325,15 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
             )
         )
     righe.sort(key=lambda r: (ORDINE_SEZIONI.index(r.sezione), r.tributo, r.codice, r.rif_a, r.rif_b))
+    if len(righe) > RIGHE_PER_MODULO:
+        ferma(
+            "piu_di_22_righe",
+            "delega",
+            f"La delega ha {len(righe)} righe e un modulo ne porta {RIGHE_PER_MODULO}: dividere i crediti "
+            "tra più moduli non è modellato",
+        )
     mancanti = []
     return Delega(
-        mese_pagamento, scadenza, data_versamento, tuple(righe), tuple(sorgenti), ente, tuple(mancanti), (), ()
+        mese_pagamento, scadenza, data_versamento, tuple(righe), tuple(sorgenti), ente, tuple(mancanti),
+        tuple(fermi.values()), (),
     )
