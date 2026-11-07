@@ -66,3 +66,17 @@ def test_la_versione_del_corpus_cambia_con_la_deduzione_e_resta_senza():
     con = Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE)
     altra = Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE.replace("deduzione-contributo-lavoratore", "deduzione-altra"))
     assert len({senza.versione, con.versione, altra.versione}) == 3
+
+
+def test_la_deduzione_senza_riferimento_e_rifiutata():
+    with pytest.raises(ErroreCorpus, match="riferimento normativo obbligatorio"):
+        Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE.replace('riferimento = "fittizio:deduzione-contributo-lavoratore"', 'riferimento = ""'))
+
+
+def test_il_corpus_reale_rifiuta_il_riferimento_fittizio_della_deduzione():
+    from test_fiscale import CORPUS_REALE
+
+    reale = Corpus.carica(CORPUS_REALE, reale=True)
+    testo = CORPUS_REALE.read_text(encoding="utf-8") + DEDUZIONE.replace('"contributo_lavoratore"', f'"{reale.istituti()[0]}"')
+    with pytest.raises(ErroreCorpus, match="Deduzione fiscale.*fittizio"):
+        Corpus.da_toml(testo, reale=True)
