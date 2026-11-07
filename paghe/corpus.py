@@ -174,13 +174,20 @@ class Regola:
 
 @dataclass(frozen=True)
 class Base:
-    """Base imponibile: insieme degli importi pagati su cui si calcola una contribuzione (ADR 0005)."""
+    """Base imponibile: insieme degli importi pagati su cui si calcola una contribuzione (ADR 0005).
+
+    Con `massimale`, il nome di un parametro annuo, la base di ogni mese si limita a cio' che resta sotto il massimale,
+    sommando i mesi dell'anno nello stesso ente (ticket #73, gestione separata). Un altro committente ferma con un fermo.
+    """
 
     nome: str
     riferimento: str
+    massimale: str | None = None
 
     def __post_init__(self) -> None:
         _riferimento_obbligatorio(self.riferimento, f"Base {self.nome}")
+        if self.massimale is not None and (not isinstance(self.massimale, str) or not self.massimale.strip()):
+            raise ErroreCorpus(f"Base {self.nome}: il massimale e' il nome di un parametro")
 
 
 @dataclass(frozen=True)
@@ -776,6 +783,7 @@ class Corpus:
         self._convalida_fiscale()
         self._convalida_composizione()
         self._convalida_part_time()
+        self._convalida_massimali_di_base()
         self._convalida_condizioni_di_proposta()
         self._convalida_mappature_di_fatto()
         self._convalida_catalogo_f24ep()
@@ -850,6 +858,11 @@ class Corpus:
             for altra in self._mappature[indice + 1 :]:
                 if (altra.istituto, altra.sistema) == (mappatura.istituto, mappatura.sistema):
                     _vigenze_sovrapposte([mappatura, altra], soggetto)
+
+    def _convalida_massimali_di_base(self) -> None:
+        for base in self._basi.values():
+            if base.massimale is not None and base.massimale not in self._parametri:
+                raise ErroreCorpus(f"Base {base.nome}: massimale, parametro ignoto {base.massimale}")
 
     def _convalida_condizioni_di_proposta(self) -> None:
         for indice, condizione in enumerate(self._condizioni_di_proposta):
@@ -1050,7 +1063,10 @@ class Corpus:
         contenuto = {
             "fatti_periodo_dichiarato": sorted(self.fatti_periodo_dichiarato),
             "servizio": self.fatto_servizio,
-            "basi": [[base.nome, base.riferimento] for _, base in sorted(self._basi.items())],
+            "basi": [
+                [base.nome, base.riferimento, *([base.massimale] if base.massimale else [])]
+                for _, base in sorted(self._basi.items())
+            ],
             "concorsi": sorted(
                 [c.istituto, c.base, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.misura, c.riferimento]
                 for c in self._concorsi
@@ -1304,7 +1320,7 @@ class Corpus:
             dati = tomllib.loads(testo)
             parametri = tuple(_parametro_da_toml(voce) for voce in dati.get("parametro", []))
             regole = tuple(_regola_da_toml(voce) for voce in dati.get("regola", []))
-            basi = tuple(Base(voce["nome"], voce["riferimento"]) for voce in dati.get("base", []))
+            basi = tuple(Base(voce["nome"], voce["riferimento"], voce.get("massimale")) for voce in dati.get("base", []))
             concorsi = tuple(concorso for voce in dati.get("concorso", []) for concorso in _concorsi_da_toml(voce))
             fermi = tuple(
                 Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"], voce.get("codice"),

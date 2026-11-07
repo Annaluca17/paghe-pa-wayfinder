@@ -255,6 +255,34 @@ def _base_del_periodo(
     )
 
 
+def _base_dei_mesi_prima(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, base: Base, istante: datetime) -> Decimal:
+    """Somma, senza limite, di cio' che e' entrato nella base nei mesi dell'anno prima di questo (massimale della base)."""
+    totale = Decimal(0)
+    for numero in range(1, mese.mese):
+        for riga in _righe_pagate(registro, rapporto, Mese(mese.anno, numero), istante)[0]:
+            concorso = corpus.concorso(riga.importo.istituto, base.nome, riga.importo.data_pagamento)
+            if concorso is not None and concorso.misura == "intero":
+                totale += riga.importo.valore
+    return totale
+
+
+def _con_massimale(importo: Importo | None, base: Base, cumulato: dict[str, Decimal], corpus: Corpus, mese: Mese) -> Importo | None:
+    """La base di un mese si limita a cio' che resta sotto il massimale annuo; il parametro resta nella derivazione."""
+    if importo is None or base.massimale is None:
+        return importo
+    vigenza = corpus.parametro(base.massimale).vigenza_per(Periodo(mese.ultimo_giorno, mese.ultimo_giorno))
+    spazio = max(vigenza.valore - cumulato[base.nome], Decimal(0))
+    cumulato[base.nome] += importo.valore
+    letto = ParametroLetto(base.massimale, vigenza.valore, vigenza.dal, vigenza.riferimento)
+    return replace(
+        importo,
+        valore=min(importo.valore, spazio),
+        derivazione=replace(
+            importo.derivazione, formula=f"{FORMULA_BASE}, fino al massimale annuo", parametri=(letto,)
+        ),
+    )
+
+
 class _Contributi:
     """Regole di cassa di un periodo, valutate alle date di pagamento degli importi nelle basi.
 
@@ -394,11 +422,15 @@ def _denuncia(
 
     sul_periodo = corpus.istituti_di_cassa - corpus.istituti_sul_mese
     condizione_su = None if in_servizio else _ultimo_giorno_di_servizio(registro, corpus, rapporto, mese, istante)
+    cumulato = {base.nome: _base_dei_mesi_prima(registro, corpus, rapporto, mese, base, istante) for base in corpus.basi() if base.massimale}
     risultato: list[PeriodoDenuncia] = []
     for periodo in periodi:
         basi = tuple(
             importo
-            for importo in (_base_del_periodo(base, gruppi[periodo], periodo, corpus, istante) for base in corpus.basi())
+            for importo in (
+                _con_massimale(_base_del_periodo(base, gruppi[periodo], periodo, corpus, istante), base, cumulato, corpus, mese)
+                for base in corpus.basi()
+            )
             if importo is not None
         )
         contributi = _Contributi(lettore, periodo, basi, condizione_su).tutti(sul_periodo) if basi else ()

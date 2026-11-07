@@ -97,3 +97,42 @@ def test_cumulo_inail_e_irap_fermano_il_calcolo_e_nominano_il_caso(registro, rea
     registro.registra_fatto(R, fatto, "1", date(2026, 11, 1), atto=ATTO)
     with pytest.raises(CasoNonModellato, match=fatto):
         calcola(registro, reale, R, Mese(2026, 11))
+
+
+@pytest.mark.parametrize("posizione", [None, "iscritto_a_una_cassa_inventata"])
+def test_senza_una_posizione_previdenziale_nota_la_rata_ferma_il_calcolo(registro, reale, posizione):
+    collaboratore(registro, posizione)
+    rata(registro, "1000.00", date(2026, 11, 30))
+    with pytest.raises(CasoNonModellato, match="posizione_previdenziale"):
+        calcola(registro, reale, R, Mese(2026, 11))
+
+
+def test_senza_rate_nel_mese_la_posizione_non_serve(registro, reale):
+    collaboratore(registro, None)
+    assert calcola(registro, reale, R, Mese(2026, 11)) == ()
+
+
+def test_il_massimale_annuo_limita_la_base_alla_parte_sotto_il_massimale(registro, reale, orologio):
+    collaboratore(registro)
+    rata(registro, "100000.00", date(2026, 1, 30))
+    paga(registro, orologio, calcola(registro, reale, R, Mese(2026, 1)), date(2026, 1, 30))
+    rata(registro, "30000.00", date(2026, 2, 27))
+    paga(registro, orologio, calcola(registro, reale, R, Mese(2026, 2)), date(2026, 2, 27))
+    gennaio, febbraio = (gestione_separata(registro, reale, Mese(2026, mese)) for mese in (1, 2))
+    assert gennaio["base.gestione_separata"] == Decimal("100000.00")
+    assert gennaio["gs_totale"] == Decimal("35030.00")
+    # 122.295,00 - 100.000,00: solo la parte sotto il massimale entra nella base e paga il contributo.
+    assert febbraio["base.gestione_separata"] == Decimal("22295.00")
+    assert febbraio["gs_totale"] == Decimal("7809.94")
+
+
+def test_dopo_il_massimale_la_base_e_a_zero_e_la_derivazione_nomina_il_massimale(registro, reale, orologio):
+    collaboratore(registro)
+    rata(registro, "130000.00", date(2026, 1, 30))
+    paga(registro, orologio, calcola(registro, reale, R, Mese(2026, 1)), date(2026, 1, 30))
+    rata(registro, "5000.00", date(2026, 2, 27))
+    paga(registro, orologio, calcola(registro, reale, R, Mese(2026, 2)), date(2026, 2, 27))
+    febbraio = gestione_separata(registro, reale, Mese(2026, 2))
+    assert febbraio["base.gestione_separata"] == febbraio["gs_totale"] == Decimal("0.00")
+    (periodo,) = calcola_denuncia(registro, reale, R, Mese(2026, 2)).periodi
+    assert "massimale_annuo_gs" in {p.nome for p in periodo.base("gestione_separata").derivazione.parametri}

@@ -149,6 +149,15 @@ caso = "IRAP sul compenso, scadenza e riparto per regione non modellati"
 ambito = "calcolo"
 riferimento = "prassi:immedia:nota:2026-11-07;10"
 
+[[fermo]]
+fatto = "posizione_previdenziale"
+caso = "rata di collaborazione senza una posizione previdenziale nota (gestione_separata, pensionato, altra_cassa): l'aliquota non ha un valore di default"
+ambito = "calcolo"
+se = "rata_collaborazione"
+manca = true
+valori = ["gestione_separata", "pensionato", "altra_cassa"]
+riferimento = "prassi:inps:circolare:2026-02-03;8~par1 + prassi:immedia:nota:2026-11-07;10"
+
 # Basi imponibili (ADR 0005)
 
 [[base]]
