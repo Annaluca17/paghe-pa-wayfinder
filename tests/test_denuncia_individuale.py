@@ -12,7 +12,7 @@ import pytest
 
 from paghe import Atto, Corpus, Mese, TipoEsito, calcola, controlla_completezza, emetti_esito, denuncia_aziendale, denuncia_individuale, invia_denuncia_individuale, leggi_invio_denuncia_individuale, segnala_scostamento_invio
 from paghe.denuncia_individuale import DenunciaIndividuale
-from paghe.errori import ErrorePaghe, ErroreRegistro, VistaFerma
+from paghe.errori import ErroreCorpus, ErrorePaghe, ErroreRegistro, VistaFerma
 from paghe.part_time import registra_programmazione
 from test_lista_pos_pa import CORPUS, R, assumi, paga, stipendi
 
@@ -509,3 +509,25 @@ def test_l_assenza_di_un_altro_tempo_determinato_ferma_l_invio_senza_registrare_
     with pytest.raises(VistaFerma, match=r"RAPPORTO-2.*non in servizio"):
         invia(registro, corpus_con_festivi)
     assert registro.esiti(TipoEsito.DICHIARATO, registro.adesso()) == []
+
+
+def test_un_dato_che_cambia_nel_mese_ferma_la_vista_perche_servirebbero_due_denunce_individuali(
+    registro, orologio, corpus_con_festivi
+):
+    in_servizio_con(registro, "18")
+    registro.registra_fatto(R, "part_time", "50", date(2026, 1, 1))
+    registro.registra_codice(R, "tipo_part_time", "orizzontale", date(2026, 1, 1), date(2026, 3, 15))
+    registro.registra_codice(R, "tipo_part_time", "verticale", date(2026, 3, 16))
+    registra_programmazione(registro, R, {g: Decimal(4) for g in MARZO.giorni()}, ATTO_PROGRAMMAZIONE)
+    paga(registro, orologio, stipendi(registro, corpus_con_festivi, MARZO), date(2026, 3, 27))
+    vista = denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
+    fermo, = vista.fermi
+    assert "tipo_part_time" in fermo.motivo and "cambia nel mese" in fermo.motivo and not vista.trasmissibile
+
+
+def test_il_corpus_rifiuta_due_mappature_di_fatto_sovrapposte_e_il_riferimento_fittizio_nel_corpus_reale():
+    sovrapposta = MAPPATURA_PROVA + MAPPATURA_PROVA.replace("2026-01-01", "2026-06-01").replace("2026-12-31", "2027-12-31")
+    with pytest.raises(ErroreCorpus, match="vigenze sovrapposte"):
+        Corpus.da_toml(CORPUS_PICCOLO + sovrapposta)
+    with pytest.raises(ErroreCorpus, match="fittizio"):
+        Corpus.da_toml(CORPUS_PICCOLO.replace("fittizio:", "prassi:inps:circolare:2026-01-30;6~par5 + fittizio:") + MAPPATURA_PROVA, reale=True)

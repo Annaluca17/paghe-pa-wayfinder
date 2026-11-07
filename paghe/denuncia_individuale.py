@@ -124,6 +124,7 @@ class _Vista:
         self.primo = giorni[0]  # i codici aprono i periodi: dentro il mese si leggono al primo giorno
         self.mancanti: list[DatoMancante] = []
         self.motivi_bozza: list[str] = []
+        self.fermi: list[QuadroFermo] = []
 
     def _chiedi(self, fatto: str) -> None:
         dato = DatoMancante(fatto)
@@ -136,10 +137,24 @@ class _Vista:
             self.motivi_bozza.append(testo)
 
     def fatto(self, tipo: str):
-        """Il fatto vigente al primo giorno di rapporto del mese; None se manca (e allora si chiede)."""
-        vigente = self.registro.vigenti_per_giorno(self.rapporto, tipo, Periodo(self.primo, self.primo), self.istante)[0]
+        """Il fatto vigente al primo giorno di rapporto del mese; None se manca (e allora si chiede).
+
+        Se il valore cambia dentro il mese la vista si ferma: per l'ordine dei criteri di univocità (Qualifica1-3,
+        TipoContribuzione, DT p. 23) servirebbero due denunce individuali, che il modello non produce.
+        """
+        periodo = Periodo(self.giorni[0], self.giorni[-1])
+        per_giorno = dict(zip(periodo.giorni(), self.registro.vigenti_per_giorno(self.rapporto, tipo, periodo, self.istante)))
+        vigenti = [per_giorno[giorno] for giorno in self.giorni]
+        vigente = vigenti[0]
         if vigente is None:
             self._chiedi(tipo)
+        elif len({str(f.valore) if f is not None else None for f in vigenti}) > 1:
+            motivo = (
+                f"Il fatto {tipo} cambia nel mese: serve più di una DenunciaIndividuale (criteri di univocità, DT p. 23), "
+                "non modellato"
+            )
+            if all(f.motivo != motivo for f in self.fermi):
+                self.fermi.append(QuadroFermo(VISTA, self.mese.periodo, motivo))
         return vigente
 
     def parametro(self, nome: str) -> Decimal:
@@ -354,6 +369,7 @@ def _vista_e_righe(
         tipo_lav_stat=_tipo_lav_stat(part_time),
         settimane=vista.settimane(part_time),
         giorni=vista.lavorati(part_time),
+        fermi=tuple(vista.fermi),
         mancanti=tuple(vista.mancanti),
         bozza=tuple(vista.motivi_bozza),
     )
