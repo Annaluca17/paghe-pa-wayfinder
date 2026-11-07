@@ -179,7 +179,7 @@ def cause_ordinate(esecuzione: Esecuzione) -> list[dict]:
 def _cosa_manca(esecuzione: Esecuzione) -> list[str]:
     righe = [
         "I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccano e poi per quanti passi del "
-        "percorso (calcolo, versione, conferma, pagamento, denuncia, ListaPosPA, delega, file, ricevute, esito versato) "
+        "percorso (calcolo, versione, conferma, pagamento, denuncia, ListaPosPA, lista collaboratori, delega, file, ricevute, esito versato) "
         "restano chiusi, sommati su marzo e dicembre.",
         "",
     ]

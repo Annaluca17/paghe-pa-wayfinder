@@ -50,12 +50,27 @@ dal = 2025-01-01
 vale = true
 riferimento = "fittizio:cassa-allargata-lavoro-dipendente"
 
+# Categorie del co.co.co. e dell'amministratore (ticket #73, PR B): CU punti 1-2 e punto 4. Valori fiscali finti come il resto.
+[[categoria_reddito]]
+nome = "collaborazione"
+[[categoria_reddito.cassa_allargata]]
+dal = 2025-01-01
+vale = true
+riferimento = "fittizio:cassa-allargata-collaborazione"
+
+[[categoria_reddito]]
+nome = "carica_elettiva"
+[[categoria_reddito.cassa_allargata]]
+dal = 2025-01-01
+vale = true
+riferimento = "fittizio:cassa-allargata-carica-elettiva"
+
 [[ritenuta]]
 istituto = "ritenuta_irpef"
 versione = 1
 dal = 2025-01-01
 riferimento = "fittizio:ritenuta-irpef"
-categorie = ["lavoro_dipendente"]
+categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
 detrazione_richiesta = "lavoro_dipendente"
 imposta = "arrotonda(max(0, fisco.imponibile - parametro.ritenuta_franchigia_annua / fisco.periodi) * parametro.ritenuta_aliquota, 2)"
 detrazione = "arrotonda(parametro.ritenuta_detrazione_annua / fisco.periodi, 2)"
@@ -83,6 +98,13 @@ riferimento = "fittizio:deduzione-fondo-credito"
 istituto = "tfs_lavoratore"
 dal = 2025-01-01
 riferimento = "fittizio:deduzione-tfs-lavoratore"
+
+# Dichiarazione ASSUNTA: la quota a carico del collaboratore della gestione separata riduce l'imponibile fiscale
+# (art. 10 c. 1 lett. e TUIR, non riletto su Normattiva).
+[[deduzione_fiscale]]
+istituto = "gs_lavoratore"
+dal = 2025-01-01
+riferimento = "fittizio:deduzione-gs-lavoratore"
 
 # Dichiarazione ASSUNTA: anche l'1% aggiuntivo a carico del lavoratore riduce l'imponibile fiscale (ticket #73: dirigente e
 # segretario superano la prima fascia mensile gia' a marzo).
@@ -213,6 +235,24 @@ categoria = "lavoro_dipendente"
 dal = 2025-01-01
 riferimento = "fittizio:reddito-posizione-segretario"
 
+[[reddito]]
+istituto = "compenso_collaborazione"
+categoria = "collaborazione"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-compenso-collaborazione"
+
+[[reddito]]
+istituto = "indennita_funzione"
+categoria = "carica_elettiva"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-indennita-funzione"
+
+[[reddito]]
+istituto = "dimezzamento_indennita"
+categoria = "carica_elettiva"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-dimezzamento-indennita"
+
 # --- Concorsi della performance (il corpus reale non li dichiara) e del rimborso 730 ---
 
 [[concorso]]
@@ -249,6 +289,21 @@ basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori"]
 misura = "escluso"
 dal = 2026-01-01
 riferimento = "fittizio:concorso-rimborso-730"
+
+# Gestione separata (ticket #73): ne sono esclusi anche gli istituti fittizi del lavoro dipendente.
+[[concorso]]
+istituto = "performance"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2025-01-01
+riferimento = "fittizio:concorso-performance-gestione-separata"
+
+[[concorso]]
+istituto = "rimborso_730_4"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "fittizio:concorso-rimborso-730-gestione-separata"
 
 # --- Dichiarazioni di composizione del pagamento ---
 
@@ -528,6 +583,87 @@ intermedio = true
 istituto = "retribuzione_valutabile_tfr"
 dal = 2025-01-01
 riferimento = "fittizio:comp-retribuzione-valutabile-tfr"
+intermedio = true
+
+# Gestione separata e onere dell'art. 86 (ticket #73, PR B): composizione dichiarata, causale F24EP NON mappata di proposito.
+# La ricerca non sa se la causale della gestione separata sia C10 o CXX: la delega resta ferma con il fermo dichiarato.
+
+[[composizione]]
+istituto = "compenso_collaborazione"
+dal = 2025-01-01
+riferimento = "fittizio:comp-compenso-collaborazione"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "indennita_funzione"
+dal = 2025-01-01
+riferimento = "fittizio:comp-indennita-funzione"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "dimezzamento_indennita"
+dal = 2025-01-01
+riferimento = "fittizio:comp-dimezzamento-indennita"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "gs_lavoratore"
+dal = 2025-01-01
+riferimento = "fittizio:comp-gs-lavoratore"
+natura = "contributo_lavoratore"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "gs_ente"
+dal = 2025-01-01
+riferimento = "fittizio:comp-gs-ente"
+natura = "contributo_ente"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "onere_art86"
+dal = 2025-01-01
+riferimento = "fittizio:comp-onere-art86"
+natura = "contributo_ente"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "gs_totale_piena"
+dal = 2025-01-01
+riferimento = "fittizio:comp-gs-totale-piena"
+intermedio = true
+
+[[composizione]]
+istituto = "gs_totale_pensionato"
+dal = 2025-01-01
+riferimento = "fittizio:comp-gs-totale-pensionato"
+intermedio = true
+
+[[composizione]]
+istituto = "gs_totale_altra_cassa"
+dal = 2025-01-01
+riferimento = "fittizio:comp-gs-totale-altra-cassa"
+intermedio = true
+
+[[composizione]]
+istituto = "gs_totale"
+dal = 2025-01-01
+riferimento = "fittizio:comp-gs-totale"
 intermedio = true
 
 # --- Mappatura verso i codici tributo e le causali F24EP ---

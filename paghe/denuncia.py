@@ -258,19 +258,33 @@ def _base_del_periodo(
 
 def _base_dei_mesi_prima(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, base: Base, istante: datetime) -> Decimal:
     """Somma, senza limite, di cio' che e' entrato nella base nei mesi dell'anno prima di questo (massimale della base)."""
+    inizio = date(mese.anno, 1, 1)
+    pagamenti = registro.pagamenti(rapporto, istante)
     totale = Decimal(0)
-    for numero in range(1, mese.mese):
-        for riga in _righe_pagate(registro, rapporto, Mese(mese.anno, numero), istante)[0]:
-            concorso = corpus.concorso(riga.importo.istituto, base.nome, riga.importo.data_pagamento)
+    for esito in registro.esiti(TipoEsito.PAGATO, istante):
+        fatto = pagamenti.get(esito.id)
+        if fatto is None or not inizio <= fatto.valido_dal < mese.primo_giorno:
+            continue
+        for riga in esito.righe:
+            if riga.rapporto != rapporto or riga.derivazione.maturazione in MATURAZIONI_DERIVATE:
+                continue
+            concorso = corpus.concorso(riga.istituto, base.nome, fatto.valido_dal)
             if concorso is not None and concorso.misura == "intero":
-                totale += riga.importo.valore
+                totale += riga.valore
     return totale
 
 
-def _con_massimale(importo: Importo | None, base: Base, cumulato: dict[str, Decimal], corpus: Corpus, mese: Mese) -> Importo | None:
-    """La base di un mese si limita a cio' che resta sotto il massimale annuo; il parametro resta nella derivazione."""
+def _con_massimale(
+    importo: Importo | None, base: Base, cumulato: dict[str, Decimal], corpus: Corpus, mese: Mese, dei_mesi_prima
+) -> Importo | None:
+    """La base di un mese si limita a cio' che resta sotto il massimale annuo; il parametro resta nella derivazione.
+
+    Il cumulo dei mesi prima si legge solo se la base del mese ha importi: `dei_mesi_prima(base)` lo calcola.
+    """
     if importo is None or base.massimale is None:
         return importo
+    if base.nome not in cumulato:
+        cumulato[base.nome] = dei_mesi_prima(base)
     vigenza = corpus.parametro(base.massimale).vigenza_per(Periodo(mese.ultimo_giorno, mese.ultimo_giorno))
     spazio = max(vigenza.valore - cumulato[base.nome], Decimal(0))
     cumulato[base.nome] += importo.valore
@@ -425,13 +439,19 @@ def _denuncia(
 
     sul_periodo = corpus.istituti_di_cassa - corpus.istituti_sul_mese
     condizione_su = None if in_servizio else _ultimo_giorno_di_servizio(registro, corpus, rapporto, mese, istante)
-    cumulato = {base.nome: _base_dei_mesi_prima(registro, corpus, rapporto, mese, base, istante) for base in corpus.basi() if base.massimale}
+    cumulato: dict[str, Decimal] = {}
+
+    def dei_mesi_prima(base: Base) -> Decimal:
+        return _base_dei_mesi_prima(registro, corpus, rapporto, mese, base, istante)
+
     risultato: list[PeriodoDenuncia] = []
     for periodo in periodi:
         basi = tuple(
             importo
             for importo in (
-                _con_massimale(_base_del_periodo(base, gruppi[periodo], periodo, corpus, istante), base, cumulato, corpus, mese)
+                _con_massimale(
+                    _base_del_periodo(base, gruppi[periodo], periodo, corpus, istante), base, cumulato, corpus, mese, dei_mesi_prima
+                )
                 for base in corpus.basi()
             )
             if importo is not None

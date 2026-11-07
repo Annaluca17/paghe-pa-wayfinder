@@ -26,11 +26,13 @@ from paghe import (
     denuncia_aziendale,
     denuncia_individuale,
     costruisci_delega,
+    lista_collaboratori,
     differenze,
     emetti_versione,
     lista_pos_pa,
     registra_pagamento_eseguito,
     registra_ricevuta_delega,
+    rapporti_della_vista,
     registra_versamento_delega,
     rimborso_730_4,
     segnala_scostamento_contributi,
@@ -60,6 +62,7 @@ PASSI = (
     "pagamento",
     "denuncia",
     "lista_pos_pa",
+    "lista_collaboratori",
     "delega",
     "file_telematico",
     "ricevute",
@@ -73,6 +76,7 @@ NOMI_PASSI = {
     "pagamento": "Pagamento eseguito",
     "denuncia": "Denuncia",
     "lista_pos_pa": "ListaPosPA",
+    "lista_collaboratori": "Lista collaboratori",
     "delega": "Delega F24EP",
     "file_telematico": "File telematico",
     "ricevute": "Ricevute della delega",
@@ -291,11 +295,11 @@ def _voci(corpus: Corpus) -> dict:
 # Il percorso
 
 class _Contesto:
-    def __init__(self, uscita: Path | None) -> None:
+    def __init__(self, uscita: Path | None, corpus_extra: str = "") -> None:
         reale = CORPUS_REALE.read_text(encoding="utf-8")
         fittizio = CORPUS_FITTIZIO.read_text(encoding="utf-8")
         # Il corpus reale rifiuta i riferimenti `fittizio:`: l'unione e' un corpus NON reale (ADR 0003).
-        self.corpus = Corpus.da_toml(reale + "\n" + fittizio, reale=False)
+        self.corpus = Corpus.da_toml(reale + "\n" + fittizio + "\n" + corpus_extra, reale=False)
         solo_reale = Corpus.da_toml(reale, reale=True)
         self.orologio = Orologio()
         self.registro = Registro(orologio=self.orologio)
@@ -359,8 +363,22 @@ def _registra_rapporto(c: _Contesto, r: S.Rapporto) -> dict[str, object]:
             atto = S.ATTO_POSIZIONE_DIRIGENTE if r.titolo == "dirigente" else S.ATTO_POSIZIONE_SEGRETARIO
             u.fatto(r.id, S.FATTO_POSIZIONE[r.titolo], r.posizione, r.dal, atto=atto)
     else:
-        u.fatto(r.id, "compenso_mensile", S.COMPENSI_SENZA_REGIME[r.id], r.dal)
+        _registra_regime(c, r)
     return fatti
+
+
+def _registra_regime(c: _Contesto, r: S.Rapporto) -> None:
+    """I fatti di un mandato di sindaco o di un piano di rate: carica, condizione e posizione datate, misura e rate da atto."""
+    u = c.ufficio
+    if r.titolo == "sindaco":
+        u.codice(r.id, "carica", "sindaco", r.dal, atto=S.ATTO_MANDATO)
+        u.codice(r.id, "condizione_lavorativa", "non_dipendente", r.dal, atto=S.ATTO_MANDATO)
+        u.codice(r.id, "posizione_previdenziale", "gestione_separata", r.dal, atto=S.ATTO_MANDATO)
+        u.fatto(r.id, "misura_indennita_funzione", S.MISURA_INDENNITA_SINDACO, date(2026, 1, 1), atto=S.ATTO_MISURA_INDENNITA)
+    else:
+        u.codice(r.id, "posizione_previdenziale", "gestione_separata", r.dal, atto=S.ATTO_PIANO_DI_RATE)
+        for giorno in (S.RATA_DI_MARZO, S.RATA_DI_DICEMBRE):
+            u.fatto(r.id, "rata_collaborazione", S.RATA_COCOCO, giorno, giorno, atto=S.ATTO_PIANO_DI_RATE)
 
 
 def _fatti_di_avvio(c: _Contesto) -> dict[str, dict[str, object]]:
@@ -426,21 +444,11 @@ def _importi_del_mese(c: _Contesto, mese: Mese, tag: str, passo: Passo, arrivi: 
             arrivi[r.id] = "fuori servizio"
             continue
         if not righe:
-            passo.fermi.append(
-                Fermo(
-                    tag,
-                    "calcolo",
-                    (r.id,),
-                    "regime del titolo assente nel corpus",
-                    f"Rapporto {r.id} ({r.titolo}): nessun importo; il fatto compenso_mensile registrato dall'Ufficio "
-                    "personale non e' letto da nessuna regola del corpus",
-                    caso=r.titolo,
-                )
-            )
-            arrivi[r.id] = "calcolo"
+            passo.note.append(f"{r.id}: nessun importo nel mese")
+            arrivi[r.id] = "fuori servizio"
             continue
         importi[r.id] = righe
-        lordo = sum((i.valore for i in righe if i.derivazione.maturazione not in ("periodo", "mese", "cassa")), Decimal(0))
+        lordo = sum((i.valore for i in righe if i.derivazione.maturazione not in ("periodo", "mese", "cassa", "onere")), Decimal(0))
         passo.riuscito.append(f"{r.id}: {len(righe)} importi, lordo {_soldi(lordo)}")
         passo.riuscito.extend(f"{r.id}: {dettaglio}" for dettaglio in dettagli)
     fittizi = sorted({i.istituto for righe in importi.values() for i in righe if "fittizio:" in i.derivazione.riferimento})
@@ -517,6 +525,13 @@ def _versione(c: _Contesto, tag: str, valuta: date, importi: dict[str, list], ar
         passo.note.append(f"avviso {tipo}: {', '.join(sorted(set(per_tipo[tipo])))}")
     for escluso in versione.esclusi:
         passo.note.append(f"escluso {escluso.importo.istituto} di {escluso.importo.rapporto}: {escluso.motivo}")
+    for rapporto in sorted(set(importi) - set(versione.rapporti)):
+        if rapporto in arrivi:
+            continue
+        motivi = [e.motivo for e in versione.esclusi if e.importo.rapporto == rapporto]
+        motivo = motivi[0] if motivi else "nessun importo in versione"
+        passo.fermi.append(Fermo(tag, "versione", (rapporto,), causa_di(motivo), motivo))
+        arrivi[rapporto] = "versione"
     conguagli = [(r.rapporto, r.importo.valore) for r in versione.righe if r.istituto == "conguaglio_irpef"]
     if conguagli:
         passo.riuscito.append(
@@ -588,38 +603,86 @@ def _denuncia_individuale(c: _Contesto, tag: str, mese: Mese, rapporto: str, pas
         passo.fermi.append(Fermo(tag, "lista_pos_pa", (rapporto,), "DenunciaIndividuale: bozza non trasmissibile", motivo))
 
 
+def _lista_collaboratori(c: _Contesto, tag: str, mese: Mese, rapporto: str, passo: Passo, arrivi: dict) -> None:
+    """La lista collaboratori di un rapporto che il regime le assegna: senza i codici del tracciato e' una bozza."""
+    try:
+        vista = lista_collaboratori(c.registro, c.corpus, rapporto, mese)
+    except ErrorePaghe as errore:
+        passo.fermi.append(Fermo(tag, "lista_collaboratori", (rapporto,), causa_di(str(errore)), str(errore)))
+        arrivi.setdefault(rapporto, "lista_collaboratori")
+        return
+    righe = "; ".join(
+        (
+            f"quota forfettaria {_soldi(r.contributo)} a carico dell'ente"
+            if r.forfettaria
+            else f"imponibile {_soldi(r.imponibile)}, contributo {_soldi(r.contributo)} "
+            f"(collaboratore {_soldi(r.quota_collaboratore)}, ente {_soldi(r.quota_ente)})"
+        )
+        for r in vista.righe
+    )
+    passo.riuscito.append(
+        f"{rapporto}: mese di erogazione {vista.mese_erogazione}, {len(vista.righe)} righe: {righe}"
+        + ("" if vista.trasmissibile else " (non trasmissibile)")
+    )
+    for dato in vista.mancanti:
+        passo.fermi.append(Fermo(tag, "lista_collaboratori", (rapporto,), f"dato mancante {dato}", dato))
+    for motivo in vista.bozza:
+        passo.fermi.append(Fermo(tag, "lista_collaboratori", (rapporto,), causa_di(motivo), motivo))
+    if not vista.trasmissibile:
+        arrivi.setdefault(rapporto, "lista_collaboratori")
+
+
 def _denuncia_e_lista(c: _Contesto, tag: str, mese: Mese, giorno: date, versione, arrivi: dict) -> None:
     pd = c.passo(tag, "denuncia")
     pl = c.passo(tag, "lista_pos_pa")
+    pc = c.passo(tag, "lista_collaboratori")
     c.vai(giorno)
     c.comando(tag, f"produzione della denuncia e della ListaPosPA ({tag})")
+    pos_pa = rapporti_della_vista(c.registro, c.corpus, "lista_pos_pa", mese, versione.rapporti)
+    collaboratori = rapporti_della_vista(c.registro, c.corpus, "lista_collaboratori", mese, versione.rapporti)
+    pl.note.append("rapporti che il regime assegna alla ListaPosPA: " + (", ".join(pos_pa) or "nessuno"))
+    pc.note.append("rapporti che il regime assegna alla lista collaboratori: " + (", ".join(collaboratori) or "nessuno"))
     viste_ok = []
     individuali = []
     for rapporto in versione.rapporti:
         try:
             scostamenti = segnala_scostamento_contributi(c.registro, c.corpus, rapporto, mese)
-            vista = lista_pos_pa(c.registro, c.corpus, rapporto, mese)
+            vista = lista_pos_pa(c.registro, c.corpus, rapporto, mese) if rapporto in pos_pa else None
         except ErrorePaghe as errore:
             pd.fermi.append(Fermo(tag, "denuncia", (rapporto,), causa_di(str(errore)), str(errore)))
             arrivi[rapporto] = "denuncia"
             continue
-        contributi = sum(
-            (i.valore for q in vista.quadri for i in q.importi if i.istituto in ("cpdel_totale", "tfs_totale", "contributo_tfr")),
-            Decimal(0),
-        )
-        pd.riuscito.append(
-            f"{rapporto}: {len(vista.quadri)} quadri, contributi nei quadri {_soldi(contributi)}; "
-            + (
-                "contributi trattenuti uguali ai dovuti"
-                if not scostamenti
-                else "scostamento tra trattenuti e dovuti per " + ", ".join(s.istituto for s in scostamenti)
+        if vista is None:
+            pd.riuscito.append(
+                f"{rapporto}: "
+                + (
+                    "contributi trattenuti uguali ai dovuti"
+                    if not scostamenti
+                    else "scostamento tra trattenuti e dovuti per " + ", ".join(s.istituto for s in scostamenti)
+                )
             )
-        )
+        else:
+            contributi = sum(
+                (i.valore for q in vista.quadri for i in q.importi if i.istituto in ("cpdel_totale", "tfs_totale", "contributo_tfr")),
+                Decimal(0),
+            )
+            pd.riuscito.append(
+                f"{rapporto}: {len(vista.quadri)} quadri, contributi nei quadri {_soldi(contributi)}; "
+                + (
+                    "contributi trattenuti uguali ai dovuti"
+                    if not scostamenti
+                    else "scostamento tra trattenuti e dovuti per " + ", ".join(s.istituto for s in scostamenti)
+                )
+            )
         for scostamento in scostamenti:
             pd.fermi.append(
                 Fermo(tag, "denuncia", (rapporto,), f"scostamento contributi {scostamento.istituto}",
                       f"{scostamento.istituto}: denuncia {scostamento.denuncia}, trattenuto {scostamento.trattenuto}")
             )
+        if vista is None:
+            if rapporto in collaboratori:
+                _lista_collaboratori(c, tag, mese, rapporto, pc, arrivi)
+            continue
         pl.riuscito.append(
             f"{rapporto}: "
             + ", ".join(f"{q.tipo}{(' causale ' + q.causale) if q.causale else ''} {q.periodo}" for q in vista.quadri)
@@ -640,6 +703,8 @@ def _denuncia_e_lista(c: _Contesto, tag: str, mese: Mese, giorno: date, versione
         else:
             arrivi.setdefault(rapporto, "lista_pos_pa")
         _denuncia_individuale(c, tag, mese, rapporto, pl, individuali)
+        if rapporto in collaboratori:
+            _lista_collaboratori(c, tag, mese, rapporto, pc, arrivi)
     if individuali:
         quadratura = denuncia_aziendale(individuali)
         pl.riuscito.append(
@@ -656,11 +721,12 @@ def _denuncia_e_lista(c: _Contesto, tag: str, mese: Mese, giorno: date, versione
         ente, mittente = _ente_e_mittente()
         nome = c.scrivi(f"lista-pos-pa-{mese}.xml", in_xml(viste_ok, ente, mittente, mese))
         pl.riuscito.append(
-            f"file {nome}: {len(viste_ok)} rapporti trasmissibili su {len(versione.rapporti)} pagati "
+            f"file {nome}: {len(viste_ok)} rapporti trasmissibili su {len(pos_pa)} della ListaPosPA "
             "(in produzione la fornitura e' un blocco solo; qui contiene i soli rapporti trasmissibili)"
         )
     pd.fittizio.append("basi, concorsi e contributi del corpus reale; concorsi della performance e del rimborso 730 fittizi")
     pl.fittizio.append("ente dichiarante, mittente e codici fiscali dei firmatari di fantasia")
+    pc.fittizio.append("nessun dato fittizio oltre ai rapporti: il tracciato della lista collaboratori non e' dichiarato")
 
 
 def _delega(c: _Contesto, tag: str, mese: Mese, versione, giorni: dict, arrivi: dict) -> None:
@@ -752,13 +818,18 @@ def _chiudi_arrivi(esecuzione: Esecuzione, tag: str, arrivi: dict) -> None:
         esecuzione.arrivi[(tag, r.id)] = arrivi.get(r.id, "completo")
 
 
-def esegui(uscita: Path | None = None, tieni_aperto: bool = False, denuncia_di_dicembre: bool = False) -> Esecuzione:
+def esegui(
+    uscita: Path | None = None, tieni_aperto: bool = False, denuncia_di_dicembre: bool = False, corpus_extra: str = ""
+) -> Esecuzione:
     """Fa girare il mese. Con `tieni_aperto` il registro resta leggibile in `Esecuzione.registro`: chi lo chiede lo chiude.
 
     Di dicembre la denuncia e la ListaPosPA girano solo con `denuncia_di_dicembre`: per i cumuli del mese di conguaglio
     il nucleo ricalcola la denuncia di tutti i mesi dell'anno per ogni rapporto, e il test deve restare veloce.
+
+    `corpus_extra` e' testo TOML aggiunto in coda al corpus: serve a un test per provare il percorso con una dichiarazione
+    che il corpus non ha (per esempio la causale della gestione separata, di cui nessuna fonte dice il codice).
     """
-    c = _Contesto(uscita)
+    c = _Contesto(uscita, corpus_extra)
     esecuzione, reg, u = c.esecuzione, c.registro, c.ufficio
     fatti = _fatti_di_avvio(c)
 
@@ -782,6 +853,8 @@ def esegui(uscita: Path | None = None, tieni_aperto: bool = False, denuncia_di_d
         for tipo, valore in S.fatti_inquadramento(r05).items():
             u.codice("R05", tipo, valore, r05.dal, r05.al)
         u.codice("R05", "codice_cessazione", "1", r05.al, r05.al)
+        c.vai(date(2026, 3, 17))
+        u.codice("R11", "attestazione_prestazione", "si", S.RATA_DI_MARZO, S.RATA_DI_MARZO, S.ATTO_ATTESTAZIONE_MARZO)
     with u.fase("avvio", "2026-03"):
         c.vai(date(2026, 3, 18))
         _registra_rapporto(c, S.PER_ID["R06"])
