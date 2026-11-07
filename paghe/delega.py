@@ -120,6 +120,8 @@ def calcola_scadenza(corpus: Corpus, mese_pagamento: Mese) -> Scadenza:
 
 ORDINE_SEZIONI = "FIRSNQWGP5"  # l'ordine delle sezioni nella delega
 RIGHE_PER_MODULO = 22
+# Scelta del modello (Luca, 07/11/2026): i crediti si compensano prima contro le ritenute, poi contro gli altri debiti.
+CODICE_PRIMA_COMPENSAZIONE = "100E"
 NATURE_A_CREDITO = frozenset({"rimborso_730", "credito_sostituto"})
 TIPI_DATI_ENTE = ("codice_fiscale", "denominazione", "email", "iban_tesoreria")
 
@@ -148,6 +150,24 @@ class RigaDelega:
     @property
     def chiave(self) -> tuple[str, str, str, str, str, str]:
         return (self.sezione, self.tributo, self.codice, self.estremi, self.rif_a, self.rif_b)
+
+
+@dataclass(frozen=True)
+class Compensazione:
+    """Quanto di un credito (riga a credito) è assorbito da un debito, entrambi indicati dalla chiave della riga."""
+
+    credito: tuple[str, str, str, str, str, str]
+    debito: tuple[str, str, str, str, str, str]
+    importo: Decimal
+
+
+@dataclass(frozen=True)
+class CreditoResiduo:
+    """Credito non assorbito dai debiti della delega: resta visibile, con le righe da cui viene."""
+
+    chiave: tuple[str, str, str, str, str, str]
+    importo: Decimal
+    origine: tuple[Origine, ...]
 
 
 @dataclass(frozen=True)
@@ -180,6 +200,8 @@ class Delega:
     dati_mancanti: tuple[DatoMancante, ...]
     fermi: tuple[FermoDelega, ...]
     avvisi: tuple[AvvisoDelega, ...]
+    compensazioni: tuple[Compensazione, ...] = ()
+    residui: tuple[CreditoResiduo, ...] = ()
 
     @property
     def totale_debito(self) -> Decimal:
@@ -232,6 +254,46 @@ def _dati_ente(registro: Registro, giorno: date, istante: datetime) -> DatiEnte:
         return fatto.valore if fatto is not None else None
 
     return DatiEnte(*(valore(tipo) for tipo in (*TIPI_DATI_ENTE, "sigla_provincia")))
+
+
+def _ordine_riga(riga: RigaDelega) -> tuple:
+    return (ORDINE_SEZIONI.index(riga.sezione), riga.tributo, riga.codice, riga.rif_a, riga.rif_b)
+
+
+def _compensa(
+    debiti: list[RigaDelega], crediti: list[RigaDelega]
+) -> tuple[list[RigaDelega], list[Compensazione], list[CreditoResiduo]]:
+    """Assorbe i crediti nei debiti: prima le ritenute (100E), poi gli altri nell'ordine delle sezioni.
+
+    Un credito si ferma quando i debiti sono finiti: la parte non assorbita non va nella delega, resta
+    tra i residui. I debiti non cambiano mai di valore, e il saldo non può quindi scendere sotto zero.
+    """
+    da_assorbire = sorted(
+        debiti, key=lambda r: (r.tributo != CODICE_PRIMA_COMPENSAZIONE, *_ordine_riga(r))
+    )
+    capienza = {riga.chiave: riga.debito for riga in da_assorbire}
+    righe = list(debiti)
+    compensazioni: list[Compensazione] = []
+    residui: list[CreditoResiduo] = []
+    for credito in sorted(crediti, key=_ordine_riga):
+        resto = credito.credito
+        for debito in da_assorbire:
+            presa = min(resto, capienza[debito.chiave])
+            if presa > 0:
+                compensazioni.append(Compensazione(credito.chiave, debito.chiave, presa))
+                capienza[debito.chiave] -= presa
+                resto -= presa
+        assorbito = credito.credito - resto
+        if assorbito > 0:
+            righe.append(
+                RigaDelega(
+                    credito.sezione, credito.tributo, credito.codice, credito.estremi, credito.rif_a, credito.rif_b,
+                    Decimal(0), assorbito, credito.origine,
+                )
+            )
+        if resto > 0:
+            residui.append(CreditoResiduo(credito.chiave, resto, credito.origine))
+    return sorted(righe, key=_ordine_riga), compensazioni, residui
 
 
 def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, noto_al: datetime | None = None) -> Delega:
@@ -315,16 +377,23 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
         )
         somme.setdefault(chiave, []).append(Origine(importo.valore, riferimento))
         sorgenti.append(riferimento)
-    righe = []
+    debiti: list[RigaDelega] = []
+    crediti: list[RigaDelega] = []
     for (sezione, tributo, codice_campo, estremi, rif_a, rif_b, a_credito), origine in somme.items():
         totale = sum((o.valore for o in origine), Decimal(0))
-        righe.append(
-            RigaDelega(
-                sezione, tributo, codice_campo, estremi, rif_a, rif_b,
-                Decimal(0) if a_credito else totale, totale if a_credito else Decimal(0), tuple(origine),
-            )
+        riga = RigaDelega(
+            sezione, tributo, codice_campo, estremi, rif_a, rif_b,
+            Decimal(0) if a_credito else totale, totale if a_credito else Decimal(0), tuple(origine),
         )
-    righe.sort(key=lambda r: (ORDINE_SEZIONI.index(r.sezione), r.tributo, r.codice, r.rif_a, r.rif_b))
+        (crediti if a_credito else debiti).append(riga)
+    righe, compensazioni, residui = _compensa(debiti, crediti)
+    if crediti and not debiti:
+        ferma(
+            "solo_crediti",
+            "delega",
+            "La delega ha solo crediti (" + ", ".join(sorted({r.tributo for r in crediti})) + ") e nessun debito da "
+            "compensare: portare un credito senza debiti non è modellato",
+        )
     if len(righe) > RIGHE_PER_MODULO:
         ferma(
             "piu_di_22_righe",
@@ -335,5 +404,5 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
     mancanti = []
     return Delega(
         mese_pagamento, scadenza, data_versamento, tuple(righe), tuple(sorgenti), ente, tuple(mancanti),
-        tuple(fermi.values()), (),
+        tuple(fermi.values()), (), tuple(compensazioni), tuple(residui),
     )
