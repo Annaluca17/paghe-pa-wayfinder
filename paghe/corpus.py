@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .errori import ErroreCorpus, ParametroMancante, ValiditaNonUniforme
 from .formula import riferimenti
+from .modello import FATTO_PART_TIME, FATTO_TIPO_PART_TIME
 from .riferimento import motivo_rifiuto
 from .tempo import Mese
 
@@ -1124,7 +1125,8 @@ class Corpus:
 
     def tipi_fatto(self) -> tuple[str, ...]:
         """I tipi di fatto che possono dividere il mese in frazioni."""
-        tipi = set(self.fatti_periodo_dichiarato)
+        tipi = set(self.fatti_periodo_dichiarato) | {FATTO_PART_TIME, FATTO_TIPO_PART_TIME}
+        tipi |= {t.fatto for t in self._trattamenti_part_time if t.fatto}
         for regole in self._regole.values():
             for regola in regole:
                 tipi |= riferimenti(regola.formula).fatti

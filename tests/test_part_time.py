@@ -159,3 +159,40 @@ def test_da_integrativo_con_misura_senza_atto_ferma(registro):
     registro.registra_fatto(R, "misura_stipendio", "80", date(2026, 1, 1))
     with pytest.raises(CasoNonModellato, match="stipendio.*atto"):
         calcola(registro, corpus_con(INTEGRATIVO), R, NOVEMBRE)
+
+
+def test_un_cambio_di_percentuale_a_meta_mese_apre_due_frazioni(registro):
+    registro.registra_fatto(R, "mensile", "1000.00", date(2026, 1, 1))
+    registro.registra_fatto(R, "part_time", "60", date(2026, 1, 1), date(2026, 11, 15))
+    registro.registra_fatto(R, "part_time", "80", date(2026, 11, 16))
+    prima, dopo = calcola(registro, corpus_con(dichiarazione()), R, NOVEMBRE)
+    assert prima.periodo == Periodo(date(2026, 11, 1), date(2026, 11, 15))
+    assert dopo.periodo == Periodo(date(2026, 11, 16), date(2026, 11, 30))
+    # Mensile ridotto 600 e 800; quote 12/26 e il residuo 14/26 (lun-sab, divisore 26).
+    assert (prima.valore, dopo.valore) == (Decimal("276.92"), Decimal("430.77"))
+    assert (prima.derivazione.part_time.percentuale, dopo.derivazione.part_time.percentuale) == (Decimal("60"), Decimal("80"))
+
+
+def test_un_cambio_della_misura_da_integrativo_a_meta_mese_apre_due_frazioni(registro):
+    from paghe import Atto
+
+    assumi_part_time(registro, "60")
+    registro.registra_fatto(R, "misura_stipendio", "50", date(2026, 1, 1), date(2026, 11, 15), atto=Atto("fittizio:a", date(2026, 1, 1)))
+    registro.registra_fatto(R, "misura_stipendio", "100", date(2026, 11, 16), atto=Atto("fittizio:b", date(2026, 11, 1)))
+    prima, dopo = calcola(registro, corpus_con(INTEGRATIVO), R, NOVEMBRE)
+    assert (prima.valore, dopo.valore) == (Decimal("230.77"), Decimal("538.46"))
+
+
+@pytest.mark.parametrize("tipo", ["orizzontale", "verticale", "misto"])
+def test_il_calcolo_e_lo_stesso_per_i_tre_tipi(registro, tipo):
+    assumi_part_time(registro, "60", tipo)
+    (stipendio,) = calcola(registro, corpus_con(dichiarazione()), R, NOVEMBRE)
+    assert stipendio.valore == Decimal("600.00")
+
+
+def test_un_cambio_di_tipo_apre_una_frazione(registro):
+    registro.registra_fatto(R, "mensile", "1000.00", date(2026, 1, 1))
+    registro.registra_fatto(R, "part_time", "60", date(2026, 1, 1))
+    registro.registra_codice(R, "tipo_part_time", "orizzontale", date(2026, 1, 1), date(2026, 11, 15))
+    registro.registra_codice(R, "tipo_part_time", "verticale", date(2026, 11, 16))
+    assert len(calcola(registro, corpus_con(dichiarazione()), R, NOVEMBRE)) == 2
