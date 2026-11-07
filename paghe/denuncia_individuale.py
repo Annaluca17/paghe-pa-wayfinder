@@ -467,6 +467,12 @@ def invia_denuncia_individuale(
     if not vista.trasmissibile:
         ragioni = [f.motivo for f in vista.fermi] + [f"dato mancante {d}" for d in vista.mancanti] + list(vista.bozza)
         raise VistaFerma(f"Denuncia individuale {invio_id} non inviabile: " + "; ".join(ragioni))
+    assenze = controlla_completezza(registro, corpus, mese, istante)
+    if assenze:
+        raise VistaFerma(
+            f"Denuncia individuale {invio_id} non inviabile, la fornitura di {mese} non è completa: "
+            + "; ".join(f"{a.rapporto}: {a.motivo}" for a in assenze)
+        )
     with registro.atomico():
         esito = registro.registra_esito(TipoEsito.DICHIARATO, istante.date(), righe) if righe else None
         evento = registro.registra_evento(
@@ -510,3 +516,54 @@ def segnala_scostamento_invio(
     return tuple(
         ScostamentoInvio(campo, inviato[campo], attuale.get(campo)) for campo in inviato if inviato[campo] != attuale.get(campo)
     )
+
+
+# --- Controllo di completezza degli output (ADR 0015, 0022) ---
+
+
+@dataclass(frozen=True)
+class Assenza:
+    """Un tempo determinato o una sua base CPDEL che la DenunciaIndividuale del mese non comprende."""
+
+    rapporto: str
+    motivo: str
+
+
+def _rapporti_a_tempo_determinato(registro: Registro, istante: datetime) -> list[str]:
+    return sorted({r for impiego in IMPIEGHI_TEMPO_DETERMINATO for r in registro.rapporti_con_codice("tipo_impiego", impiego, istante)})
+
+
+def controlla_completezza(
+    registro: Registro, corpus: Corpus, mese: Mese, noto_al: datetime | None = None
+) -> tuple[Assenza, ...]:
+    """Ogni base CPDEL pagata a un tempo determinato finisce nell'Imponibile della sua denuncia; ogni tempo
+    determinato in servizio ha la sua. Un'assenza ferma l'invio di questo output, non il calcolo.
+
+    Il modello non ha una dichiarazione esplicita di esclusione per questo output: ogni assenza ferma l'invio.
+    """
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    assenze = []
+    for rapporto in _rapporti_a_tempo_determinato(registro, istante):
+        vista, _ = _vista_e_righe(registro, corpus, rapporto, mese, istante)
+        pagata = sum(
+            (periodo.base("cpdel").valore for periodo in calcola_denuncia(registro, corpus, rapporto, mese, istante).periodi if periodo.base("cpdel")),
+            Decimal(0),
+        )
+        if vista is None:
+            if pagata:
+                assenze.append(
+                    Assenza(
+                        rapporto,
+                        f"base cpdel {pagata} pagata in {mese} a un tempo determinato non in servizio nel mese: "
+                        "nessuna DenunciaIndividuale la comprende",
+                    )
+                )
+        elif vista.fermi:
+            assenze.append(
+                Assenza(rapporto, "tempo determinato in servizio senza DenunciaIndividuale: " + "; ".join(f.motivo for f in vista.fermi))
+            )
+        elif pagata and vista.imponibile != int(pagata.to_integral_value(ROUND_HALF_UP)):
+            assenze.append(
+                Assenza(rapporto, f"base cpdel {pagata} pagata in {mese}: non è nell'Imponibile {vista.imponibile} della denuncia")
+            )
+    return tuple(assenze)

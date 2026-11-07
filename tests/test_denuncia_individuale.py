@@ -10,7 +10,7 @@ from decimal import Decimal
 
 import pytest
 
-from paghe import Atto, Corpus, Mese, TipoEsito, calcola, denuncia_aziendale, denuncia_individuale, invia_denuncia_individuale, leggi_invio_denuncia_individuale, segnala_scostamento_invio
+from paghe import Atto, Corpus, Mese, TipoEsito, calcola, controlla_completezza, emetti_esito, denuncia_aziendale, denuncia_individuale, invia_denuncia_individuale, leggi_invio_denuncia_individuale, segnala_scostamento_invio
 from paghe.denuncia_individuale import DenunciaIndividuale
 from paghe.errori import ErrorePaghe, ErroreRegistro, VistaFerma
 from paghe.part_time import registra_programmazione
@@ -464,3 +464,48 @@ def test_dopo_l_invio_un_fatto_che_cambia_la_vista_si_segnala_e_la_correzione_e_
     assert secondo.vista.qualifica3 == "A" and secondo.esito_id != primo.esito_id
     assert segnala_scostamento_invio(registro, corpus_con_festivi, R, MARZO) == ()
     assert leggi_invio_denuncia_individuale(registro, "DI-2026-03-R").vista.qualifica3 == "D"  # il primo non è cambiato
+
+
+FEBBRAIO = Mese(2026, 2)
+
+
+def test_la_base_cpdel_pagata_a_un_tempo_determinato_non_in_servizio_e_un_assenza_che_nomina_il_rapporto(
+    registro, orologio, corpus_con_festivi
+):
+    assumi(registro, al=date(2026, 2, 28), senza=("tipo_impiego",))
+    registro.registra_codice(R, "tipo_impiego", "17", date(2026, 1, 1), date(2026, 2, 28))
+    paga(registro, orologio, stipendi(registro, corpus_con_festivi, FEBBRAIO), date(2026, 3, 27))  # arretrato pagato a marzo
+    assert denuncia_individuale(registro, corpus_con_festivi, R, MARZO) is None  # non è in servizio a marzo
+    assenza, = controlla_completezza(registro, corpus_con_festivi, MARZO)
+    assert assenza.rapporto == R and "2051.69" in assenza.motivo and "non in servizio" in assenza.motivo
+
+
+def test_un_tempo_determinato_in_servizio_senza_denuncia_individuale_e_un_assenza(registro, orologio):
+    corpus = Corpus.da_toml(CORPUS_SENZA_CPDEL)
+    registro.registra_codice(R, "tipo_impiego", "17", date(2026, 1, 1))
+    registro.registra_fatto(R, "compenso_mensile", "1300", date(2026, 1, 1))
+    paga(registro, orologio, calcola(registro, corpus, R, MARZO), date(2026, 3, 27))
+    assenza, = controlla_completezza(registro, corpus, MARZO)
+    assert assenza.rapporto == R and "senza DenunciaIndividuale" in assenza.motivo and "non in CPDEL" in assenza.motivo
+
+
+def test_un_tempo_determinato_completo_non_ha_assenze(registro, orologio, corpus_con_festivi):
+    td_trasmissibile(registro, orologio, corpus_con_festivi)
+    assert controlla_completezza(registro, corpus_con_festivi, MARZO) == ()
+
+
+def test_l_assenza_di_un_altro_tempo_determinato_ferma_l_invio_senza_registrare_nulla(registro, orologio, corpus_con_festivi):
+    altro = "RAPPORTO-2"
+    registro.registra_codice_persona("PERSONA-2", "codice_fiscale", "RSSMRA85C01H501D", date(1985, 3, 1))
+    registro.collega_rapporto(altro, "PERSONA-2", date(2026, 1, 1))
+    for tipo, valore in (("tipo_impiego", "17"), ("tipo_servizio", "4"), ("contratto", "RALN"), ("qualifica", "0IR000"),
+                         ("area", "istruttori"), ("regime_fine_servizio", "3")):
+        registro.registra_codice(altro, tipo, valore, date(2026, 1, 1), date(2026, 2, 28))
+    arretrato = calcola(registro, corpus_con_festivi, altro, FEBBRAIO)
+    td_trasmissibile(registro, orologio, corpus_con_festivi)  # R, completo
+    esito = emetti_esito(registro, TipoEsito.PAGATO, date(2026, 3, 27), arretrato)
+    registro.registra_pagamento(altro, esito.id, date(2026, 3, 27))  # il secondo è pagato a marzo da cessato
+    orologio.vai(4, 2)
+    with pytest.raises(VistaFerma, match=r"RAPPORTO-2.*non in servizio"):
+        invia(registro, corpus_con_festivi)
+    assert registro.esiti(TipoEsito.DICHIARATO, registro.adesso()) == []

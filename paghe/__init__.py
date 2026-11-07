@@ -45,6 +45,7 @@ from .delega import (
 from .esito_730_4 import Esito730, esito_730_4, rimborso_730_4
 from .f24ep import serializza as serializza_f24ep
 from .denuncia_individuale import (
+    controlla_completezza,
     denuncia_aziendale,
     denuncia_individuale,
     invia_denuncia_individuale,
@@ -152,6 +153,7 @@ __all__ = [
     "segnala_scostamento_contributi",
     "stato_delega",
     "stato_versione",
+    "controlla_completezza",
     "denuncia_aziendale",
     "denuncia_individuale",
     "invia_denuncia_individuale",
