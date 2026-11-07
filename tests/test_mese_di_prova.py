@@ -23,30 +23,6 @@ from prove.mese_di_prova.resoconto import cause_ordinate, scrivi
 
 ATTESO = RADICE / "prove" / "mese_di_prova" / "resoconto-atteso.md"
 
-# Causale della gestione separata ASSUNTA, solo per provare il percorso a valle: la ricerca non sa se sia C10 o CXX e il
-# corpus non la dichiara. Il codice e la sua forma sono di fantasia (la forma e' quella della P201).
-CAUSALE_GS_ASSUNTA = """
-[[codice_f24ep]]
-codice = "ZGS1"
-sezione = "Q"
-codice_campo = "provincia"
-estremi = "facoltativo"
-rif_a = "periodo_inizio"
-rif_b = "periodo_fine"
-modalita = "debito"
-dal = 2025-01-01
-riferimento = "fittizio:codice-zgs1"
-""" + "".join(
-    f"""
-[[mappatura]]
-istituto = "{istituto}"
-sistema = "codice_tributo_f24ep"
-codice = "ZGS1"
-dal = 2025-01-01
-riferimento = "fittizio:mappatura-{istituto.replace('_', '-')}"
-"""
-    for istituto in ("gs_lavoratore", "gs_ente", "onere_art86")
-)
 
 
 @pytest.fixture(scope="module")
@@ -80,12 +56,12 @@ def test_il_resoconto_e_deterministico(resoconto):
     assert "tmp" not in resoconto.lower()
 
 
-def test_il_percorso_di_marzo_si_ferma_alla_delega_per_la_causale_della_gestione_separata(esecuzione):
+def test_il_percorso_di_marzo(esecuzione, uscita):
     arrivi = {r: a for (m, r), a in esecuzione.arrivi.items() if m == "2026-03"}
-    # R10 e R11 hanno nella delega righe della gestione separata la cui causale (C10 o CXX) nessuna fonte abbina all'aliquota:
-    # nessuna mappatura, la delega e' ferma con il fermo dichiarato e con lei tutti i rapporti che ne fanno parte (ticket #73).
-    assert [r for r, a in arrivi.items() if a == "completo"] == []
-    assert {arrivi[r] for r in ("R01", "R02", "R03", "R05", "R06", "R07")} == {"delega"}
+    # La causale della gestione separata e' ASSUNTA nel corpus fittizio (ZGS1, di fantasia: C10 o CXX da verificare), cosi' la
+    # delega con le righe di R10 e R11 non ferma tutto il mese (ticket #73).
+    assert [r for r, a in arrivi.items() if a == "completo"] == ["R01", "R02", "R03", "R05", "R06", "R07"]
+    assert not [r for r, a in arrivi.items() if a == "delega"]
     # R04, a tempo parziale al 60% (verticale), supera il calcolo e arriva alla ListaPosPA, ma e' una bozza (ticket #72).
     assert arrivi["R04"] == "lista_pos_pa"
     # Dirigente e segretario (ticket #73) superano calcolo, denuncia e pagamento: alla ListaPosPA mancano contratto e qualifica,
@@ -93,16 +69,7 @@ def test_il_percorso_di_marzo_si_ferma_alla_delega_per_la_causale_della_gestione
     assert {arrivi[r] for r in ("R08", "R09")} == {"lista_pos_pa"}
     # Sindaco e co.co.co. (ticket #73) arrivano alla lista collaboratori, una bozza: i codici del tracciato non sono dichiarati.
     assert {arrivi[r] for r in ("R10", "R11")} == {"lista_collaboratori"}
-
-
-def test_con_la_causale_della_gestione_separata_assunta_il_percorso_di_marzo_arriva_all_esito_versato(tmp_path):
-    """Prova a valle: se la causale fosse nota, la delega con le righe della gestione separata sarebbe valida (codice di fantasia)."""
-    esecuzione = esegui(tmp_path, corpus_extra=CAUSALE_GS_ASSUNTA)
-    arrivi = {r: a for (m, r), a in esecuzione.arrivi.items() if m == "2026-03"}
-    assert [r for r, a in arrivi.items() if a == "completo"] == ["R01", "R02", "R03", "R05", "R06", "R07"]
-    assert not [r for r, a in arrivi.items() if a == "delega"]  # la delega non ferma piu' nessuno
-    assert {arrivi[r] for r in ("R10", "R11")} == {"lista_collaboratori"}  # restano una bozza, per i codici del tracciato
-    f24ep = (tmp_path / "f24ep-2026-03.txt").read_bytes()
+    f24ep = (uscita / "f24ep-2026-03.txt").read_bytes()
     assert controlla(f24ep) == ([], [])
     assert b"ZGS1" in f24ep
 
@@ -114,8 +81,7 @@ def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
     assert tracciato["bloccati"] == {"R10", "R11"}  # codici del tracciato non letti: bozza, non inventati
     (attestazione,) = [g for causa, g in per_causa.items() if "attestazione_prestazione" in causa]
     assert attestazione["bloccati"] == {"R11"}  # la rata di dicembre non e' attestata: calcolata, ma fuori dalla versione
-    (mappatura,) = [g for causa, g in per_causa.items() if causa.startswith("mappatura_mancante")]
-    assert mappatura["casi"].keys() == {"R10", "R11"}  # causale della gestione separata: nessuna fonte, delega ferma
+    assert not [causa for causa in per_causa if causa.startswith("mappatura_mancante")]
     for dato in ("contratto", "qualifica"):
         assert per_causa[f"dato mancante {dato}"]["bloccati"] == {"R08", "R09"}  # codici del tracciato non letti
     assert "part-time, riproporzionamento non modellato" not in per_causa
@@ -150,7 +116,7 @@ def test_il_conteggio_dei_passaggi_distingue_avvio_e_ricorrenti(esecuzione):
 
 
 def test_i_file_prodotti_sono_validi(esecuzione, uscita):
-    assert sorted(esecuzione.file_prodotti) == ["lista-pos-pa-2026-03.xml"]  # la delega e' ferma: nessun file F24EP
+    assert sorted(esecuzione.file_prodotti) == ["f24ep-2026-03.txt", "lista-pos-pa-2026-03.xml"]
     radice = ET.parse(uscita / "lista-pos-pa-2026-03.xml").getroot()
     assert radice.tag == "DenunceMensili"
     assert len(radice.findall(".//D0_DenunciaIndividuale")) == 6

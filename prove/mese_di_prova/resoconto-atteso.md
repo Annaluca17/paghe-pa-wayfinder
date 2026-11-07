@@ -16,8 +16,8 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 | regole di conguaglio | 0 | 1 | 1 |
 | dichiarazioni di pagamento fisiologico | 0 | 1 | 1 |
 | dichiarazioni di composizione | 0 | 42 | 42 |
-| mappature verso codici esterni | 0 | 11 | 11 |
-| codici nel catalogo F24EP | 0 | 7 | 7 |
+| mappature verso codici esterni | 0 | 14 | 14 |
+| codici nel catalogo F24EP | 0 | 8 | 8 |
 | regole di scadenza F24EP | 0 | 2 | 2 |
 | calendari dei festivi | 0 | 2 | 2 |
 
@@ -44,13 +44,13 @@ Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fi
 
 | Rapporto | Marzo 2026 | Dicembre 2026 |
 |---|---|---|
-| R01 | si ferma al passo «Delega F24EP»: mappatura_mancante: importo pagato il <data> con canale F24EP senza codice tributo o causale | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R02 | si ferma al passo «Delega F24EP»: mappatura_mancante: importo pagato il <data> con canale F24EP senza codice tributo o causale | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R03 | si ferma al passo «Delega F24EP»: mappatura_mancante: importo pagato il <data> con canale F24EP senza codice tributo o causale | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R01 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R02 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R03 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
 | R04 | si ferma al passo «ListaPosPA»: bozza non trasmissibile | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R05 | si ferma al passo «Delega F24EP»: mappatura_mancante: importo pagato il <data> con canale F24EP senza codice tributo o causale | fuori servizio |
-| R06 | si ferma al passo «Delega F24EP»: mappatura_mancante: importo pagato il <data> con canale F24EP senza codice tributo o causale | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R07 | si ferma al passo «Delega F24EP»: mappatura_mancante: importo pagato il <data> con canale F24EP senza codice tributo o causale | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R05 | completo, fino all'esito versato | fuori servizio |
+| R06 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R07 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
 | R08 | si ferma al passo «ListaPosPA»: dato mancante qualifica | si ferma al passo «Versione di proposta»: conguaglio annuo di contributo_aggiuntivo in 2026-12 |
 | R09 | si ferma al passo «ListaPosPA»: dato mancante qualifica | si ferma al passo «Versione di proposta»: conguaglio annuo di contributo_aggiuntivo in 2026-12 |
 | R10 | si ferma al passo «Lista collaboratori»: tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
@@ -61,14 +61,13 @@ Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fi
 
 I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccano e poi per quanti passi del percorso (calcolo, versione, conferma, pagamento, denuncia, ListaPosPA, lista collaboratori, delega, file, ricevute, esito versato) restano chiusi, sommati su marzo e dicembre.
 
-1. **mappatura_mancante: importo pagato il <data> con canale F24EP senza codice tributo o causale**: 12 rapporti bloccati, 80 passi, al passo «Delega F24EP», in marzo e dicembre. Casi: R10 (onere_art86), R11 (gs_ente).
-2. **debito_negativo: Il totale a debito del codice 100E e' negativo**: 8 rapporti bloccati, 32 passi, al passo «Delega F24EP», in dicembre. Casi: R01, R02, R03, R04, R06, R07, R10, R12.
-3. **conguaglio annuo di contributo_aggiuntivo in 2026-12**: 2 rapporti bloccati, 20 passi, al passo «Versione di proposta», in dicembre. Casi: R08, R09.
-4. **bozza non trasmissibile**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R04, R12.
-5. **dato mancante contratto**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
-6. **dato mancante qualifica**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
-7. **tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile**: 2 rapporti bloccati, 10 passi, al passo «Lista collaboratori», in marzo. Casi: R10, R11.
-8. **manca il fatto attestazione_prestazione per <data>: l'importo resta calcolato ma non entra in una versione di proposta**: 1 rapporto bloccato, 10 passi, al passo «Versione di proposta», in dicembre. Casi: R11.
+1. **debito_negativo: Il totale a debito del codice 100E e' negativo**: 8 rapporti bloccati, 32 passi, al passo «Delega F24EP», in dicembre. Casi: R01, R02, R03, R04, R06, R07, R10, R12.
+2. **conguaglio annuo di contributo_aggiuntivo in 2026-12**: 2 rapporti bloccati, 20 passi, al passo «Versione di proposta», in dicembre. Casi: R08, R09.
+3. **bozza non trasmissibile**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R04, R12.
+4. **dato mancante contratto**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
+5. **dato mancante qualifica**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
+6. **tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile**: 2 rapporti bloccati, 10 passi, al passo «Lista collaboratori», in marzo. Casi: R10, R11.
+7. **manca il fatto attestazione_prestazione per <data>: l'importo resta calcolato ma non entra in una versione di proposta**: 1 rapporto bloccato, 10 passi, al passo «Versione di proposta», in dicembre. Casi: R11.
 
 ## Passaggi manuali
 
@@ -78,9 +77,9 @@ I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccan
 | Fatti ricorrenti del mese (atti, variazioni, cessazioni, 730) | 0 | 0 | 17 | 1 |
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
-| Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 1 | 1 |
-| Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 2 | 1 |
-| **Totale senza i comandi** | **153** | **3** | **34** | **6** |
+| Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 5 | 1 |
+| Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 1 |
+| **Totale senza i comandi** | **153** | **3** | **38** | **6** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
 
@@ -110,8 +109,13 @@ Dettaglio di Marzo, escluso l'avvio:
 - [scelta] 1 x ente: data di versamento dei pagamenti di 2026-03
 - [scelta] 1 x valuta prevista della versione (2026-03-27)
 - [evento] 1 x pagamento eseguito della versione 2
+- [evento] 1 x ricevuta della delega: addebito
+- [evento] 1 x ricevuta della delega: controlli_formali
+- [evento] 1 x ricevuta della delega: controllo_crediti
+- [evento] 1 x versamento eseguito della delega
 - [comando] 1 x emissione della versione di proposta (2026-03)
 - [comando] 1 x produzione della denuncia e della ListaPosPA (2026-03)
+- [comando] 1 x trasmissione della delega (2026-03)
 
 Dettaglio di Dicembre, escluso l'avvio:
 
@@ -265,35 +269,42 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - scadenza 2026-04-16, data di versamento scelta 2026-04-16
-- Fermi:
-  - R10 (onere_art86): Istituto onere_art86: importo pagato il 2026-03-27 con canale F24EP senza codice tributo o causale
-  - R11 (gs_ente): Istituto gs_ente: importo pagato il 2026-03-27 con canale F24EP senza codice tributo o causale
-  - R11 (gs_lavoratore): Istituto gs_lavoratore: importo pagato il 2026-03-27 con canale F24EP senza codice tributo o causale
+  - riga F 100E: debito 1108.98, credito 0.00
+  - riga Q P201: debito 7554.80, credito 0.00
+  - riga Q P607: debito 504.55, credito 0.00
+  - riga Q P608: debito 584.83, credito 0.00
+  - riga Q P909: debito 80.90, credito 0.00
+  - riga Q ZGS1: debito 1053.96, credito 0.00
+  - saldo 10888.02
+  - delega DELEGA-2026-03 trasmessa il 2026-04-08
+- Fermi: nessuno
 - Su dati fittizi:
   - mappatura dei codici, catalogo dei codici F24EP, scadenza e festivi del corpus fittizio
-- Note:
-  - righe costruite ma non trasmissibili: 100E 1108.98, P201 7554.80, P607 504.55, P608 584.83, P909 80.90
 
 **File telematico**
 
-- Riuscito: niente
-- Fermi:
-  - R01, R02, R03, R04, R05, R06, R07, R08, R09, R10, R11, R12: non eseguito, la delega del mese non e' trasmessa
+- Riuscito:
+  - file f24ep-2026-03.txt: 4 record
+- Fermi: nessuno
 - Su dati fittizi:
+  - dati dell'ente (codice fiscale, denominazione, IBAN di tesoreria) di fantasia
 
 **Ricevute della delega**
 
-- Riuscito: niente
-- Fermi:
-  - R01, R02, R03, R04, R05, R06, R07, R08, R09, R10, R11, R12: non eseguito, la delega del mese non e' trasmessa
+- Riuscito:
+  - stato della delega: addebitata
+- Fermi: nessuno
 - Su dati fittizi:
+  - le tre ricevute (controlli formali, controllo dei crediti, addebito) sono simulate, tutte positive
 
 **Esito versato**
 
-- Riuscito: niente
-- Fermi:
-  - R01, R02, R03, R04, R05, R06, R07, R08, R09, R10, R11, R12: non eseguito, la delega del mese non e' trasmessa
+- Riuscito:
+  - esito versato 4: 64 righe, 10888.02 versati il 2026-04-16
+  - righe ancora da versare nel mese: 0
+- Fermi: nessuno
 - Su dati fittizi:
+  - l'addebito e' simulato dal percorso, alla data di versamento scelta
 
 ### Dicembre 2026 (conguaglio)
 
@@ -353,7 +364,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Pagamento eseguito**
 
 - Riuscito:
-  - esito pagato 3: 68 righe, valuta 2026-12-18
+  - esito pagato 5: 68 righe, valuta 2026-12-18
 - Fermi: nessuno
 - Su dati fittizi:
   - l'evento di pagamento eseguito e' simulato dal percorso, con valuta uguale alla prevista
@@ -373,12 +384,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Riuscito:
   - scadenza 2027-01-18, data di versamento scelta 2027-01-18
 - Fermi:
-  - R10 (onere_art86): Istituto onere_art86: importo pagato il 2026-12-18 con canale F24EP senza codice tributo o causale
   - R01, R02, R03, R04, R06, R07, R10, R12: Il totale a debito del codice 100E e' negativo (-426.23; sezione F, riferimenti 0012/2026): i conguagli a credito superano le ritenute della delega. Il recupero dell'eccedenza non ha ancora una fonte, la delega non si trasmette
 - Su dati fittizi:
   - mappatura dei codici, catalogo dei codici F24EP, scadenza e festivi del corpus fittizio
 - Note:
-  - righe costruite ma non trasmissibili: 100E -426.23, 150E -150.00, P201 3943.56, P607 450.65, P608 129.74, P909 42.27
+  - righe costruite ma non trasmissibili: 100E -426.23, 150E -150.00, P201 3943.56, P607 450.65, P608 129.74, P909 42.27, ZGS1 528.51
 
 **File telematico**
 
@@ -415,4 +425,5 @@ Nessuno trovato.
 
 ## File prodotti
 
+- `f24ep-2026-03.txt`
 - `lista-pos-pa-2026-03.xml`
