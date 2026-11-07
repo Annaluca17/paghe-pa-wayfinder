@@ -411,12 +411,14 @@ def _annuale(
     istante: datetime,
     righe_nuove: tuple[Importo, ...] = (),
     ritenute_nuove: tuple[Importo, ...] = (),
+    deduzioni_nuove: tuple[Importo, ...] = (),
 ) -> _Annuale:
     """Imposta dell'anno sull'imponibile fiscale della persona, meno ritenute e conguagli già operati."""
     regola_ritenuta, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
     regola = _regola_conguaglio(corpus, riferimento)
-    base = imponibile_fiscale(registro, persona, anno, istante)
+    base = imponibile_fiscale(registro, persona, anno, istante, corpus=corpus)
     reddito = (*base.righe, *righe_nuove)
+    deduzioni = (*base.deduzioni, *deduzioni_nuove)
     for riga in reddito:
         if riga.categoria_reddito not in regola_ritenuta.categorie:
             raise CasoNonModellato(
@@ -433,10 +435,15 @@ def _annuale(
     operate += list(ritenute_nuove)
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
     calcolo = _calcola(
-        corpus, regola_ritenuta, sum((riga.valore for riga in reddito), Decimal(0)), 1, riferimento, dichiarazione
+        corpus,
+        regola_ritenuta,
+        sum((riga.valore for riga in reddito), Decimal(0)) - sum((riga.valore for riga in deduzioni), Decimal(0)),
+        1,
+        riferimento,
+        dichiarazione,
     )
     return _Annuale(
-        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *operate), regola, regola_ritenuta
+        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta
     )
 
 
@@ -533,10 +540,14 @@ def calcola_fiscale(
     conguaglio = None
     if ultimo_dell_anno:
         _controlla_ultimo(registro, persona, anno, data_pagamento, istante)
-        annuale = _annuale(registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,))
+        annuale = _annuale(
+            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
+        )
         conguaglio = _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
     else:
-        annuale = _annuale(registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,))
+        annuale = _annuale(
+            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
+        )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
     return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi))
 

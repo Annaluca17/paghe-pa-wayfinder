@@ -181,3 +181,28 @@ def test_senza_il_corpus_l_imponibile_fiscale_non_conosce_le_deduzioni(registro,
         registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 3)), "120", date(2026, 3, 27)
     )
     assert imponibile_fiscale(registro, "PERSONA-1", 2026).valore == Decimal("1500")
+
+
+# Effetto sul conguaglio e sulla proiezione
+
+def test_il_conguaglio_dell_ultimo_pagamento_e_sull_imponibile_al_netto_dei_contributi(registro, con_deduzione, orologio):
+    """Un solo pagamento nell'anno: 1500 - 120 = 1380 in un solo periodo.
+
+    Imposta annua sotto il primo scaglione: 0,10 * 1380 = 138,00. La ritenuta mensile, ragguagliata, è 192,67:
+    il conguaglio la riporta a 138,00, cioè 138,00 - 192,67 = -54,67.
+    """
+    assumi(registro)
+    fiscale = paga_con_contributo(
+        registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 6)), "120", date(2026, 6, 27), ultimo=True
+    )
+    assert fiscale.ritenuta.valore == Decimal("192.67")
+    assert fiscale.conguaglio.valore == Decimal("-54.67")
+
+
+def test_la_proiezione_del_conguaglio_e_sull_imponibile_al_netto_dei_contributi(registro, con_deduzione, orologio):
+    assumi(registro)
+    fiscale = paga_con_contributo(
+        registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 6)), "120", date(2026, 6, 27)
+    )
+    (proiezione,) = fiscale.avvisi_di("proiezione_conguaglio")
+    assert proiezione.valore == Decimal("-54.67")
