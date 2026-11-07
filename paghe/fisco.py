@@ -69,6 +69,8 @@ class FiscaleDelPagamento:
 class _Pagata:
     riga: Importo
     data: date | None
+    valuta: date
+    anno_esito: int | None
 
 
 def anno_imposta(corpus: Corpus, categoria: str, data_pagamento: date) -> int:
@@ -170,8 +172,20 @@ def _pagati(registro: Registro, persona: str, istante: datetime) -> list[_Pagata
         for riga in esito.righe:
             if riga.rapporto in pagamenti:
                 fatto = pagamenti[riga.rapporto].get(esito.id)
-                pagate.append(_Pagata(riga, fatto.valido_dal if fatto else None))
+                anni = {r.anno_imposta for r in esito.righe if r.rapporto == riga.rapporto and _e_reddito(r)}
+                anno_esito = anni.pop() if len(anni) == 1 else None
+                pagate.append(_Pagata(riga, fatto.valido_dal if fatto else None, esito.data, anno_esito))
     return pagate
+
+
+def _e_deduzione(corpus: Corpus, riga: Importo, giorno: date) -> bool:
+    """Un importo derivato dal pagato che l'istituto dichiara riduttivo dell'imponibile fiscale alla data di pagamento."""
+    return not _e_reddito(riga) and corpus.deduzione_fiscale(riga.istituto, giorno) is not None
+
+
+def _anno_della_deduzione(pagata: _Pagata) -> int:
+    """L'anno d'imposta del reddito pagato insieme alla deduzione; senza reddito, l'anno della data di pagamento."""
+    return pagata.riga.anno_imposta or pagata.anno_esito or (pagata.data or pagata.valuta).year
 
 
 def _e_reddito(riga: Importo) -> bool:
@@ -297,6 +311,7 @@ def _ritenuta(
     righe: tuple[Importo, ...],
     data_pagamento: date,
     istante: datetime,
+    deduzioni: tuple[Importo, ...] = (),
 ) -> tuple[Importo, RegolaRitenuta, date, Fatto | None]:
     anno = righe[0].anno_imposta
     regola, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
@@ -310,7 +325,17 @@ def _ritenuta(
     ]
     gia_operate = [riga for riga in del_periodo if riga.istituto == regola.istituto]
     gia_pagate = [riga for riga in del_periodo if _e_reddito(riga)]
-    imponibile = sum((riga.valore for riga in (*gia_pagate, *righe)), Decimal(0))
+    gia_dedotte = [
+        pagata.riga
+        for pagata in _pagati(registro, persona, istante)
+        if pagata.data is not None
+        and (pagata.data.year, pagata.data.month) == (data_pagamento.year, data_pagamento.month)
+        and _e_deduzione(corpus, pagata.riga, pagata.data)
+        and _anno_della_deduzione(pagata) == anno
+    ]
+    imponibile = sum((riga.valore for riga in (*gia_pagate, *righe)), Decimal(0)) - sum(
+        (riga.valore for riga in (*gia_dedotte, *deduzioni)), Decimal(0)
+    )
     dichiarazione = _dichiarazione(registro, persona, regola, data_pagamento, istante)
     calcolo = _calcola(corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione)
     operato = sum((riga.valore for riga in gia_operate), Decimal(0))
@@ -335,7 +360,7 @@ def _ritenuta(
             noto_al=istante,
             parametri=calcolo.parametri,
             fatti=calcolo.fatti,
-            importi=(*gia_pagate, *righe, *gia_operate),
+            importi=(*gia_pagate, *righe, *gia_dedotte, *deduzioni, *gia_operate),
         ),
     )
     return importo, regola, riferimento, dichiarazione
@@ -471,7 +496,10 @@ def calcola_fiscale(
         raise ErroreCalcolo(f"Rapporto {rapporto}: nessun importo da tassare nel pagamento")
     reddito = _controlla_righe(registro, rapporto, persona, righe, regola_provvisoria, istante)
     anno = reddito[0].anno_imposta
-    ritenuta, regola, _, dichiarazione = _ritenuta(registro, corpus, rapporto, persona, reddito, data_pagamento, istante)
+    deduzioni = tuple(riga for riga in righe if _e_deduzione(corpus, riga, data_pagamento))
+    ritenuta, regola, _, dichiarazione = _ritenuta(
+        registro, corpus, rapporto, persona, reddito, data_pagamento, istante, deduzioni
+    )
     avvisi: list[Avviso] = []
     if dichiarazione is None:
         avvisi.append(

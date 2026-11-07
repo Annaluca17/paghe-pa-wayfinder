@@ -7,14 +7,16 @@ Uno stipendio mensile di 1500 con un contributo del lavoratore di 120:
   ritenuta = 0,10 * 833,33 + 0,20 * (1380 - 833,33) = 83,33 + 109,33 = 192,67 (senza deduzione: 216,67).
 """
 
+from dataclasses import replace
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
-from paghe import Corpus
+from paghe import Corpus, Mese, attribuisci_reddito, calcola_fiscale
 from paghe.errori import ErroreCorpus
 
-from test_fiscale import TESTO
+from test_fiscale import TESTO, assumi, stipendio
 
 CONTRIBUTO = """
 [[regola]]
@@ -80,3 +82,25 @@ def test_il_corpus_reale_rifiuta_il_riferimento_fittizio_della_deduzione():
     testo = CORPUS_REALE.read_text(encoding="utf-8") + DEDUZIONE.replace('"contributo_lavoratore"', f'"{reale.istituti()[0]}"')
     with pytest.raises(ErroreCorpus, match="Deduzione fiscale.*fittizio"):
         Corpus.da_toml(testo, reale=True)
+
+
+# Effetto sulla ritenuta del pagamento
+
+def contributo(riga, valore):
+    """Un contributo del lavoratore sul pagamento, derivato dal pagato come quelli della denuncia."""
+    derivazione = replace(riga.derivazione, istituto="contributo_lavoratore", maturazione="periodo")
+    return replace(riga, istituto="contributo_lavoratore", valore=Decimal(valore), derivazione=derivazione)
+
+
+@pytest.fixture
+def con_deduzione():
+    return Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE)
+
+
+def test_la_ritenuta_si_calcola_sull_imponibile_al_netto_dei_contributi_del_lavoratore(registro, con_deduzione, orologio):
+    assumi(registro)
+    giorno = date(2026, 6, 27)
+    (riga,) = stipendio(registro, con_deduzione, Mese(2026, 6))
+    attribuite = attribuisci_reddito(con_deduzione, [riga], giorno)
+    fiscale = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", [*attribuite, contributo(riga, "120")], giorno)
+    assert fiscale.ritenuta.valore == Decimal("192.67")
