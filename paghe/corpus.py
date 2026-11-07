@@ -39,6 +39,14 @@ NATURE = frozenset({
 EFFETTI = frozenset({"piu", "meno", "nessuno"})
 DESTINATARI = frozenset({"beneficiario", "terzo"})
 CANALI = frozenset({"accredito", "f24ep", "bonifico"})
+# Catalogo dei codici F24EP (ticket #54): valori ammessi.
+SEZIONI_F24EP = frozenset({"F", "I", "R", "S", "N", "Q", "W", "G", "P", "5"})
+CODICE_CAMPO_F24EP = frozenset({"nessuno", "regione", "catastale", "provincia"})
+ESTREMI_F24EP = frozenset({"nessuno", "facoltativo"})
+RIF_A_F24EP = frozenset({"nessuno", "mese_pagamento", "periodo_inizio"})
+RIF_B_F24EP = frozenset({"nessuno", "anno_pagamento", "anno_imposta", "periodo_fine"})
+MODALITA_F24EP = frozenset({"debito", "debito_credito"})
+LIMITI_CREDITO_F24EP = frozenset({"nessuno", "non_modellato"})
 
 
 @dataclass(frozen=True)
@@ -450,6 +458,58 @@ class MappaturaEsterna:
         return self.dal <= giorno and (self.al is None or giorno <= self.al)
 
 
+@dataclass(frozen=True)
+class CodiceF24EP:
+    """Voce del catalogo dei codici F24EP, con vigenza e fonte (ticket #54).
+
+    Dice in quale sezione sta il codice tributo o la causale, che cosa va nel campo «codice» (regione,
+    codice catastale, sigla di provincia), se gli estremi si compilano e da dove vengono i riferimenti
+    A e B. `modalita` dice se il codice si usa solo a debito o anche a credito; `limite_credito`
+    `non_modellato` ferma ogni delega che lo usa a credito, perché il suo limite non è ancora modellato.
+    """
+
+    codice: str
+    sezione: str
+    codice_campo: str
+    estremi: str
+    rif_a: str
+    rif_b: str
+    modalita: str
+    dal: date
+    riferimento: str
+    limite_credito: str = "nessuno"
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Codice F24EP {self.codice}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if not isinstance(self.codice, str) or not self.codice.strip() or self.codice != self.codice.strip():
+            raise ErroreCorpus(f"{soggetto}: il codice va scritto come testo")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        campi = {
+            "sezione": (self.sezione, SEZIONI_F24EP),
+            "codice_campo": (self.codice_campo, CODICE_CAMPO_F24EP),
+            "estremi": (self.estremi, ESTREMI_F24EP),
+            "rif_a": (self.rif_a, RIF_A_F24EP),
+            "rif_b": (self.rif_b, RIF_B_F24EP),
+            "modalita": (self.modalita, MODALITA_F24EP),
+            "limite_credito": (self.limite_credito, LIMITI_CREDITO_F24EP),
+        }
+        for nome, (valore, ammessi) in campi.items():
+            if valore not in ammessi:
+                raise ErroreCorpus(f"{soggetto}: {nome} obbligatorio, uno di {sorted(ammessi)}")
+        if self.limite_credito != "nessuno" and self.modalita != "debito_credito":
+            raise ErroreCorpus(f"{soggetto}: limite_credito vale solo per un codice usabile a credito")
+
+    @property
+    def a_credito(self) -> bool:
+        return self.modalita == "debito_credito"
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
 class Corpus:
     """Insieme coerente e immutabile; la versione è l'impronta del contenuto."""
 
@@ -467,8 +527,10 @@ class Corpus:
         fiscale: RegoleFiscali | None = None,
         composizioni: tuple[DichiarazioneComposizione, ...] = (),
         mappature: tuple[MappaturaEsterna, ...] = (),
+        codici_f24ep: tuple[CodiceF24EP, ...] = (),
     ):
         self.reale = reale
+        self._codici_f24ep = tuple(codici_f24ep)
         self._composizioni = tuple(composizioni)
         self._mappature = tuple(mappature)
         self.fiscale = fiscale or RegoleFiscali()
@@ -494,6 +556,7 @@ class Corpus:
         self._convalida_denuncia()
         self._convalida_fiscale()
         self._convalida_composizione()
+        self._convalida_catalogo_f24ep()
         if reale:
             self._rifiuta_fittizi()
         self.versione = self._impronta()
@@ -511,6 +574,7 @@ class Corpus:
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
+        elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
         return elenco
 
     def _rifiuta_fittizi(self) -> None:
@@ -553,6 +617,12 @@ class Corpus:
             for altra in self._mappature[indice + 1 :]:
                 if (altra.istituto, altra.sistema) == (mappatura.istituto, mappatura.sistema):
                     _vigenze_sovrapposte([mappatura, altra], soggetto)
+
+    def _convalida_catalogo_f24ep(self) -> None:
+        for indice, voce in enumerate(self._codici_f24ep):
+            for altra in self._codici_f24ep[indice + 1 :]:
+                if altra.codice == voce.codice:
+                    _vigenze_sovrapposte([voce, altra], f"Codice F24EP {voce.codice}")
 
     def _convalida_fiscale(self) -> None:
         fiscale = self.fiscale
@@ -775,6 +845,12 @@ class Corpus:
                 [m.istituto, m.sistema, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
                 for m in self._mappature
             )
+        if self._codici_f24ep:
+            contenuto["codici_f24ep"] = sorted(
+                [c.codice, c.sezione, c.codice_campo, c.estremi, c.rif_a, c.rif_b, c.modalita, c.limite_credito,
+                 c.dal.isoformat(), c.al.isoformat() if c.al else "", c.riferimento]
+                for c in self._codici_f24ep
+            )
         testo = json.dumps(contenuto, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(testo.encode("utf-8")).hexdigest()[:16]
 
@@ -820,6 +896,10 @@ class Corpus:
         """Codice del sistema esterno: per anno d'imposta, al 31 dicembre, se l'importo lo porta; altrimenti per data di pagamento."""
         giorno = date(anno_imposta, 12, 31) if anno_imposta is not None else data_pagamento
         return _vigente([m for m in self._mappature if (m.istituto, m.sistema) == (istituto, sistema)], giorno)
+
+    def codice_f24ep(self, codice: str, giorno: date) -> CodiceF24EP | None:
+        """Voce del catalogo vigente alla data; None se il codice non è dichiarato."""
+        return _vigente([c for c in self._codici_f24ep if c.codice == codice], giorno)
 
     def regola_iniziata(self, istituto: str, giorno: date) -> bool:
         """Vero se l'istituto ha già una regola decorrente a quella data, anche se oggi scaduta."""
@@ -888,6 +968,7 @@ class Corpus:
             fiscale = _fiscale_da_toml(dati)
             composizioni = tuple(_composizione_da_toml(voce) for voce in dati.get("composizione", []))
             mappature = tuple(_mappatura_da_toml(voce) for voce in dati.get("mappatura", []))
+            codici_f24ep = tuple(_codice_f24ep_da_toml(voce) for voce in dati.get("codice_f24ep", []))
         except (tomllib.TOMLDecodeError, KeyError, TypeError, AttributeError) as errore:
             raise ErroreCorpus(f"Corpus TOML non valido: {errore!r}") from errore
         periodo = dati.get("periodo_dichiarato", {})
@@ -904,6 +985,7 @@ class Corpus:
             fiscale=fiscale,
             composizioni=composizioni,
             mappature=mappature,
+            codici_f24ep=codici_f24ep,
         )
 
     @classmethod
@@ -927,6 +1009,22 @@ def _composizione_da_toml(voce: dict) -> DichiarazioneComposizione:
         destinatario=voce.get("destinatario"),
         canale=voce.get("canale"),
         intermedio=voce.get("intermedio", False),
+        al=_data(voce["al"], "al") if "al" in voce else None,
+    )
+
+
+def _codice_f24ep_da_toml(voce: dict) -> CodiceF24EP:
+    return CodiceF24EP(
+        codice=voce["codice"],
+        sezione=voce["sezione"],
+        codice_campo=voce["codice_campo"],
+        estremi=voce["estremi"],
+        rif_a=voce["rif_a"],
+        rif_b=voce["rif_b"],
+        modalita=voce["modalita"],
+        limite_credito=voce.get("limite_credito", "nessuno"),
+        dal=_data(voce["dal"], "dal"),
+        riferimento=voce["riferimento"],
         al=_data(voce["al"], "al") if "al" in voce else None,
     )
 
