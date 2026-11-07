@@ -218,6 +218,8 @@ class Fermo:
     Con `codice` il fermo scatta solo se il fatto categoriale ha quel valore (ADR 0009).
     Con `manca` scatta al contrario quando il fatto non c'è: serve `se`, la condizione `tipo` o `tipo=codice` su un altro
     fatto che dice per chi quel fatto è obbligatorio (ticket #73, fascia del segretario). Nessun titolo è nominato nel motore.
+    Con `manca`, `valori` limita i codici ammessi del fatto categoriale. Con `solo_se` (da solo) scatta se il fatto c'è in un
+    giorno in cui la condizione non vale: il fatto è fuori dal suo regime.
     """
 
     fatto: str
@@ -227,6 +229,8 @@ class Fermo:
     codice: str | None = None
     se: str | None = None
     manca: bool = False
+    valori: tuple[str, ...] | None = None
+    solo_se: str | None = None
 
     def __post_init__(self) -> None:
         soggetto = f"Fermo {self.fatto}"
@@ -240,6 +244,14 @@ class Fermo:
             raise ErroreCorpus(f"{soggetto}: `manca` e `se` vanno indicati insieme")
         if self.manca and self.codice is not None:
             raise ErroreCorpus(f"{soggetto}: `manca` non si combina con `codice`")
+        if self.valori is not None and (not self.manca or not self.valori or not all(
+                isinstance(v, str) and v.strip() and v == v.strip() for v in self.valori)):
+            raise ErroreCorpus(f"{soggetto}: `valori` vale solo con `manca` ed e' un elenco di codici non vuoti")
+        if self.solo_se is not None:
+            if self.manca or self.codice is not None:
+                raise ErroreCorpus(f"{soggetto}: `solo_se` non si combina con `manca` né con `codice`")
+            if not isinstance(self.solo_se, str) or not self.solo_se.strip() or self.solo_se != self.solo_se.strip()                     or self.solo_se.startswith("=") or self.solo_se.endswith("="):
+                raise ErroreCorpus(f"{soggetto}: condizione `solo_se` non valida, {self.solo_se!r}")
         if self.manca and self.ambito == "vista":
             raise ErroreCorpus(f"{soggetto}: `manca` vale per l'ambito calcolo o denuncia, non per la vista")
         if self.se is not None and (not isinstance(self.se, str) or not self.se.strip() or self.se != self.se.strip()
@@ -1027,7 +1039,9 @@ class Corpus:
         if self.fermi:
             contenuto["fermi"] = sorted(
                 [f.fatto, f.caso, f.ambito, f.riferimento, *([f.codice] if f.codice is not None else []),
-                 *(["manca", f.se] if f.manca else [])]
+                 *(["manca", f.se] if f.manca else []),
+                 *(["valori", sorted(f.valori)] if f.valori is not None else []),
+                 *(["solo_se", f.solo_se] if f.solo_se is not None else [])]
                 for f in self.fermi
             )
         if self.denuncia != RegoleDenuncia():
@@ -1246,7 +1260,8 @@ class Corpus:
             concorsi = tuple(concorso for voce in dati.get("concorso", []) for concorso in _concorsi_da_toml(voce))
             fermi = tuple(
                 Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"], voce.get("codice"),
-                      voce.get("se"), voce.get("manca", False))
+                      voce.get("se"), voce.get("manca", False),
+                      tuple(voce["valori"]) if voce.get("valori") is not None else None, voce.get("solo_se"))
                 for voce in dati.get("fermo", [])
             )
             denuncia = _denuncia_da_toml(dati.get("denuncia", {}))

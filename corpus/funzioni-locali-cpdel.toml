@@ -81,6 +81,7 @@ caso = "segretario senza fascia, il tabellare non ha un valore di default"
 ambito = "calcolo"
 se = "area=segretario"
 manca = true
+valori = ["A", "B", "C"]
 riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
@@ -106,6 +107,27 @@ fatto = "diritti_rogito"
 caso = "diritti di rogito del segretario, non modellati"
 ambito = "calcolo"
 riferimento = "prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "fascia_segretario"
+caso = "fascia_segretario fuori dal suo regime, il fatto vale solo con area=segretario"
+ambito = "calcolo"
+solo_se = "area=segretario"
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "posizione_annua_segretario"
+caso = "posizione_annua_segretario fuori dal suo regime, il fatto vale solo con area=segretario"
+ambito = "calcolo"
+solo_se = "area=segretario"
+riferimento = "ccnl:S105:2026-02-23~art38-com1 + prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "posizione_annua_dirigente"
+caso = "posizione_annua_dirigente fuori dal suo regime, il fatto vale solo con area=dirigente"
+ambito = "calcolo"
+solo_se = "area=dirigente"
+riferimento = "ccnl:S105:2026-02-23~art22-com6 + prassi:immedia:nota:2026-11-07;9"
 
 # Basi imponibili (ADR 0005)
 

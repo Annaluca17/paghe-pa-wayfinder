@@ -315,7 +315,7 @@ Fatto che interrompe il servizio di un rapporto che prosegue, con inizio e, quan
 _Avoid_: Cessazione temporanea, aspettativa (che è una delle possibili cause)
 
 **Fermo**:
-Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato. Con un codice, scatta solo per quel valore del fatto. Con `manca` e una condizione su un altro fatto, scatta al contrario quando il fatto non c'è.
+Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato. Con un codice, scatta solo per quel valore del fatto. Con `manca` e una condizione su un altro fatto, scatta al contrario quando il fatto non c'è o ha un codice fuori da `valori`; con `solo_se` scatta se il fatto c'è dove la condizione non vale.
 _Avoid_: Blocco, errore generico
 
 **Regime di fine servizio**:

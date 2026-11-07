@@ -194,3 +194,13 @@ def test_gli_altri_casi_del_segretario_fermano_il_calcolo_e_nominano_il_fatto(re
     registro.registra_fatto(R, fatto, "1000.00", date(2026, 11, 1), atto=ATTO)
     with pytest.raises(CasoNonModellato, match=fatto):
         calcola(registro, reale, R, Mese(2026, 11))
+
+
+def test_valori_e_solo_se_hanno_i_loro_vincoli():
+    from paghe.errori import ErroreCorpus
+
+    with pytest.raises(ErroreCorpus, match="`valori` vale solo con `manca`"):
+        Corpus.da_toml(FERMO_MANCA.format(altro='valori = ["A"]'))
+    with pytest.raises(ErroreCorpus, match="`solo_se` non si combina"):
+        Corpus.da_toml(FERMO_MANCA.format(altro='solo_se = "area=x"\ncodice = "A"'))
+    assert Corpus.da_toml(FERMO_MANCA.format(altro='solo_se = "area=x"')).fermi[0].solo_se == "area=x"
