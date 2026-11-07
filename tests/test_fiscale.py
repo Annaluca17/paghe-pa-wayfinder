@@ -9,6 +9,7 @@ Con la detrazione, 1200 * (40000 - 1500 * 12) / 40000 / 12 = 55,00; ritenuta 161
 Su dodici pagamenti di 1500 il reddito è 18000: imposta annua 2600, detrazione annua 660, dovuto 1940,00.
 """
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -734,3 +735,36 @@ def test_il_pagamento_fisiologico_dell_anno_prima_e_attribuito_all_anno_d_impost
     (riga,) = attribuisci_reddito(fisiologico, righe, date(2027, 1, 13))
     assert (riga.categoria_reddito, riga.anno_imposta) == ("lavoro_dipendente", 2027)
     assert riga.periodo == Periodo(date(2026, 12, 1), date(2026, 12, 31))
+
+
+def test_senza_dichiarazione_dell_istituto_il_fermo_nomina_il_caso(registro, fisco):
+    assumi(registro)
+    righe = stipendio(registro, fisco, Mese(2026, 12))
+    with pytest.raises(CasoNonModellato, match="non dichiara il pagamento fisiologico") as errore:
+        attribuisci_reddito(fisco, righe, date(2027, 1, 13))
+    assert "causa del pagamento tardivo" in str(errore.value)
+
+
+def test_una_dichiarazione_scaduta_prima_della_data_di_pagamento_non_vale(registro):
+    corpus = Corpus.da_toml(TESTO + FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2027-01-12"))
+    assumi(registro)
+    righe = stipendio(registro, corpus, Mese(2026, 12))
+    with pytest.raises(CasoNonModellato, match="non dichiara il pagamento fisiologico"):
+        attribuisci_reddito(corpus, righe, date(2027, 1, 13))
+    (riga,) = attribuisci_reddito(corpus, righe, date(2027, 1, 12))
+    assert riga.anno_imposta == 2026  # dentro la cassa allargata: già dell'anno di competenza
+
+
+def test_una_competenza_di_due_anni_prima_ferma_anche_con_la_dichiarazione(registro, fisiologico):
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2025, 12))
+    with pytest.raises(CasoNonModellato, match="due o più anni prima"):
+        attribuisci_reddito(fisiologico, righe, date(2027, 1, 13))
+
+
+def test_una_competenza_a_cavallo_di_due_anni_ferma_anche_con_la_dichiarazione(registro, fisiologico):
+    assumi(registro)
+    (riga,) = stipendio(registro, fisiologico, Mese(2026, 12))
+    cavallo = replace(riga, periodo=Periodo(date(2026, 12, 15), date(2027, 1, 14)))
+    with pytest.raises(CasoNonModellato, match="a cavallo di due anni"):
+        attribuisci_reddito(fisiologico, [cavallo], date(2027, 1, 20))

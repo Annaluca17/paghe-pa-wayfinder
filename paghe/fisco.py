@@ -83,6 +83,36 @@ def anno_imposta(corpus: Corpus, categoria: str, data_pagamento: date) -> int:
     return data_pagamento.year
 
 
+def _controlla_competenza(corpus: Corpus, importo: Importo, anno: int, data_pagamento: date) -> None:
+    """Una competenza fuori dall'anno d'imposta ferma il calcolo, salvo il pagamento fisiologico dell'anno prima (ADR 0018).
+
+    Il fermo nomina il caso. La dichiarazione dell'istituto si sceglie per la data di pagamento.
+    """
+    dal, al = importo.periodo.dal.year, importo.periodo.al.year
+    if dal == al == anno:
+        return
+    soggetto = f"Rapporto {importo.rapporto}, istituto {importo.istituto}: caso non modellato"
+    if dal != al:
+        raise CasoNonModellato(
+            f"{soggetto}, competenza {importo.periodo} a cavallo di due anni, pagata nell'anno d'imposta {anno}"
+        )
+    if dal > anno:
+        raise CasoNonModellato(
+            f"{soggetto}, competenza {importo.periodo} posteriore all'anno d'imposta {anno}"
+        )
+    if dal <= anno - 2:
+        raise CasoNonModellato(
+            f"{soggetto}, competenza {importo.periodo} di due o più anni prima dell'anno d'imposta {anno}: "
+            "serve la causa del pagamento tardivo (tassazione separata, ADR 0018)"
+        )
+    if corpus.pagamento_fisiologico(importo.istituto, data_pagamento) is None:
+        raise CasoNonModellato(
+            f"{soggetto}, competenza {importo.periodo} pagata nell'anno d'imposta {anno}: l'istituto non dichiara "
+            f"il pagamento fisiologico per un pagamento del {data_pagamento}, serve la causa del pagamento "
+            "tardivo (tassazione separata, ADR 0018)"
+        )
+
+
 def attribuisci_reddito(corpus: Corpus, importi, valuta_prevista: date) -> tuple[Importo, ...]:
     """Categoria di reddito e anno d'imposta di ogni importo da pagare, da congelare nell'esito (ADR 0015).
 
@@ -109,16 +139,7 @@ def attribuisci_reddito(corpus: Corpus, importi, valuta_prevista: date) -> tuple
                     f"Rapporto {importo.rapporto}, istituto {importo.istituto}: caso non modellato, la categoria di "
                     f"reddito cambia tra la data di pagamento {valuta_prevista} e l'anno d'imposta {anno}"
                 )
-        fisiologico = (
-            corpus.pagamento_fisiologico(importo.istituto, valuta_prevista) is not None
-            and importo.periodo.dal.year == importo.periodo.al.year == anno - 1
-        )
-        if not fisiologico and (importo.periodo.dal.year != anno or importo.periodo.al.year != anno):
-            raise CasoNonModellato(
-                f"Rapporto {importo.rapporto}, istituto {importo.istituto}: caso non modellato, competenza "
-                f"{importo.periodo} pagata nell'anno d'imposta {anno}: serve la causa del pagamento tardivo "
-                "(tassazione separata, ADR 0018)"
-            )
+        _controlla_competenza(corpus, importo, anno, valuta_prevista)
         risultato.append(replace(importo, anno_imposta=anno, categoria_reddito=categoria))
     return tuple(risultato)
 
