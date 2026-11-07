@@ -397,7 +397,7 @@ Fatto datato della persona letto dalle regole delle addizionali, che con esso sc
 _Avoid_: Residenza (quando si intende il domicilio fiscale), comune dell'anagrafica
 
 **Esito 730-4**:
-Fatto della persona che arriva dal canale 730-4 con la sua provenienza: crediti, debiti, rate e acconti da operare. Un 730-4 rettificativo o integrativo lo sostituisce con un nuovo fatto. Le regole ne ricavano rimborsi e trattenute dal primo pagamento utile da luglio.
+Fatto della persona che arriva dal canale 730-4 con la sua provenienza: crediti, debiti, rate e acconti da operare, con l'anno dei redditi dichiarati. Un 730-4 rettificativo o integrativo lo sostituisce con un nuovo fatto. Le regole ne ricavano rimborsi e trattenute dal primo pagamento utile da luglio.
 _Avoid_: 730 (che è la dichiarazione della persona, non il risultato contabile per il sostituto), importazione 730
 
 **Conguaglio non effettuato**:
@@ -423,7 +423,7 @@ Vista delle liquidazioni verso terzi di una scadenza: righe per sezione, codice 
 _Avoid_: F24 (senza dire quale), modello F24EP mensile, tracciato F24EP (che è solo la forma del file)
 
 **Credito da compensare**:
-Credito del sostituto (rimborso da assistenza fiscale, trattamento integrativo e simili) che una regola ricava dagli esiti pagati e porta come riga a credito nella delega della stessa scadenza. La parte non assorbita passa alla scadenza successiva come fatto con la sua origine.
+Credito del sostituto (rimborso da assistenza fiscale, trattamento integrativo e simili) che una regola ricava dagli esiti pagati, dalla natura della riga di composizione e qualunque sia il suo canale, e porta come riga a credito nella delega della stessa scadenza. Il rimborso resta una sola riga, sul netto del lavoratore. La parte non assorbita passa alla scadenza successiva come fatto con la sua origine.
 _Avoid_: Credito residuo (senza dire di quale scadenza), compensazione automatica
 
 **Data di versamento**:

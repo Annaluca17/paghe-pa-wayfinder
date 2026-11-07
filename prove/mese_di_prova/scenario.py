@@ -88,6 +88,7 @@ PER_ID = {r.id: r for r in RAPPORTI}
 COMPENSI_SENZA_REGIME = {"R08": "5000.00", "R09": "4000.00", "R10": "3000.00", "R11": "1500.00"}
 PERFORMANCE_2025 = "600.00"
 RIMBORSO_730 = "150.00"
+ANNO_REDDITI_730 = 2025  # i redditi dichiarati nel 730 il cui esito (730-4) porta il rimborso
 PART_TIME_PERCENTUALE = "60"
 
 # Atti di fantasia: riferimento nel formato ente:<ente>:<tipo>:<data>;<numero>

@@ -21,6 +21,7 @@ from .f24ep import problemi_dati_ente
 from .f24ep import FornituraF24EP, ModelloF24EP, ModuloF24EP, RigaF24EP, serializza
 from .modello import Esito, Evento, Importo, TipoEsito
 from .proposta import (
+    NATURE_A_CREDITO,
     TIPO_PAGAMENTO_ESEGUITO,
     TIPO_VERSAMENTO_ESEGUITO,
     DatoMancante,
@@ -132,7 +133,6 @@ ORDINE_SEZIONI = "FIRSNQWGP5"  # l'ordine delle sezioni nella delega
 RIGHE_PER_MODULO = 22
 # Scelta del modello (Luca, 07/11/2026): i crediti si compensano prima contro le ritenute, poi contro gli altri debiti.
 CODICE_PRIMA_COMPENSAZIONE = "100E"
-NATURE_A_CREDITO = frozenset({"rimborso_730", "credito_sostituto"})
 TIPI_DATI_ENTE = ("codice_fiscale", "denominazione", "email", "iban_tesoreria")
 
 
@@ -329,7 +329,12 @@ def _riporti_usati_da_deleghe_attive(registro: Registro, istante: datetime, igno
 
 
 def _righe_candidate(registro: Registro, mese: Mese, istante: datetime):
-    """(riga di composizione, riferimento, data di pagamento) delle righe F24EP degli esiti pagati del mese."""
+    """(riga di composizione, riferimento, data di pagamento) delle righe degli esiti pagati del mese che la delega legge.
+
+    I debiti sono le righe con canale F24EP. I crediti si ricavano dalla natura, qualunque sia il canale: il rimborso
+    al lavoratore e' una riga sola, sul netto e verso il beneficiario, letta anche dalla delega (ADR 0023). I rapporti
+    sono quelli pagati dall'evento: un credito di un rapporto non pagato non entra.
+    """
     for evento in registro.eventi(TIPO_PAGAMENTO_ESEGUITO, istante):
         pagamento = registro.esito(evento.esito_id).data
         if Mese(pagamento.year, pagamento.month) != mese:
@@ -337,7 +342,7 @@ def _righe_candidate(registro: Registro, mese: Mese, istante: datetime):
         versione = leggi_versione(registro, evento.versione_id)
         for rapporto in evento.contenuto["rapporti"]:
             for riga in versione.righe_del_rapporto(rapporto):
-                if riga.canale == "f24ep":
+                if riga.canale == "f24ep" or riga.natura in NATURE_A_CREDITO:
                     yield riga, versione.riferimento(riga), pagamento
 
 
@@ -515,6 +520,23 @@ def costruisci_delega(
             Decimal(0) if a_credito else totale, totale if a_credito else Decimal(0), tuple(origine),
         )
         (crediti if a_credito else debiti).append(riga)
+    for riga in debiti:
+        if riga.debito < 0:
+            ferma(
+                "debito_negativo",
+                "/".join(riga.chiave),
+                f"Il totale a debito del codice {riga.tributo} e' negativo ({riga.debito}; sezione {riga.sezione}, "
+                f"riferimenti {riga.rif_a or '-'}/{riga.rif_b or '-'}): i conguagli a credito superano le ritenute "
+                "della delega. Il recupero dell'eccedenza non ha ancora una fonte, la delega non si trasmette",
+            )
+    for riga in crediti:
+        if riga.credito < 0:
+            ferma(
+                "credito_negativo",
+                "/".join(riga.chiave),
+                f"Il totale a credito del codice {riga.tributo} e' negativo ({riga.credito}; sezione {riga.sezione}): "
+                "un credito negativo non e' un caso modellato, la delega non si trasmette",
+            )
     righe, compensazioni, residui = _compensa(debiti, crediti)
     if crediti and not debiti:
         ferma(

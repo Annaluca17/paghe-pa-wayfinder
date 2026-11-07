@@ -42,6 +42,7 @@ from .delega import (
     situazione_delega,
     trasmetti_delega,
 )
+from .esito_730_4 import Esito730, esito_730_4, rimborso_730_4
 from .f24ep import serializza as serializza_f24ep
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
@@ -104,6 +105,7 @@ __all__ = [
     "Differenza",
     "Escluso",
     "Esito",
+    "Esito730",
     "Fermo",
     "Fatto",
     "Importo",
@@ -133,6 +135,8 @@ __all__ = [
     "differenze",
     "emetti_esito",
     "emetti_versione",
+    "esito_730_4",
+    "rimborso_730_4",
     "leggi_versione",
     "registra_pagamento_eseguito",
     "registra_ricevuta_delega",

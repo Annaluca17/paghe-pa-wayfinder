@@ -29,6 +29,7 @@ from paghe import (
     registra_pagamento_eseguito,
     registra_ricevuta_delega,
     registra_versamento_delega,
+    rimborso_730_4,
     segnala_scostamento_contributi,
     situazione_delega,
     stato_delega,
@@ -159,6 +160,10 @@ class Ufficio:
     def fatto(self, rapporto, tipo, valore, dal, al=None, atto=None):
         self._conta_fatto(f"rapporto {rapporto}: {tipo}")
         return self.registro.registra_fatto(rapporto, tipo, valore, dal, al, atto)
+
+    def esito_730_4(self, persona, rimborso, anno_redditi, dal, atto):
+        self._conta_fatto(f"persona {persona}: esito 730-4")
+        return self.registro.registra_esito_730_4(persona, rimborso, anno_redditi, dal, atto)
 
     def annulla(self, rapporto, fatto_id, tipo, motivo):
         self._conta_fatto(f"rapporto {rapporto}: annullamento di {tipo}")
@@ -362,7 +367,7 @@ def _fuori_servizio(r: S.Rapporto, mese: Mese) -> bool:
     return (r.al is not None and r.al < mese.primo_giorno) or r.dal > mese.ultimo_giorno
 
 
-def _importi_del_mese(c: _Contesto, mese: Mese, tag: str, passo: Passo, arrivi: dict) -> dict[str, list]:
+def _importi_del_mese(c: _Contesto, mese: Mese, tag: str, passo: Passo, arrivi: dict, valuta: date) -> dict[str, list]:
     """Il calcolo di ogni rapporto: un errore del nucleo ferma quel rapporto e non gli altri."""
     reg, corpus = c.registro, c.corpus
     importi: dict[str, list] = {}
@@ -376,6 +381,12 @@ def _importi_del_mese(c: _Contesto, mese: Mese, tag: str, passo: Passo, arrivi: 
                 dettagli.append(
                     f"arretrato su febbraio, differenza rispetto all'esito pagato: {len(arretrato)} righe, netto "
                     f"{_soldi(sum((i.valore for i in arretrato), Decimal(0)))}"
+                )
+            rimborso = rimborso_730_4(reg, corpus, r.id, valuta)
+            if rimborso is not None:
+                righe.append(rimborso)
+                dettagli.append(
+                    f"rimborso del 730-4: {_soldi(rimborso.valore)}, anno dei redditi dichiarati {rimborso.anno_imposta}"
                 )
             if tag == "2026-03" and r.id == "R03":
                 performance = [i for i in calcola(reg, corpus, r.id, Mese(2025, 12)) if i.istituto == "performance"]
@@ -440,16 +451,6 @@ def _controlla_fiscale(c: _Contesto, versione) -> None:
                 "dedurli. Da confermare con chi conosce il fisco: se l'imponibile IRPEF e' al netto dei contributi "
                 "obbligatori, la ritenuta e' calcolata troppo alta.",
             )
-        for riga in righe:
-            if riga.natura == "rimborso_730" and riga.effetto == "nessuno":
-                netto = next(n.netto for n in versione.netti if n.rapporto == r.id)
-                esecuzione.difetto(
-                    "Il rimborso 730 non puo' essere insieme nel netto e a credito nella delega",
-                    f"{r.id}, {versione.valuta_prevista}: il rimborso {_soldi(riga.importo.valore)} e' una riga con un solo "
-                    f"effetto. Dichiarato a credito F24EP (effetto nessuno sul netto), il netto resta {_soldi(netto)} e "
-                    "il lavoratore non lo riceve; dichiarato sul netto, il sostituto non avrebbe il credito da "
-                    "compensare. Servirebbero due righe dallo stesso importo, e la struttura ne ammette una.",
-                )
         if r.al is not None and not any(riga.istituto == "conguaglio_irpef" for riga in righe):
             esecuzione.difetto(
                 "Il conguaglio fiscale alla cessazione non c'e'",
@@ -626,7 +627,8 @@ def _delega(c: _Contesto, tag: str, mese: Mese, versione, giorni: dict, arrivi: 
         )
     for dato in delega.dati_mancanti:
         fermi.append(Fermo(tag, "delega", in_delega, f"dato mancante {dato.tipo}", dato.motivo, bloccati=in_delega))
-    negative = [riga for riga in delega.righe if riga.debito < 0]
+    # Una riga a debito negativa deve fermare la delega (caso `debito_negativo`): il difetto e' che risulti pronta.
+    negative = [riga for riga in delega.righe if riga.debito < 0] if delega.pronta else []
     for riga in negative:
         try:
             modulo_delega._file_telematico(delega.ente, giorni["versamento"], delega.righe)
@@ -727,7 +729,7 @@ def esegui(uscita: Path | None = None, tieni_aperto: bool = False, denuncia_di_d
 
     arrivi: dict = {}
     c.vai(date(2026, 3, 19))
-    importi = _importi_del_mese(c, S.MARZO, "2026-03", c.passo("2026-03", "calcolo"), arrivi)
+    importi = _importi_del_mese(c, S.MARZO, "2026-03", c.passo("2026-03", "calcolo"), arrivi, date(2026, 3, 27))
     versione = _versione(c, "2026-03", date(2026, 3, 27), importi, arrivi)
     if versione is not None:
         _conferma_e_pagamento(c, "2026-03", versione, date(2026, 3, 27), date(2026, 3, 20))
@@ -746,10 +748,10 @@ def esegui(uscita: Path | None = None, tieni_aperto: bool = False, denuncia_di_d
         u.ultimo_pagamento(2026, S.ULTIMO_PAGAMENTO_2026)
     c.vai(date(2026, 12, 2))
     with u.fase("ricorrente", "2026-12"):
-        u.fatto("R07", "rimborso_irpef_730", S.RIMBORSO_730, S.DICEMBRE.primo_giorno, S.DICEMBRE.ultimo_giorno, S.ATTO_RIMBORSO)
+        u.esito_730_4("P07", Decimal(S.RIMBORSO_730), S.ANNO_REDDITI_730, S.ATTO_RIMBORSO.data, S.ATTO_RIMBORSO)
     arrivi = {}
     c.vai(date(2026, 12, 10))
-    importi = _importi_del_mese(c, S.DICEMBRE, "2026-12", c.passo("2026-12", "calcolo"), arrivi)
+    importi = _importi_del_mese(c, S.DICEMBRE, "2026-12", c.passo("2026-12", "calcolo"), arrivi, S.ULTIMO_PAGAMENTO_2026)
     versione = _versione(c, "2026-12", S.ULTIMO_PAGAMENTO_2026, importi, arrivi)
     if versione is not None:
         _conferma_e_pagamento(c, "2026-12", versione, S.ULTIMO_PAGAMENTO_2026, date(2026, 12, 11))

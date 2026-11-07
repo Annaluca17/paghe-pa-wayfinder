@@ -42,6 +42,9 @@ ESITI_RICEVUTA = ("positivo", "negativo", "sospeso")
 CANALI_DI_VERSAMENTO = ("f24ep", "bonifico")
 PROVENIENZE_DI_VERSAMENTO = ("addebito", "bonifico", "regolarizzazione")
 
+# Nature che la delega F24EP porta a credito del sostituto, qualunque sia il canale della riga (ADR 0023).
+NATURE_A_CREDITO = frozenset({"rimborso_730", "credito_sostituto"})
+
 _SEGNO = {"piu": 1, "meno": -1, "nessuno": 0}
 
 
@@ -726,7 +729,11 @@ def stato_delega(registro: Registro, versamento: str, noto_al: datetime | None =
 
 
 def _riga_riferita(registro: Registro, riferimento: RiferimentoRiga, canale: str, istante: datetime) -> Importo:
-    """La riga di composizione indicata, ammessa solo se è a un terzo, sul canale giusto, di un rapporto pagato."""
+    """La riga di composizione indicata, ammessa solo se è a un terzo, sul canale giusto, di un rapporto pagato.
+
+    Sul canale F24EP e' ammessa anche una riga a credito del sostituto (rimborso 730, credito), anche se e' sul netto
+    verso il beneficiario: la delega la compensa, e' la stessa riga che il lavoratore incassa (ADR 0023).
+    """
     versione = leggi_versione(registro, riferimento.versione_id)
     trovata = next(
         (r for r in versione.righe if versione.riferimento(r) == riferimento),
@@ -734,7 +741,8 @@ def _riga_riferita(registro: Registro, riferimento: RiferimentoRiga, canale: str
     )
     if trovata is None:
         raise ErroreRegistro(f"La riga {riferimento.in_dizionario()} non è nella versione {riferimento.versione_id}")
-    if trovata.destinatario != "terzo" or trovata.canale != canale:
+    a_credito = canale == "f24ep" and trovata.natura in NATURE_A_CREDITO
+    if not a_credito and (trovata.destinatario != "terzo" or trovata.canale != canale):
         raise ErroreRegistro(
             f"La riga {trovata.istituto} del rapporto {trovata.rapporto} non è un versamento a un terzo sul canale {canale}"
         )
