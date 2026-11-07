@@ -15,16 +15,21 @@ from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 from .corpus import Corpus
 from .denuncia import calcola_denuncia, periodi_in_servizio
+from .errori import ErroreCalcolo, ErroreRegistro, VistaFerma
 from .lista_pos_pa import TIPI_PART_TIME, DatoMancante, QuadroFermo
 from .modello import (
     FATTO_PART_TIME,
     FATTO_PRIMA_ISCRIZIONE_DAL_1996,
     FATTO_TERMINE_PER_SOSTITUZIONE,
     FATTO_TIPO_PART_TIME,
+    Importo,
+    TipoEsito,
 )
 from .part_time import TIPO_PROGRAMMAZIONE, programmazione_del_mese
 from .registro import Registro
 from .tempo import Mese, Periodo, in_utc
+
+TIPO_INVIO = "denuncia_individuale_inviata"  # tipo dell'evento che registra l'invio
 
 # TipoImpiego della ListaPosPA (Allegato tecnico 4.33.1, pp. 235-236).
 IMPIEGHI_TEMPO_DETERMINATO = {"17", "18"}
@@ -251,6 +256,23 @@ class _Vista:
         return {giorno: programmazione.ore[giorno] for giorno in self.giorni}
 
 
+CAMPI_SEMPLICI = (
+    "tipo_contribuzione",
+    "imponibile",
+    "qualifica1",
+    "qualifica2",
+    "qualifica3",
+    "regime_post95",
+    "codice_contratto",
+    "tipo_codice_contratto",
+    "perc_part_time",
+    "perc_part_time_mese",
+    "ore_contribuite",
+    "settimane_utili",
+    "tipo_lav_stat",
+)
+
+
 def _tipo_lav_stat(part_time: _PartTime) -> str | None:
     """DR00: part-time verticale o misto senza alcuna ora programmata nel mese (Allegato tecnico 4.33.1, p. 133)."""
     if part_time.qualifica2 in PART_TIME_CON_PERCENTUALE_DEL_MESE and part_time.ore is not None:
@@ -275,17 +297,24 @@ def denuncia_individuale(
 ) -> DenunciaIndividuale | None:
     """DenunciaIndividuale del rapporto nel mese; None se il rapporto non è un tempo determinato."""
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    return _vista_e_righe(registro, corpus, rapporto, mese, istante)[0]
+
+
+def _vista_e_righe(
+    registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime
+) -> tuple[DenunciaIndividuale | None, tuple[Importo, ...]]:
+    """La vista e le righe pagate che compongono il suo Imponibile (la base CPDEL dei periodi in servizio)."""
     periodi = periodi_in_servizio(registro, corpus, rapporto, mese, istante)
     if not periodi:
-        return None
+        return None, ()
     primo = periodi[0].dal
     fatto = registro.vigenti_per_giorno(rapporto, "tipo_impiego", Periodo(primo, primo), istante)[0]
     impiego = str(fatto.valore)
     if impiego in IMPIEGHI_FUORI_PERIMETRO:
         motivo = f"Tipo impiego {impiego}, {IMPIEGHI_FUORI_PERIMETRO[impiego]}: fuori dal perimetro della vista (ADR 0027)"
-        return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),))
+        return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),)), ()
     if impiego not in IMPIEGHI_TEMPO_DETERMINATO:
-        return None
+        return None, ()
     denuncia = calcola_denuncia(registro, corpus, rapporto, mese, istante)
     pagati = [periodo for periodo in denuncia.periodi if periodo.in_servizio and periodo.basi]
     if pagati and not any(periodo.base("cpdel") for periodo in pagati):
@@ -293,7 +322,7 @@ def denuncia_individuale(
             f"Tempo determinato con tipo impiego {impiego} e pensione non in CPDEL (nessuna base cpdel nel mese): "
             "fuori dal perimetro della vista (ADR 0027)"
         )
-        return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),))
+        return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),)), ()
     vista = _Vista(registro, corpus, rapporto, mese, istante, sorted({g for p in periodi for g in p.giorni()}))
     qualifica1 = vista.codice("Qualifica1", "area")
     qualifica3 = vista.codice("Qualifica3", FATTO_TERMINE_PER_SOSTITUZIONE)
@@ -301,10 +330,12 @@ def denuncia_individuale(
     codice_contratto = vista.codice("CodiceContratto", "contratto")
     tipo_codice_contratto = vista.codice("TipoCodiceContratto", "contratto")
     part_time = vista.part_time(impiego)
-    cpdel = [periodo.base("cpdel").valore for periodo in pagati if periodo.base("cpdel")]
+    basi = [periodo.base("cpdel") for periodo in pagati if periodo.base("cpdel")]
+    cpdel = [base.valore for base in basi]
+    righe = {riga.chiave: riga for base in basi for riga in base.derivazione.importi}
     # Senza importi pagati l'Imponibile manca, e con lui il Contributo (obbligatorio solo se c'è l'Imponibile, DT p. 52).
     imponibile = int(sum(cpdel, Decimal(0)).to_integral_value(ROUND_HALF_UP)) if cpdel else None
-    return DenunciaIndividuale(
+    finale = DenunciaIndividuale(
         rapporto,
         mese,
         tipo_contribuzione=TIPO_CONTRIBUZIONE,
@@ -326,9 +357,156 @@ def denuncia_individuale(
         mancanti=tuple(vista.mancanti),
         bozza=tuple(vista.motivi_bozza),
     )
+    return finale, tuple(righe[chiave] for chiave in sorted(righe, key=lambda c: (c[2].dal, c[1])))
 
 
 def _contributo(corpus: Corpus, mese: Mese, imponibile: int) -> Decimal:
     """Imponibile dichiarato (intero) per l'aliquota NASpI, al centesimo: i millesimi da 5 a 9 salgono (DT p. 31)."""
     aliquota = sum((corpus.parametro(nome).vigenza_per(mese).valore for nome in ALIQUOTE_NASPI), Decimal(0))
     return (imponibile * aliquota / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+
+
+@dataclass(frozen=True)
+class DenunciaAziendale:
+    """Quadratura della posizione nel mese: numero delle denunce individuali e totale a debito, intero (DT pp. 156, 171)."""
+
+    mese: Mese
+    num_den_indiv: int
+    totale_a_debito: int
+
+
+def denuncia_aziendale(viste: list[DenunciaIndividuale]) -> DenunciaAziendale:
+    """NumDenIndiv e TotaleADebito delle denunce individuali dello stesso mese."""
+    mesi = {vista.mese for vista in viste}
+    if len(mesi) > 1:
+        raise ErroreCalcolo("La denuncia aziendale quadra denunce individuali dello stesso mese, non di mesi diversi")
+    totale = sum((vista.contributo for vista in viste if vista.contributo is not None), Decimal(0))
+    return DenunciaAziendale(
+        mese=next(iter(mesi)) if mesi else None,
+        num_den_indiv=len(viste),
+        totale_a_debito=int(totale.to_integral_value(ROUND_HALF_UP)),
+    )
+
+
+# --- Esito dichiarato (ADR 0027; come la delega F24EP, ADR 0023) ---
+
+
+@dataclass(frozen=True)
+class InvioDenunciaIndividuale:
+    """La denuncia individuale com'è stata inviata: un esito dichiarato che non cambia più. Si rilegge dal registro.
+
+    `esito_id` è l'esito dichiarato con le righe pagate dell'Imponibile; è assente se il mese non ha imponibile.
+    """
+
+    id: str
+    rapporto: str
+    mese: Mese
+    vista: DenunciaIndividuale
+    esito_id: int | None
+    evento_id: int
+
+
+def _chiave_invio(invio_id: str) -> str:
+    return f"denuncia_individuale:{invio_id}"
+
+
+def _in_dizionario(vista: DenunciaIndividuale) -> dict:
+    """Gli elementi dichiarati della vista, come testo: ciò che l'invio fissa."""
+    dichiarati = {campo: getattr(vista, campo) for campo in CAMPI_SEMPLICI}
+    dichiarati["contributo"] = str(vista.contributo) if vista.contributo is not None else None
+    dichiarati["settimane"] = [[s.id, s.copertura] for s in vista.settimane]
+    dichiarati["giorni"] = [[g.giorno.isoformat(), g.lavorato] for g in vista.giorni]
+    return dichiarati
+
+
+def _da_dizionario(rapporto: str, mese: Mese, dati: dict) -> DenunciaIndividuale:
+    contributo = dati["contributo"]
+    return DenunciaIndividuale(
+        rapporto,
+        mese,
+        **{campo: dati[campo] for campo in CAMPI_SEMPLICI},
+        contributo=Decimal(contributo) if contributo is not None else None,
+        settimane=tuple(Settimana(i, copertura) for i, copertura in dati["settimane"]),
+        giorni=tuple(Giorno(date.fromisoformat(g), lavorato) for g, lavorato in dati["giorni"]),
+    )
+
+
+def _contenuto_dell_invio(invio_id: str, vista: DenunciaIndividuale) -> dict:
+    return {"id": invio_id, "rapporto": vista.rapporto, "mese": str(vista.mese), "vista": _in_dizionario(vista)}
+
+
+def _invio_dal_evento(evento) -> InvioDenunciaIndividuale:
+    dati = evento.contenuto
+    mese = Mese.da_testo(dati["mese"])
+    return InvioDenunciaIndividuale(
+        dati["id"], dati["rapporto"], mese, _da_dizionario(dati["rapporto"], mese, dati["vista"]), evento.esito_id, evento.id
+    )
+
+
+def invia_denuncia_individuale(
+    registro: Registro, corpus: Corpus, invio_id: str, adattatore: str, rapporto: str, mese: Mese
+) -> InvioDenunciaIndividuale:
+    """Invia la denuncia individuale del mese: l'esito dichiarato nasce qui e non cambia più.
+
+    Con lo stesso identificativo e la stessa vista non ha effetto; con una vista diversa è un errore: la correzione
+    è un nuovo invio, con un altro identificativo. Una vista con dati mancanti, bozza o fermi non si invia.
+    """
+    if not isinstance(invio_id, str) or not invio_id.strip():
+        raise ErroreRegistro("L'invio ha un identificativo")
+    chiave = _chiave_invio(invio_id)
+    istante = registro.adesso()
+    vista, righe = _vista_e_righe(registro, corpus, rapporto, mese, istante)
+    gia = registro.evento(chiave)
+    if gia is not None:
+        nuovo = _contenuto_dell_invio(invio_id, vista) if vista is not None and vista.trasmissibile else None
+        if nuovo is None or nuovo != gia.contenuto:
+            raise ErroreRegistro(f"Evento {chiave}: stesso identificativo con contenuto diverso, rifiutato")
+        return _invio_dal_evento(gia)
+    if vista is None:
+        raise VistaFerma(f"Denuncia individuale {invio_id}: il rapporto {rapporto} non è un tempo determinato in servizio in {mese}")
+    if not vista.trasmissibile:
+        ragioni = [f.motivo for f in vista.fermi] + [f"dato mancante {d}" for d in vista.mancanti] + list(vista.bozza)
+        raise VistaFerma(f"Denuncia individuale {invio_id} non inviabile: " + "; ".join(ragioni))
+    with registro.atomico():
+        esito = registro.registra_esito(TipoEsito.DICHIARATO, istante.date(), righe) if righe else None
+        evento = registro.registra_evento(
+            chiave, TIPO_INVIO, _contenuto_dell_invio(invio_id, vista), adattatore, esito_id=esito.id if esito else None
+        )
+    return _invio_dal_evento(evento)
+
+
+def leggi_invio_denuncia_individuale(registro: Registro, invio_id: str) -> InvioDenunciaIndividuale:
+    evento = registro.evento(_chiave_invio(invio_id))
+    if evento is None or evento.tipo != TIPO_INVIO:
+        raise ErroreRegistro(f"Invio {invio_id}: inesistente")
+    return _invio_dal_evento(evento)
+
+
+@dataclass(frozen=True)
+class ScostamentoInvio:
+    """Un elemento della vista di oggi che differisce da quello dell'ultimo invio."""
+
+    campo: str
+    inviato: object
+    attuale: object
+
+
+def segnala_scostamento_invio(
+    registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, noto_al: datetime | None = None
+) -> tuple[ScostamentoInvio, ...]:
+    """Differenza tra la vista di oggi e l'ultimo invio del rapporto nel mese; vuota se nessun invio o nessuna differenza.
+
+    Non corregge nulla: la correzione è un nuovo invio (ADR 0027).
+    """
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    invii = [
+        e for e in registro.eventi(TIPO_INVIO, istante) if e.contenuto["rapporto"] == rapporto and e.contenuto["mese"] == str(mese)
+    ]
+    if not invii:
+        return ()
+    inviato = invii[-1].contenuto["vista"]
+    vista, _ = _vista_e_righe(registro, corpus, rapporto, mese, istante)
+    attuale = _in_dizionario(vista) if vista is not None else {campo: None for campo in inviato}
+    return tuple(
+        ScostamentoInvio(campo, inviato[campo], attuale.get(campo)) for campo in inviato if inviato[campo] != attuale.get(campo)
+    )

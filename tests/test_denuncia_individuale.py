@@ -10,7 +10,9 @@ from decimal import Decimal
 
 import pytest
 
-from paghe import Atto, Corpus, Mese, calcola, denuncia_individuale
+from paghe import Atto, Corpus, Mese, TipoEsito, calcola, denuncia_aziendale, denuncia_individuale, invia_denuncia_individuale, leggi_invio_denuncia_individuale, segnala_scostamento_invio
+from paghe.denuncia_individuale import DenunciaIndividuale
+from paghe.errori import ErrorePaghe, ErroreRegistro, VistaFerma
 from paghe.part_time import registra_programmazione
 from test_lista_pos_pa import CORPUS, R, assumi, paga, stipendi
 
@@ -387,3 +389,78 @@ def test_il_verticale_con_il_mese_interamente_non_lavorato_e_dr00_con_tutte_le_s
 def test_dr00_non_si_usa_nei_mesi_con_ore_programmate_ne_a_tempo_pieno(registro, orologio, corpus_con_festivi):
     td_part_time(registro, orologio, corpus_con_festivi, "verticale", "50", verticale)
     assert denuncia_individuale(registro, corpus_con_festivi, R, MARZO).tipo_lav_stat is None
+
+
+def individuale(rapporto, contributo, mese=MARZO):
+    return DenunciaIndividuale(rapporto, mese, contributo=None if contributo is None else Decimal(contributo))
+
+
+def test_la_denuncia_aziendale_quadra_il_numero_delle_individuali_e_il_totale_a_debito_all_euro():
+    quadratura = denuncia_aziendale([individuale("A", "33.04"), individuale("B", "0.46"), individuale("C", None)])
+    # 33,50 al centesimo di euro: la metà sale (ROUND_HALF_UP) -> 34; la vista senza imponibile conta ma non somma.
+    assert (quadratura.mese, quadratura.num_den_indiv, quadratura.totale_a_debito) == (MARZO, 3, 34)
+
+
+def test_la_denuncia_aziendale_non_mescola_mesi_diversi():
+    with pytest.raises(ErrorePaghe, match="mesi diversi"):
+        denuncia_aziendale([individuale("A", "1"), individuale("B", "1", Mese(2026, 4))])
+
+
+def td_trasmissibile(registro, orologio, corpus, impiego="17", termine="no"):
+    """Un tempo determinato a tempo pieno con tutti i fatti che la vista chiede, pagato a marzo."""
+    in_servizio_con(registro, impiego)
+    registro.registra_codice(R, "termine_per_sostituzione", termine, date(2026, 1, 1))
+    registro.registra_codice(R, "prima_iscrizione_dal_1996", "no", date(2026, 1, 1))
+    paga(registro, orologio, stipendi(registro, corpus, MARZO), date(2026, 3, 27))
+
+
+def test_l_invio_registra_un_esito_dichiarato_con_le_righe_pagate_dell_imponibile(registro, orologio, corpus_con_festivi):
+    td_trasmissibile(registro, orologio, corpus_con_festivi)
+    orologio.vai(4, 2)
+    invio = invia_denuncia_individuale(registro, corpus_con_festivi, "DI-2026-03-R", "adattatore-prova", R, MARZO)
+    esito = registro.esito(invio.esito_id)
+    assert esito.tipo is TipoEsito.DICHIARATO
+    assert {riga.istituto for riga in esito.righe} == {"tabellare_istruttori", "comparto_istruttori"}  # solo ciò che concorre alla base cpdel
+    assert (invio.rapporto, invio.mese, invio.vista.imponibile, invio.vista.contributo) == (R, MARZO, 2052, Decimal("33.04"))
+    assert invio.vista == denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
+
+
+def invia(registro, corpus, invio_id="DI-2026-03-R"):
+    return invia_denuncia_individuale(registro, corpus, invio_id, "adattatore-prova", R, MARZO)
+
+
+def test_lo_stesso_invio_ripetuto_non_ha_effetto_e_con_una_vista_diversa_e_rifiutato(registro, orologio, corpus_con_festivi):
+    td_trasmissibile(registro, orologio, corpus_con_festivi)
+    orologio.vai(4, 2)
+    primo = invia(registro, corpus_con_festivi)
+    assert invia(registro, corpus_con_festivi) == primo
+    assert len(registro.esiti(TipoEsito.DICHIARATO, registro.adesso())) == 1
+    orologio.vai(4, 3)
+    registro.registra_codice(R, "termine_per_sostituzione", "si", date(2026, 1, 1))  # cambia Qualifica3
+    with pytest.raises(ErroreRegistro, match="stesso identificativo con contenuto diverso"):
+        invia(registro, corpus_con_festivi)
+
+
+def test_una_vista_con_dati_mancanti_non_si_invia_e_non_registra_nulla(registro, orologio, corpus_con_festivi):
+    td_pagato(registro, orologio, corpus_con_festivi)  # senza i fatti di inquadramento che la vista chiede
+    with pytest.raises(VistaFerma, match="dato mancante termine_per_sostituzione"):
+        invia(registro, corpus_con_festivi)
+    assert registro.esiti(TipoEsito.DICHIARATO, registro.adesso()) == [] and registro.evento("denuncia_individuale:DI-2026-03-R") is None
+
+
+def test_dopo_l_invio_un_fatto_che_cambia_la_vista_si_segnala_e_la_correzione_e_un_nuovo_invio(
+    registro, orologio, corpus_con_festivi
+):
+    td_trasmissibile(registro, orologio, corpus_con_festivi)
+    orologio.vai(4, 2)
+    primo = invia(registro, corpus_con_festivi)
+    assert segnala_scostamento_invio(registro, corpus_con_festivi, R, MARZO) == ()
+    orologio.vai(4, 3)
+    registro.registra_codice(R, "termine_per_sostituzione", "si", date(2026, 1, 1))
+    scostamento, = segnala_scostamento_invio(registro, corpus_con_festivi, R, MARZO)
+    assert (scostamento.campo, scostamento.inviato, scostamento.attuale) == ("qualifica3", "D", "A")
+    orologio.vai(4, 4)
+    secondo = invia(registro, corpus_con_festivi, "DI-2026-03-R-bis")
+    assert secondo.vista.qualifica3 == "A" and secondo.esito_id != primo.esito_id
+    assert segnala_scostamento_invio(registro, corpus_con_festivi, R, MARZO) == ()
+    assert leggi_invio_denuncia_individuale(registro, "DI-2026-03-R").vista.qualifica3 == "D"  # il primo non è cambiato
