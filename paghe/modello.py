@@ -97,6 +97,20 @@ class Quota:
     base: Decimal
 
 
+# Fatti del part-time (ADR 0026): la percentuale è numerica, il tipo un codice.
+FATTO_PART_TIME = "part_time"
+FATTO_TIPO_PART_TIME = "tipo_part_time"
+
+
+@dataclass(frozen=True)
+class RiduzionePartTime:
+    """Il part-time applicato a un importo: percentuale, importo pieno prima della riduzione e trattamento dichiarato."""
+
+    percentuale: Decimal
+    importo_pieno: Decimal
+    trattamento: str
+
+
 @dataclass(frozen=True)
 class Derivazione:
     """Da dove viene un importo, fino a norma, parametri e fatti."""
@@ -113,6 +127,7 @@ class Derivazione:
     importi: tuple["Importo", ...]
     quota: Quota | None = None
     concorsi: tuple[ConcorsoLetto, ...] = ()
+    part_time: RiduzionePartTime | None = None
 
 
 # Importi calcolati sul pagato, non sulla competenza: ritenuta e conguaglio fiscale (ADR 0019).
@@ -180,6 +195,17 @@ class Importo:
                     {"istituto": c.istituto, "base": c.base, "misura": c.misura, "dal": c.dal.isoformat(), "riferimento": c.riferimento}
                     for c in d.concorsi
                 ],
+                **(
+                    {
+                        "part_time": {
+                            "percentuale": str(d.part_time.percentuale),
+                            "importo_pieno": str(d.part_time.importo_pieno),
+                            "trattamento": d.part_time.trattamento,
+                        }
+                    }
+                    if d.part_time
+                    else {}
+                ),
             },
         }
 
@@ -225,6 +251,15 @@ class Importo:
                 concorsi=tuple(
                     ConcorsoLetto(c["istituto"], c["base"], c["misura"], date.fromisoformat(c["dal"]), c["riferimento"])
                     for c in d.get("concorsi", ())
+                ),
+                part_time=(
+                    RiduzionePartTime(
+                        Decimal(d["part_time"]["percentuale"]),
+                        Decimal(d["part_time"]["importo_pieno"]),
+                        d["part_time"]["trattamento"],
+                    )
+                    if d.get("part_time")
+                    else None
                 ),
             ),
         )

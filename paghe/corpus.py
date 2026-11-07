@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .errori import ErroreCorpus, ParametroMancante, ValiditaNonUniforme
 from .formula import riferimenti
+from .modello import FATTO_PART_TIME, FATTO_TIPO_PART_TIME
 from .riferimento import motivo_rifiuto
 from .tempo import Mese
 
@@ -48,6 +49,8 @@ RIF_B_F24EP = frozenset({"nessuno", "anno_pagamento", "anno_imposta", "periodo_f
 MODALITA_F24EP = frozenset({"debito", "debito_credito"})
 LIMITI_CREDITO_F24EP = frozenset({"nessuno", "non_modellato"})
 FONTI_SCADENZA = frozenset({"norma", "prassi"})
+# Trattamento nel part-time (ADR 0026): proporzionale si riduce, intero no, da_integrativo lo fissa l'ente con un input da atto.
+TRATTAMENTI_PART_TIME = frozenset({"proporzionale", "intero", "da_integrativo"})
 
 
 @dataclass(frozen=True)
@@ -231,6 +234,32 @@ class Fermo:
             raise ErroreCorpus(f"{soggetto}: il caso va nominato")
         if self.ambito not in AMBITI_FERMO:
             raise ErroreCorpus(f"{soggetto}: ambito obbligatorio, uno di {sorted(AMBITI_FERMO)}")
+
+
+@dataclass(frozen=True)
+class DichiarazioneTrattamentoPartTime:
+    """L'istituto dichiara come si comporta nel part-time (ADR 0026), con date e fonte."""
+
+    istituto: str
+    trattamento: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+    # Tipo del fatto del rapporto, con atto, che porta la percentuale fissata dall'ente: solo per `da_integrativo`.
+    fatto: str | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Part-time {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if self.trattamento not in TRATTAMENTI_PART_TIME:
+            raise ErroreCorpus(f"{soggetto}: trattamento uno di {sorted(TRATTAMENTI_PART_TIME)}")
+        if (self.trattamento == "da_integrativo") != bool(self.fatto):
+            raise ErroreCorpus(f"{soggetto}: il fatto di input va indicato se, e solo se, il trattamento è da_integrativo")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
 
 
 @dataclass(frozen=True)
@@ -624,8 +653,10 @@ class Corpus:
         codici_f24ep: tuple[CodiceF24EP, ...] = (),
         scadenze_f24ep: tuple[RegolaScadenzaF24EP, ...] = (),
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
+        trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
     ):
         self.reale = reale
+        self._trattamenti_part_time = tuple(trattamenti_part_time)
         self._scadenze_f24ep = tuple(scadenze_f24ep)
         self._calendari_festivi = tuple(calendari_festivi)
         self._codici_f24ep = tuple(codici_f24ep)
@@ -636,6 +667,9 @@ class Corpus:
         self.denuncia = denuncia or RegoleDenuncia()
         self.fatto_servizio = fatto_servizio
         fatti_periodo = tuple(fatti_periodo_dichiarato)
+        if trattamenti_part_time:
+            # Un corpus che modella il part-time lo dichiara nel periodo: un cambio di percentuale o di tipo lo apre.
+            fatti_periodo += tuple(f for f in (FATTO_PART_TIME, FATTO_TIPO_PART_TIME) if f not in fatti_periodo)
         if fatto_servizio and fatto_servizio not in fatti_periodo:
             fatti_periodo = (fatto_servizio, *fatti_periodo)
         self.fatti_periodo_dichiarato = fatti_periodo
@@ -654,6 +688,7 @@ class Corpus:
         self._convalida_denuncia()
         self._convalida_fiscale()
         self._convalida_composizione()
+        self._convalida_part_time()
         self._convalida_catalogo_f24ep()
         if reale:
             self._rifiuta_fittizi()
@@ -674,6 +709,7 @@ class Corpus:
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
+        elenco += [(f"Part-time {t.istituto}", t.riferimento) for t in self._trattamenti_part_time]
         elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
         elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
         elenco += [("Proroga della scadenza F24EP", r.proroga.riferimento) for r in self._scadenze_f24ep if r.proroga]
@@ -720,6 +756,15 @@ class Corpus:
             for altra in self._mappature[indice + 1 :]:
                 if (altra.istituto, altra.sistema) == (mappatura.istituto, mappatura.sistema):
                     _vigenze_sovrapposte([mappatura, altra], soggetto)
+
+    def _convalida_part_time(self) -> None:
+        noti = self._istituti_noti()
+        for indice, dichiarazione in enumerate(self._trattamenti_part_time):
+            if dichiarazione.istituto not in noti:
+                raise ErroreCorpus(f"Part-time {dichiarazione.istituto}: istituto ignoto")
+            for altra in self._trattamenti_part_time[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], f"Part-time {dichiarazione.istituto}")
 
     def _convalida_catalogo_f24ep(self) -> None:
         for indice, voce in enumerate(self._codici_f24ep):
@@ -972,6 +1017,11 @@ class Corpus:
                  c.destinatario or "", c.canale or "", c.intermedio, c.riferimento]
                 for c in self._composizioni
             )
+        if self._trattamenti_part_time:
+            contenuto["part_time"] = sorted(
+                [t.istituto, t.trattamento, t.dal.isoformat(), t.al.isoformat() if t.al else "", t.fatto or "", t.riferimento]
+                for t in self._trattamenti_part_time
+            )
         if self._mappature:
             contenuto["mappature"] = sorted(
                 [m.istituto, m.sistema, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
@@ -1041,6 +1091,10 @@ class Corpus:
         """Dichiarazione di composizione vigente alla data; None se l'istituto non ne dichiara."""
         return _vigente([c for c in self._composizioni if c.istituto == istituto], giorno)
 
+    def trattamento_part_time(self, istituto: str, giorno: date) -> DichiarazioneTrattamentoPartTime | None:
+        """Trattamento nel part-time vigente alla data; None se l'istituto non lo dichiara."""
+        return _vigente([t for t in self._trattamenti_part_time if t.istituto == istituto], giorno)
+
     def mappatura(
         self, istituto: str, sistema: str, data_pagamento: date, anno_imposta: int | None = None
     ) -> MappaturaEsterna | None:
@@ -1074,7 +1128,8 @@ class Corpus:
 
     def tipi_fatto(self) -> tuple[str, ...]:
         """I tipi di fatto che possono dividere il mese in frazioni."""
-        tipi = set(self.fatti_periodo_dichiarato)
+        tipi = set(self.fatti_periodo_dichiarato) | {FATTO_PART_TIME, FATTO_TIPO_PART_TIME}
+        tipi |= {t.fatto for t in self._trattamenti_part_time if t.fatto}
         for regole in self._regole.values():
             for regola in regole:
                 tipi |= riferimenti(regola.formula).fatti
@@ -1126,6 +1181,17 @@ class Corpus:
             fiscale = _fiscale_da_toml(dati)
             composizioni = tuple(_composizione_da_toml(voce) for voce in dati.get("composizione", []))
             mappature = tuple(_mappatura_da_toml(voce) for voce in dati.get("mappatura", []))
+            trattamenti_part_time = tuple(
+                DichiarazioneTrattamentoPartTime(
+                    istituto=voce["istituto"],
+                    trattamento=voce["trattamento"],
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                    fatto=voce.get("fatto"),
+                )
+                for voce in dati.get("part_time", [])
+            )
             codici_f24ep = tuple(_codice_f24ep_da_toml(voce) for voce in dati.get("codice_f24ep", []))
             scadenze_f24ep = tuple(_scadenza_f24ep_da_toml(voce) for voce in dati.get("scadenza_f24ep", []))
             calendari_festivi = tuple(
@@ -1155,6 +1221,7 @@ class Corpus:
             codici_f24ep=codici_f24ep,
             scadenze_f24ep=scadenze_f24ep,
             calendari_festivi=calendari_festivi,
+            trattamenti_part_time=trattamenti_part_time,
         )
 
     @classmethod

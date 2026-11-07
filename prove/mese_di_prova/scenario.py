@@ -7,7 +7,8 @@ prova, nessun ente reale. Lo scenario dice cosa l'Ufficio personale registra e q
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
+from decimal import Decimal
 
 from paghe import Atto, Mese
 
@@ -90,11 +91,14 @@ PERFORMANCE_2025 = "600.00"
 RIMBORSO_730 = "150.00"
 ANNO_REDDITI_730 = 2025  # i redditi dichiarati nel 730 il cui esito (730-4) porta il rimborso
 PART_TIME_PERCENTUALE = "60"
+PART_TIME_TIPO = "verticale"  # tre giornate su cinque a orario pieno: lunedi', martedi', mercoledi'
+ORE_GIORNATA_PIENA = Decimal("7.2")  # 36 ore settimanali su cinque giorni
 
 # Atti di fantasia: riferimento nel formato ente:<ente>:<tipo>:<data>;<numero>
 ATTO_PERFORMANCE = Atto("ente:ente_di_prova:determina:2026-03-04;41", date(2026, 3, 4))
 ATTO_PROGRESSIONE = Atto("ente:ente_di_prova:determina:2026-03-05;42", date(2026, 3, 5))
 ATTO_RIMBORSO = Atto("ente:ente_di_prova:comunicazione.730:2026-11-30;7304", date(2026, 11, 30))
+ATTO_PROGRAMMAZIONE = Atto("ente:ente_di_prova:determina:2026-01-09;43", date(2026, 1, 9))
 ATTO_DETRAZIONI = Atto("ente:ente_di_prova:dichiarazione.detrazioni:2026-01-09;1", date(2026, 1, 9))
 
 
@@ -108,3 +112,12 @@ def fatti_inquadramento(r: Rapporto) -> dict[str, str]:
         "area": r.area,
         "regime_fine_servizio": r.regime,
     }
+
+
+def programmazione_part_time_2026() -> dict[date, Decimal]:
+    """La programmazione annuale di R04: ore per ogni giorno del 2026, zero nei giorni non lavorativi."""
+    giorno, fine, ore = date(2026, 1, 1), date(2026, 12, 31), {}
+    while giorno <= fine:
+        ore[giorno] = ORE_GIORNATA_PIENA if giorno.weekday() < 3 else Decimal(0)
+        giorno += timedelta(days=1)
+    return ore

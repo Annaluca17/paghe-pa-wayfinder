@@ -15,7 +15,18 @@ from typing import Callable
 from .corpus import Corpus, Regola
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante
 from .formula import PRECISIONE, riferimenti, valuta
-from .modello import MATURAZIONI_FISCALI, Derivazione, Esito, Fatto, Importo, ParametroLetto, Quota, TipoEsito
+from .modello import (
+    FATTO_PART_TIME,
+    MATURAZIONI_FISCALI,
+    Derivazione,
+    Esito,
+    Fatto,
+    Importo,
+    ParametroLetto,
+    Quota,
+    RiduzionePartTime,
+    TipoEsito,
+)
 from .registro import Registro
 from .riferimento import solo_prassi
 from .tempo import Mese, Periodo, in_utc
@@ -147,6 +158,51 @@ class _Lettore:
         )
 
 
+    def con_part_time(self, regola: Regola, periodo: Periodo, importo: Importo) -> Importo:
+        """Rapporto in part-time: l'importo pieno della frazione si riduce secondo il trattamento dichiarato (ADR 0026)."""
+        if riferimenti(regola.formula).importi:
+            return importo  # deriva da importi già ridotti
+        percentuale = self.fatto(FATTO_PART_TIME, periodo)
+        if percentuale is None:
+            return importo
+        dichiarazione = self.corpus.trattamento_part_time(regola.istituto, periodo.dal)
+        if dichiarazione is None or not dichiarazione.copre(periodo.al):
+            raise CasoNonModellato(
+                f"Rapporto {self.rapporto}: caso non modellato, l'istituto {regola.istituto} non dichiara il "
+                f"trattamento nel part-time per {periodo} (fatto {FATTO_PART_TIME} dal {percentuale.valido_dal})"
+            )
+        fatti = {fatto.id: fatto for fatto in importo.derivazione.fatti}
+        fatti[percentuale.id] = percentuale
+        misura = percentuale
+        if dichiarazione.trattamento == "da_integrativo":
+            misura = self.fatto(dichiarazione.fatto, periodo)
+            if misura is None:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, il trattamento nel part-time di {regola.istituto} "
+                    f"è da integrativo e manca l'input da atto (fatto {dichiarazione.fatto}) per {periodo}"
+                )
+            if misura.atto is None or misura.categoriale:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, il fatto {dichiarazione.fatto} di {regola.istituto} "
+                    f"non è un valore numerico con atto (#{misura.id})"
+                )
+            fatti[misura.id] = misura
+        valore = importo.valore
+        if dichiarazione.trattamento != "intero":
+            with localcontext() as contesto:
+                contesto.prec = PRECISIONE
+                valore = _arrotonda(importo.valore * misura.valore / 100, regola.decimali)
+        return replace(
+            importo,
+            valore=valore,
+            derivazione=replace(
+                importo.derivazione,
+                fatti=tuple(fatti[numero] for numero in sorted(fatti)),
+                part_time=RiduzionePartTime(misura.valore, importo.valore, dichiarazione.trattamento),
+            ),
+        )
+
+
 class _Calcolo:
     def __init__(self, lettore: _Lettore, competenza: Mese):
         self.lettore = lettore
@@ -197,7 +253,7 @@ class _Calcolo:
 
             importo = self.lettore.importo(regola, frazione, leggi)
             if importo is not None:
-                righe[indice] = importo
+                righe[indice] = self.lettore.con_part_time(regola, frazione, importo)
         righe = self._applica_quote(istituto, righe)
         self._righe_frazione[istituto] = righe
         return righe

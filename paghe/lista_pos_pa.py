@@ -17,7 +17,8 @@ from decimal import Decimal
 from .calcolo import calcola
 from .corpus import Corpus
 from .denuncia import Denuncia, PeriodoDenuncia, SU_CESSATO, _denuncia, calcola_denuncia, periodi_in_servizio, righe_pagate
-from .modello import Importo
+from .modello import FATTO_PART_TIME, FATTO_TIPO_PART_TIME, Importo
+from .part_time import TIPO_PROGRAMMAZIONE, programmazione_del_mese
 from .registro import Registro
 from .tempo import Mese, Periodo, in_utc
 
@@ -45,6 +46,10 @@ TIPO_CONTRIBUTO_ORDINARIO = (
     {"1", "2", "5", "6", "8", "9", "10", "13", "14", "17", "18", "38", "39", "40", "41", "42", "43", "44", "46", "47", "48", "49", "50", "51", "52", "53"},
 )
 V1_RECUPERO_SU_CESSATO = "V1 causale 7, codice motivo 7"
+# PartTimePA (DT 4.33, p. 185; AT 4.33.1, p. 244; ricerca in docs/research/part-time-lista-pos-pa.md).
+IMPIEGHI_PART_TIME = {"8", "18"}  # TipoImpiego che rendono obbligatorio TipoPartTime
+TIPI_PART_TIME = {"orizzontale": "P", "verticale": "V", "misto": "M"}
+MILLESIMI_TEMPO_PIENO = 100000  # PercPartTime «espresso in millesimi», massimo 100000
 
 
 @dataclass(frozen=True)
@@ -57,12 +62,21 @@ class Lavoratore:
 
 
 @dataclass(frozen=True)
+class PartTimePA:
+    """Elemento PartTimePA: `perc` è PercPartTime in millesimi; None se il tracciato non la determina (bozza)."""
+
+    tipo: str
+    perc: int | None
+
+
+@dataclass(frozen=True)
 class Inquadramento:
     tipo_impiego: str | None
     tipo_servizio: str | None
     contratto: str | None
     qualifica: str | None
     regime_fine_servizio: str | None
+    part_time: PartTimePA | None = None
 
 
 @dataclass(frozen=True)
@@ -163,6 +177,7 @@ class _Vista:
         self.mancanti: list[DatoMancante] = []
         self.avvisi: list[str] = []
         self.fermi: list[QuadroFermo] = []
+        self.motivi_bozza: list[str] = []
 
     def _chiedi(self, fatto: str, periodo: Periodo | None = None) -> None:
         dato = DatoMancante(fatto, periodo)
@@ -198,7 +213,59 @@ class _Vista:
         for tipo, valore in valori.items():
             if valore is None:
                 self._chiedi(tipo, periodo)
-        return Inquadramento(**valori)
+        return Inquadramento(**valori, part_time=self.part_time(periodo, valori["tipo_impiego"]))
+
+    def _motivo_bozza(self, motivo: str) -> None:
+        testo = f"{motivo}: bozza non trasmissibile"
+        if testo not in self.motivi_bozza:
+            self.motivi_bozza.append(testo)
+
+    def part_time(self, periodo: Periodo, tipo_impiego: str | None) -> PartTimePA | None:
+        """TipoPartTime e PercPartTime del periodo; ciò che il tracciato non determina resta bozza o dato mancante."""
+        percentuale, tipo = (
+            self.registro.vigenti_per_giorno(self.rapporto, fatto, _giorno(periodo.dal), self.istante)[0]
+            for fatto in (FATTO_PART_TIME, FATTO_TIPO_PART_TIME)
+        )
+        if percentuale is None and tipo is None and tipo_impiego not in IMPIEGHI_PART_TIME:
+            return None
+        for fatto, assente in ((FATTO_TIPO_PART_TIME, tipo is None), (FATTO_PART_TIME, percentuale is None)):
+            if assente:
+                self._chiedi(fatto, periodo)
+        if percentuale is None or tipo is None:
+            return None
+        codice = TIPI_PART_TIME.get(str(tipo.valore))
+        if codice is None:
+            self._motivo_bozza(
+                f"Tipo part-time {tipo.valore!r} dal {tipo.valido_dal} non riconosciuto "
+                f"(ammessi {', '.join(sorted(TIPI_PART_TIME))})"
+            )
+            return None
+        return PartTimePA(codice, self._perc_part_time(codice, percentuale.valore, periodo))
+
+    def _perc_part_time(self, codice: str, percentuale: Decimal, periodo: Periodo) -> int | None:
+        if codice == "P":
+            millesimi = percentuale * 1000
+            if millesimi != millesimi.to_integral_value() or not 0 < millesimi < MILLESIMI_TEMPO_PIENO:
+                self._motivo_bozza(
+                    f"Part-time orizzontale al {percentuale}% dal {periodo.dal}: PercPartTime deve essere un numero "
+                    f"intero di millesimi maggiore di 0 e minore di {MILLESIMI_TEMPO_PIENO}"
+                )
+                return None
+            return int(millesimi)
+        # Verticale e misto: la percentuale del mese dipende dalla programmazione (ADR 0026).
+        mese = Mese(periodo.dal.year, periodo.dal.month)
+        programmazione = programmazione_del_mese(self.registro, self.rapporto, mese, self.istante)
+        if not programmazione.completa:
+            self._chiedi(TIPO_PROGRAMMAZIONE, periodo)
+            return None
+        if codice == "V" and all(programmazione.ore[giorno] == 0 for giorno in periodo.giorni()):
+            return 0  # «Da indicare 0 nel caso di part time verticale con assenza di attività lavorativa» (DT 4.33, p. 185)
+        self._motivo_bozza(
+            f"Part-time {'verticale' if codice == 'V' else 'misto'} dal {periodo.dal}: percentuale mensile "
+            "(PercPartTime) non determinata dal documento tecnico INPS per un periodo lavorato in parte "
+            "(docs/research/part-time-lista-pos-pa.md)"
+        )
+        return None
 
     def codice_cessazione(self, periodo: Periodo) -> str | None:
         """Se il servizio finisce con il periodo, il quadro porta il codice di cessazione o sospensione."""
@@ -495,6 +562,6 @@ def lista_pos_pa(
         quadri=tuple(quadri),
         fermi=tuple(vista.fermi),
         mancanti=tuple(vista.mancanti),
-        bozza=tuple(vista.bozza(quadri)),
+        bozza=tuple(vista.bozza(quadri) + vista.motivi_bozza),
         avvisi=tuple(vista.avvisi),
     )

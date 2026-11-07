@@ -49,11 +49,7 @@ caso = "optante TFR, doppio imponibile TFS e TFR non modellato"
 ambito = "denuncia"
 riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1 + prassi:immedia:nota:2026-11-06;4"
 
-[[fermo]]
-fatto = "part_time"
-caso = "part-time, riproporzionamento non modellato"
-ambito = "calcolo"
-riferimento = "prassi:immedia:nota:2026-11-06;3"
+# Il fermo sul part-time è tolto: ogni istituto di calcolo dichiara il trattamento nel part-time (ADR 0026, ticket #72).
 
 [[fermo]]
 fatto = "aspettativa_sindacale"
@@ -672,3 +668,57 @@ basi = ["tfr_ulteriori"]
 misura = "escluso"
 dal = 2026-01-01
 riferimento = "ccnl:S105:2000-09-14~art49 + prassi:immedia:nota:2026-11-06;5"
+
+# Trattamento nel part-time (ADR 0026, ticket #72). Riferimento letto sul testo ARAN: CCNL 16/11/2022, art. 62, c. 10,
+# «il trattamento economico del personale con rapporto di lavoro a tempo parziale è proporzionale alla prestazione
+# lavorativa, con riferimento a tutte le competenze fisse e periodiche»; l'art. 55, c. 10, del CCNL 23/02/2026
+# lo disapplica e sostituisce con lo stesso testo (effetti dal giorno dopo la stipulazione). Tabellare e indennità di
+# comparto sono competenze fisse e periodiche.
+
+[[part_time]]
+istituto = "tabellare_funzionari"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+[[part_time]]
+istituto = "tabellare_istruttori"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+[[part_time]]
+istituto = "tabellare_operatori_esperti"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+[[part_time]]
+istituto = "tabellare_operatori"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+[[part_time]]
+istituto = "comparto_funzionari"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+[[part_time]]
+istituto = "comparto_istruttori"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+[[part_time]]
+istituto = "comparto_operatori_esperti"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+[[part_time]]
+istituto = "comparto_operatori"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"

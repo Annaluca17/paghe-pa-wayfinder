@@ -99,6 +99,11 @@ def _quadro(x: _Scrittore, q: Quadro, ente: Ente) -> None:
     x.campo("TipoServizio", i.tipo_servizio)
     x.campo("Contratto", i.contratto)
     x.campo("Qualifica", i.qualifica)
+    if i.part_time:
+        x.apri("PartTimePA")
+        x.campo("TipoPartTime", i.part_time.tipo)
+        x.campo("PercPartTime", i.part_time.perc)
+        x.chiudi("PartTimePA")
     x.campo("RegimeFineServizio", i.regime_fine_servizio)
     x.chiudi("InquadramentoLavPA")
     if q.pensionistica or q.previdenziale or q.credito:
