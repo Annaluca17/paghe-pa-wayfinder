@@ -783,3 +783,21 @@ def test_il_pagamento_fisiologico_entra_nell_imponibile_nella_ritenuta_e_nel_con
     assert fiscale.ritenuta.anno_imposta == 2027
     assert fiscale.conguaglio.valore == Decimal("-66.67")  # imposta annua 0,10 * 1500 = 150, meno 216,67 operati
     assert fiscale.conguaglio.anno_imposta == 2027
+
+
+def test_la_performance_di_dicembre_pagata_il_10_gennaio_con_la_cassa_allargata_e_gia_dell_anno_di_competenza(
+    registro, fisco, fisiologico
+):
+    """Non serve nessuna dichiarazione: l'anno d'imposta è il 2026, quello della competenza."""
+    assumi(registro)
+    for corpus in (fisco, fisiologico):
+        righe = stipendio(registro, corpus, Mese(2026, 12))
+        (riga,) = attribuisci_reddito(corpus, righe, date(2027, 1, 10))
+        assert riga.anno_imposta == 2026
+
+
+def test_una_competenza_posteriore_all_anno_d_imposta_ferma_il_calcolo(registro, fisiologico):
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2027, 1))
+    with pytest.raises(CasoNonModellato, match="posteriore all'anno d'imposta"):
+        attribuisci_reddito(fisiologico, righe, date(2026, 12, 20))
