@@ -682,3 +682,11 @@ def test_l_istituto_dichiara_il_pagamento_fisiologico_con_date_e_riferimento():
 def test_il_pagamento_fisiologico_di_un_istituto_ignoto_e_rifiutato():
     with pytest.raises(ErroreCorpus, match="istituto ignoto"):
         Corpus.da_toml(TESTO + FISIOLOGICO.replace('"stipendio"', '"premio_inesistente"'))
+
+
+def test_due_dichiarazioni_fisiologiche_dello_stesso_istituto_non_si_sovrappongono():
+    seconda = FISIOLOGICO.replace("2020-01-01", "2026-01-01").replace("fisiologico-stipendio", "fisiologico-bis")
+    with pytest.raises(ErroreCorpus, match="sovrappost"):
+        Corpus.da_toml(TESTO + FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2026-06-30") + seconda)
+    adiacenti = FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2025-12-31") + seconda
+    assert Corpus.da_toml(TESTO + adiacenti).pagamento_fisiologico("stipendio", date(2026, 1, 1)).riferimento == "fittizio:fisiologico-bis"
