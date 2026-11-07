@@ -110,6 +110,7 @@ CATALOGO = "".join(
 ISTITUTI_A_MANO = (
     ("ritenuta_arretrati", "ritenuta", "meno", "terzo", "f24ep", "104E"),
     ("rimborso_irpef_730", "rimborso_730", "nessuno", "terzo", "f24ep", "150E"),
+    ("rimborso_730_sul_netto", "rimborso_730", "piu", "beneficiario", "accredito", "150E"),
     ("credito_integrativo", "credito_sostituto", "nessuno", "terzo", "f24ep", "170E"),
     ("credito_somma_175", "credito_sostituto", "nessuno", "terzo", "f24ep", "175E"),
     ("credito_senza_codice", "credito_sostituto", "nessuno", "terzo", "f24ep", None),

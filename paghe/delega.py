@@ -329,7 +329,12 @@ def _riporti_usati_da_deleghe_attive(registro: Registro, istante: datetime, igno
 
 
 def _righe_candidate(registro: Registro, mese: Mese, istante: datetime):
-    """(riga di composizione, riferimento, data di pagamento) delle righe F24EP degli esiti pagati del mese."""
+    """(riga di composizione, riferimento, data di pagamento) delle righe degli esiti pagati del mese che la delega legge.
+
+    I debiti sono le righe con canale F24EP. I crediti si ricavano dalla natura, qualunque sia il canale: il rimborso
+    al lavoratore e' una riga sola, sul netto e verso il beneficiario, letta anche dalla delega (ADR 0023). I rapporti
+    sono quelli pagati dall'evento: un credito di un rapporto non pagato non entra.
+    """
     for evento in registro.eventi(TIPO_PAGAMENTO_ESEGUITO, istante):
         pagamento = registro.esito(evento.esito_id).data
         if Mese(pagamento.year, pagamento.month) != mese:
@@ -337,7 +342,7 @@ def _righe_candidate(registro: Registro, mese: Mese, istante: datetime):
         versione = leggi_versione(registro, evento.versione_id)
         for rapporto in evento.contenuto["rapporti"]:
             for riga in versione.righe_del_rapporto(rapporto):
-                if riga.canale == "f24ep":
+                if riga.canale == "f24ep" or riga.natura in NATURE_A_CREDITO:
                     yield riga, versione.riferimento(riga), pagamento
 
 
