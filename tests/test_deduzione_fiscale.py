@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import pytest
 
-from paghe import Corpus, Mese, attribuisci_reddito, calcola_fiscale
+from paghe import Corpus, Mese, TipoEsito, attribuisci_reddito, calcola_fiscale, emetti_esito
 from paghe.errori import ErroreCorpus
 
 from test_fiscale import TESTO, assumi, stipendio
@@ -133,3 +133,28 @@ def test_la_derivazione_della_ritenuta_porta_i_contributi_dedotti(registro, con_
     attribuite = attribuisci_reddito(con_deduzione, [riga], giorno)
     fiscale = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", [*attribuite, contributo(riga, "120")], giorno)
     assert [i.istituto for i in fiscale.ritenuta.derivazione.importi] == ["stipendio", "contributo_lavoratore"]
+
+
+def paga_con_contributo(registro, orologio, corpus, righe, valore, giorno, ultimo=False):
+    """Un pagamento col suo contributo del lavoratore: l'esito pagato li comprende entrambi, come la proposta."""
+    orologio.vai(giorno.month, giorno.day, giorno.year)
+    attribuite = attribuisci_reddito(corpus, righe, giorno)
+    versati = [contributo(righe[0], valore)]
+    fiscale = calcola_fiscale(registro, corpus, "RAPPORTO-1", [*attribuite, *versati], giorno, ultimo_dell_anno=ultimo)
+    contenuto = [*attribuite, *versati, fiscale.ritenuta, *([fiscale.conguaglio] if fiscale.conguaglio else [])]
+    esito = emetti_esito(registro, TipoEsito.PAGATO, giorno, contenuto)
+    registro.registra_pagamento("RAPPORTO-1", esito.id, giorno)
+    orologio.avanza()
+    return fiscale
+
+
+def test_la_ritenuta_di_un_secondo_pagamento_del_mese_deduce_anche_i_contributi_gia_pagati(registro, con_deduzione, orologio):
+    """Imponibile del mese 2000 - 160 = 1840: imposta 83,33 + 0,20 * (1840 - 833,33) = 284,67; già operati 192,67."""
+    assumi(registro)
+    primo = paga_con_contributo(
+        registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 6)), "120", date(2026, 6, 20)
+    )
+    secondo = paga_con_contributo(
+        registro, orologio, con_deduzione, stipendio(registro, con_deduzione, Mese(2026, 5), "500"), "40", date(2026, 6, 27)
+    )
+    assert (primo.ritenuta.valore, secondo.ritenuta.valore) == (Decimal("192.67"), Decimal("92.00"))
