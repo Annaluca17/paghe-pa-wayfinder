@@ -155,7 +155,7 @@ Input da atto del contratto di collaborazione: compenso totale, durata, date e i
 _Avoid_: Compenso mensile, stipendio del collaboratore
 
 **Attestazione della prestazione**:
-Fatto sul rapporto, dal responsabile, che dichiara eseguita la prestazione di una rata. Senza attestazione l'importo resta calcolato ma non entra in una versione di proposta.
+Fatto sul rapporto, dal responsabile, che dichiara eseguita la prestazione di una rata. Senza attestazione l'importo resta calcolato ma non entra in una versione di proposta: il corpus la dichiara come condizione di proposta dell'istituto.
 _Avoid_: Visto, nulla osta
 
 **Convenzione di segreteria**:
@@ -199,7 +199,7 @@ Fatto datato sul mandato di amministratore che dice se l'amministratore è lavor
 _Avoid_: Flag aspettativa
 
 **Posizione previdenziale dell'amministratore**:
-Fatto datato sul mandato di amministratore che nomina la gestione o cassa a cui la persona è iscritta. Con carica, popolazione dell'ente e condizione lavorativa decide se spetta un onere dell'art. 86 e verso chi.
+Fatto datato sul mandato di amministratore che nomina la gestione o cassa a cui la persona è iscritta. Con carica, popolazione dell'ente e condizione lavorativa decide se spetta un onere dell'art. 86 e verso chi. Vale anche per il collaboratore, dove sceglie l'aliquota della gestione separata: `gestione_separata` (nessuna altra cassa, non pensionato), `pensionato`, `altra_cassa`.
 _Avoid_: Cassa di appartenenza (senza data)
 
 **Onere dell'art. 86**:
@@ -279,7 +279,7 @@ Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolar
 _Avoid_: Data di pagamento (finché il pagamento non è eseguito)
 
 **Base imponibile**:
-Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR, gestione separata). Una base non deriva da un'altra, salvo che una norma lo dica.
+Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo Credito, TFS, TFR, gestione separata). Una base non deriva da un'altra, salvo che una norma lo dica. Una base può avere un massimale annuo, un parametro: la base di ogni mese è ciò che resta sotto il massimale, sommando i mesi dell'anno nello stesso ente (gestione separata, 122.295 euro nel 2026).
 _Avoid_: Imponibile (senza dire quale)
 
 **Categoria di reddito**:
@@ -293,6 +293,22 @@ _Avoid_: Flag imponibile
 **Regola di cassa**:
 Regola che legge una base o un'altra regola di cassa. Si sceglie alla data di pagamento, con i parametri vigenti in quel giorno, e produce importi solo nella denuncia. Con `applica_se` vale solo per un codice, letto sul periodo o, fuori servizio, sull'ultimo giorno di servizio.
 _Avoid_: Contributo per competenza
+
+**Condizione di proposta**:
+Fatto che il corpus richiede, per un istituto e con date e riferimento, perché un suo importo entri in una versione di proposta: deve coprire tutti i giorni dell'importo. Senza il fatto l'importo resta calcolato e visibile tra gli esclusi, col motivo. È il caso dell'attestazione della prestazione.
+_Avoid_: Visto, blocco del calcolo (il calcolo prosegue)
+
+**Condizioni congiunte**:
+`anche_se` di una regola: altre condizioni `tipo=codice` che devono valere insieme ad `applica_se`, tutte sui fatti categoriali del periodo. Se una non vale la regola non produce nessun importo.
+_Avoid_: Regola con più condizioni scritte nella formula
+
+**Maturazione onere**:
+Maturazione a giorni di un importo a carico dell'ente: non è reddito della persona e non concorre a nessuna base, come la quota forfettaria dell'art. 86. Entra nella composizione del pagamento ma non nel netto.
+_Avoid_: Contributo (che deriva da una base)
+
+**Output del regime**:
+Dichiarazione del corpus, con date e riferimento, delle basi o degli istituti con cui il regime assegna a una vista i rapporti che le spettano: la ListaPosPA prende chi ha importi nelle basi della gestione dipendenti pubblici, la lista collaboratori chi ha importi in gestione separata più la quota forfettaria. Una vista non conosce i titoli.
+_Avoid_: Filtro per titolo
 
 **Regola sul mese**:
 Regola di cassa che legge il totale del mese delle basi, non il singolo periodo dichiarato, e si espone sull'ultimo periodo, come il contributo dell'1%.
@@ -355,7 +371,7 @@ Vista della denuncia per chi è a tempo determinato con pensione in CPDEL: dichi
 _Avoid_: UniEmens privatistico (che è il canale, non la vista), DM10, flusso DS
 
 **Lista collaboratori**:
-Vista della denuncia per chi è in gestione separata (co.co.co. e quote forfettarie degli amministratori), separata dalla ListaPosPA: ha struttura e identità proprie e segue il mese di erogazione. Produce un esito dichiarato.
+Vista della denuncia per chi è in gestione separata (co.co.co. e quote forfettarie degli amministratori), separata dalla ListaPosPA: ha struttura e identità proprie e segue il mese di erogazione. Produce un esito dichiarato. Finché i codici del tracciato non sono nel corpus resta una bozza non trasmissibile, e lo è anche con una somma di cassa allargata. La quota forfettaria non ha imponibile e sta a carico dell'ente.
 _Avoid_: ListaPosPA dei collaboratori, flusso parasubordinati
 
 **Quadro**:
