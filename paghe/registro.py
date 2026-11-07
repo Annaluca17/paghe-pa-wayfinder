@@ -14,7 +14,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Callable, Iterable
 
 from .errori import ErroreRegistro, ValiditaNonUniforme
-from .modello import Atto, Esito, Fatto, Importo, TipoEsito
+from .modello import Atto, Esito, Evento, Fatto, Importo, TipoEsito
 from .riferimento import data_atto, motivo_rifiuto
 from .tempo import Mese, Periodo, in_utc, istante_in_testo
 
@@ -49,13 +49,42 @@ CREATE TABLE IF NOT EXISTS esiti (
     registrato_il TEXT NOT NULL,
     righe TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS versioni_proposta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    valuta_prevista TEXT NOT NULL,
+    registrato_il TEXT NOT NULL,
+    contenuto TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS stati_versione (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    versione_id INTEGER NOT NULL REFERENCES versioni_proposta (id),
+    stato TEXT NOT NULL,
+    motivo TEXT,
+    registrato_il TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS eventi_ritorno (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chiave TEXT NOT NULL UNIQUE,
+    tipo TEXT NOT NULL,
+    contenuto TEXT NOT NULL,
+    adattatore TEXT NOT NULL,
+    versione_id INTEGER REFERENCES versioni_proposta (id),
+    esito_id INTEGER REFERENCES esiti (id),
+    registrato_il TEXT NOT NULL
+);
 """
 
-TABELLE = ("fatti", "annullamenti", "esiti")
+TABELLE = ("fatti", "annullamenti", "esiti", "versioni_proposta", "stati_versione", "eventi_ritorno")
 TIPO_DATA_PAGAMENTO = "data_pagamento"
 TIPO_PERSONA = "persona"
 TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
 TIPO_IBAN = "iban"
+# Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
+# Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
+TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
 SOGGETTO_RAPPORTO = "rapporto"
 SOGGETTO_PERSONA = "persona"
 SOGGETTO_ENTE = "ente"
@@ -465,8 +494,114 @@ class Registro:
         ).fetchall()
         return [_esito_da_riga(riga) for riga in righe]
 
+    def registra_versione(self, valuta_prevista: date, contenuto: dict) -> tuple[int, datetime]:
+        """Versione di proposta: istantanea immutabile, con lo stato iniziale `inviata` (ADR 0013, 0025)."""
+        istante = self.adesso()
+        with self.atomico():
+            cursore = self._db.execute(
+                "INSERT INTO versioni_proposta (valuta_prevista, registrato_il, contenuto) VALUES (?, ?, ?)",
+                (valuta_prevista.isoformat(), istante_in_testo(istante), _testo(contenuto)),
+            )
+            self._db.execute(
+                "INSERT INTO stati_versione (versione_id, stato, motivo, registrato_il) VALUES (?, 'inviata', NULL, ?)",
+                (cursore.lastrowid, istante_in_testo(istante)),
+            )
+        self._registra(istante)
+        return cursore.lastrowid, istante
+
+    def versione_registrata(self, versione_id: int) -> tuple[date, datetime, dict]:
+        riga = self._db.execute("SELECT * FROM versioni_proposta WHERE id = ?", (versione_id,)).fetchone()
+        if riga is None:
+            raise ErroreRegistro(f"Versione di proposta {versione_id} inesistente")
+        return (
+            date.fromisoformat(riga["valuta_prevista"]),
+            datetime.fromisoformat(riga["registrato_il"]),
+            json.loads(riga["contenuto"]),
+        )
+
+    def versioni_registrate(self, noti_al: datetime) -> list[int]:
+        righe = self._db.execute(
+            "SELECT id FROM versioni_proposta WHERE registrato_il <= ? ORDER BY id", (istante_in_testo(noti_al),)
+        ).fetchall()
+        return [riga[0] for riga in righe]
+
+    def registra_stato_versione(self, versione_id: int, stato: str, motivo: str | None = None) -> None:
+        """Uno stato è un evento: il precedente resta, l'ultimo vale."""
+        self.versione_registrata(versione_id)
+        istante = self.adesso()
+        with self._scrittura():
+            self._db.execute(
+                "INSERT INTO stati_versione (versione_id, stato, motivo, registrato_il) VALUES (?, ?, ?, ?)",
+                (versione_id, stato, motivo, istante_in_testo(istante)),
+            )
+        self._registra(istante)
+
+    def stati_versione(self, versione_id: int, noto_al: datetime) -> list[tuple[str, str | None, datetime]]:
+        """Stati della versione noti all'istante, in ordine di registrazione."""
+        righe = self._db.execute(
+            "SELECT stato, motivo, registrato_il FROM stati_versione WHERE versione_id = ? AND registrato_il <= ?"
+            " ORDER BY id",
+            (versione_id, istante_in_testo(noto_al)),
+        ).fetchall()
+        return [(riga["stato"], riga["motivo"], datetime.fromisoformat(riga["registrato_il"])) for riga in righe]
+
+    def registra_evento(
+        self,
+        chiave: str,
+        tipo: str,
+        contenuto: dict,
+        adattatore: str,
+        versione_id: int | None = None,
+        esito_id: int | None = None,
+    ) -> Evento:
+        """Evento di ritorno con identificativo stabile; l'adattatore che l'ha portato resta nel fatto."""
+        if not chiave or not chiave.strip() or not adattatore or not adattatore.strip():
+            raise ErroreRegistro("Identificativo e adattatore dell'evento sono obbligatori")
+        istante = self.adesso()
+        try:
+            with self._scrittura():
+                cursore = self._db.execute(
+                    "INSERT INTO eventi_ritorno (chiave, tipo, contenuto, adattatore, versione_id, esito_id, registrato_il)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (chiave, tipo, _testo(contenuto), adattatore, versione_id, esito_id, istante_in_testo(istante)),
+                )
+        except sqlite3.IntegrityError as errore:
+            raise ErroreRegistro(f"Evento {chiave}: identificativo già registrato") from errore
+        self._registra(istante)
+        return self._evento_da_riga(
+            self._db.execute("SELECT * FROM eventi_ritorno WHERE id = ?", (cursore.lastrowid,)).fetchone()
+        )
+
+    def evento(self, chiave: str) -> Evento | None:
+        riga = self._db.execute("SELECT * FROM eventi_ritorno WHERE chiave = ?", (chiave,)).fetchone()
+        return self._evento_da_riga(riga) if riga else None
+
+    def eventi(self, tipo: str, noti_al: datetime) -> list[Evento]:
+        righe = self._db.execute(
+            "SELECT * FROM eventi_ritorno WHERE tipo = ? AND registrato_il <= ? ORDER BY id",
+            (tipo, istante_in_testo(noti_al)),
+        ).fetchall()
+        return [self._evento_da_riga(riga) for riga in righe]
+
+    @staticmethod
+    def _evento_da_riga(riga: sqlite3.Row) -> Evento:
+        return Evento(
+            id=riga["id"],
+            chiave=riga["chiave"],
+            tipo=riga["tipo"],
+            contenuto=json.loads(riga["contenuto"]),
+            adattatore=riga["adattatore"],
+            registrato_il=datetime.fromisoformat(riga["registrato_il"]),
+            versione_id=riga["versione_id"],
+            esito_id=riga["esito_id"],
+        )
+
     def chiudi(self) -> None:
         self._db.close()
+
+
+def _testo(contenuto: dict) -> str:
+    return json.dumps(contenuto, ensure_ascii=False, sort_keys=True)
 
 
 def _fatto_da_riga(riga: sqlite3.Row) -> Fatto:
