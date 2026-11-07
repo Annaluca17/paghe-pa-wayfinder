@@ -234,6 +234,20 @@ class Fermo:
 
 
 @dataclass(frozen=True)
+class DichiarazioneTrattamentoPartTime:
+    """L'istituto dichiara come si comporta nel part-time (ADR 0026), con date e fonte."""
+
+    istituto: str
+    trattamento: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
 class Massimale:
     """Base annua sottoposta a massimale: il superamento nell'anno ferma la denuncia (ADR 0005)."""
 
@@ -624,8 +638,10 @@ class Corpus:
         codici_f24ep: tuple[CodiceF24EP, ...] = (),
         scadenze_f24ep: tuple[RegolaScadenzaF24EP, ...] = (),
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
+        trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
     ):
         self.reale = reale
+        self._trattamenti_part_time = tuple(trattamenti_part_time)
         self._scadenze_f24ep = tuple(scadenze_f24ep)
         self._calendari_festivi = tuple(calendari_festivi)
         self._codici_f24ep = tuple(codici_f24ep)
@@ -1041,6 +1057,10 @@ class Corpus:
         """Dichiarazione di composizione vigente alla data; None se l'istituto non ne dichiara."""
         return _vigente([c for c in self._composizioni if c.istituto == istituto], giorno)
 
+    def trattamento_part_time(self, istituto: str, giorno: date) -> DichiarazioneTrattamentoPartTime | None:
+        """Trattamento nel part-time vigente alla data; None se l'istituto non lo dichiara."""
+        return _vigente([t for t in self._trattamenti_part_time if t.istituto == istituto], giorno)
+
     def mappatura(
         self, istituto: str, sistema: str, data_pagamento: date, anno_imposta: int | None = None
     ) -> MappaturaEsterna | None:
@@ -1126,6 +1146,16 @@ class Corpus:
             fiscale = _fiscale_da_toml(dati)
             composizioni = tuple(_composizione_da_toml(voce) for voce in dati.get("composizione", []))
             mappature = tuple(_mappatura_da_toml(voce) for voce in dati.get("mappatura", []))
+            trattamenti_part_time = tuple(
+                DichiarazioneTrattamentoPartTime(
+                    istituto=voce["istituto"],
+                    trattamento=voce["trattamento"],
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                )
+                for voce in dati.get("part_time", [])
+            )
             codici_f24ep = tuple(_codice_f24ep_da_toml(voce) for voce in dati.get("codice_f24ep", []))
             scadenze_f24ep = tuple(_scadenza_f24ep_da_toml(voce) for voce in dati.get("scadenza_f24ep", []))
             calendari_festivi = tuple(
@@ -1155,6 +1185,7 @@ class Corpus:
             codici_f24ep=codici_f24ep,
             scadenze_f24ep=scadenze_f24ep,
             calendari_festivi=calendari_festivi,
+            trattamenti_part_time=trattamenti_part_time,
         )
 
     @classmethod
