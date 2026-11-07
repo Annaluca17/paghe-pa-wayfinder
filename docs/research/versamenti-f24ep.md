@@ -120,6 +120,8 @@ Coerenza con ADR 0023: la ricevuta dell'AdE come esito dichiarato e l'annullamen
 
 Fonte unica per la colonna «Esito»: tabella AdE dei codici F24EP aggiornata al [01/10/2026](https://www.agenziaentrate.gov.it/portale/documents/d/guest/tabella-codici-tributo-f24ep-aggiornata-al-1-ottobre-2026) (confrontata con la versione del 18/09/2025 per i codici sotto). **norma certa** salvo diversa indicazione. Nella tabella ci sono anche codici sospesi: la riga indica la modalità (D = debito, E = debito e credito).
 
+**Correzione (ticket #54, 07/11/2026).** Dove questa tabella dice «estremi = codice catastale» (384E, 385E) o «estremi = sigla provincia» (P201 e le altre causali INPDAP), il valore va nel campo **«Codice»** del rigo, non negli estremi: così l'Allegato 2 e la tabella AdE, rilette nel ticket #54. Per 384E gli estremi sono «non compilare», per P201 sono facoltativi.
+
 | Codice | Denominazione e uso | Esito |
 |---|---|---|
 | **384E** | Addizionale comunale IRPEF trattenuta dai sostituti, **saldo**. Sezione Enti locali (S), estremi = codice catastale, rif. A = mese (00MM), rif. B = anno. D | Confermato |
