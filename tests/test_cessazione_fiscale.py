@@ -16,7 +16,7 @@ import pytest
 from paghe import Mese, calcola
 from paghe.proposta import emetti_versione
 
-from materiale_proposta import CF, IBAN, P, R, corpus_proposta, per_istituto, stipendio
+from materiale_proposta import CF, IBAN, P, R, paga, corpus_proposta, per_istituto, stipendio
 
 
 @pytest.fixture
@@ -78,3 +78,23 @@ def test_chiuso_anche_l_altro_rapporto_il_pagamento_di_chi_cessa_per_ultimo_port
     orologio.vai(3, 20)
     versione = emetti_versione(registro, corpus_c, date(2026, 3, 27), importi)
     assert "conguaglio_irpef" in per_istituto(versione.righe)
+
+
+def test_un_arretrato_pagato_dopo_la_cessazione_porta_un_conguaglio_per_differenza(registro, corpus_c, orologio):
+    """Pagamento finale di marzo: ritenuta 280, conguaglio -220, operato 60 (l'imposta dell'anno su 1500).
+
+    Arretrato di 500 pagato il 10 maggio: ritenuta del mese (500 - 100) * 0,20 = 80,00; imposta dell'anno su 2000
+    (2000 - 1200) * 0,20 = 160,00; già operato 280 - 220 + 80 = 140; conguaglio per differenza 20,00.
+    """
+    assumi_fino_al(registro, R, P, al=date(2026, 3, 14))
+    marzo = stipendio_fino_al(registro, corpus_c, Mese(2026, 3), date(2026, 3, 14))
+    orologio.vai(3, 20)
+    paga(registro, corpus_c, orologio, marzo, date(2026, 3, 27), "pag-marzo")
+    arretrato = stipendio_fino_al(registro, corpus_c, Mese(2026, 2), date(2026, 2, 28), "500")
+    orologio.vai(5, 5)
+    versione = emetti_versione(registro, corpus_c, date(2026, 5, 10), arretrato)
+    righe = per_istituto(versione.righe)
+    assert (righe["ritenuta_irpef"].importo.valore, righe["conguaglio_irpef"].importo.valore) == (
+        Decimal("80.00"),
+        Decimal("20.00"),
+    )
