@@ -170,3 +170,34 @@ def test_due_calendari_dello_stesso_anno_sono_rifiutati():
 def test_scadenza_e_calendario_cambiano_la_versione_del_corpus():
     assert corpus("").versione != corpus(SCADENZA).versione
     assert corpus(SCADENZA).versione != corpus(SCADENZA.replace("2026-12-25]", "2026-12-26]")).versione
+
+
+def test_la_natura_irap_e_ammessa_nella_composizione():
+    """Serve a riconoscere le righe IRAP, che fermano la delega (ADR 0023): le sue regole non sono in questo ticket."""
+    testo = """
+[[parametro]]
+nome = "aliquota"
+[[parametro.vigenza]]
+dal = 2020-01-01
+valore = "0.085"
+riferimento = "fittizio:aliquota-irap"
+
+[[regola]]
+istituto = "irap_acconto"
+versione = 1
+dal = 2020-01-01
+riferimento = "fittizio:irap"
+formula = "fatto.base * parametro.aliquota"
+maturazione = "evento"
+applica_se = "base"
+
+[[composizione]]
+istituto = "irap_acconto"
+dal = 2020-01-01
+riferimento = "fittizio:comp-irap"
+natura = "irap"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+"""
+    assert corpus(testo).composizione("irap_acconto", date(2026, 1, 1)).natura == "irap"

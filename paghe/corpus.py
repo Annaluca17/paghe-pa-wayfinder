@@ -34,7 +34,7 @@ FITTIZIO = "fittizio:"
 # Dichiarazione di composizione (ADR 0025): valori ammessi.
 NATURE = frozenset({
     "retribuzione", "ritenuta", "addizionale", "contributo_lavoratore", "contributo_ente",
-    "rata_730", "rimborso_730", "credito_sostituto", "trattenuta_terzi",
+    "rata_730", "rimborso_730", "credito_sostituto", "trattenuta_terzi", "irap",
 })
 EFFETTI = frozenset({"piu", "meno", "nessuno"})
 DESTINATARI = frozenset({"beneficiario", "terzo"})

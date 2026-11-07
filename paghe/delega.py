@@ -16,6 +16,11 @@ from .corpus import Corpus
 from .errori import ParametroMancante
 from .tempo import Mese
 
+# Sistema della mappatura esterna dell'istituto: codice tributo o causale F24EP (ADR 0022).
+SISTEMA_F24EP = "codice_tributo_f24ep"
+TIPO_DELEGA_TRASMESSA = "delega_trasmessa"
+TIPO_DELEGA_ANNULLATA = "delega_annullata"
+
 AVVISO_SCADENZA_PER_PRASSI = "scadenza_per_prassi"
 AVVISO_PROROGA_SU_FESTIVO = "proroga_su_festivo"
 
