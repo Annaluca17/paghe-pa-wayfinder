@@ -14,7 +14,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from .corpus import Corpus
-from .errori import ParametroMancante
+from .errori import CasoNonModellato, ParametroMancante
 from .modello import Derivazione, Fatto, Importo, ParametroLetto
 from .registro import TIPO_ESITO_730_4, Registro
 from .tempo import Mese, Periodo, in_utc
@@ -59,6 +59,12 @@ def rimborso_730_4(
     esito = esito_730_4(registro, persona, valuta, istante)
     if esito is None:
         return None
+    altri = [r for r in registro.rapporti_della_persona(persona, istante) if r != rapporto]
+    if altri:
+        raise CasoNonModellato(
+            f"Rapporto {rapporto}: caso non modellato, il rimborso del 730-4 della persona {persona} che ha più "
+            f"rapporti (anche {altri[0]}): su quale rapporto operarlo non e' deciso"
+        )
     try:
         vigenza = corpus.parametro(PARAMETRO_PRIMO_MESE).vigenza_per(Mese(valuta.year, valuta.month))
     except KeyError:
