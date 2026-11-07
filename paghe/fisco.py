@@ -149,7 +149,8 @@ def _controlla_anno_dei_pagamenti(registro: Registro, persona: str, istante: dat
     for fatto in registro.fatti_persona_noti(persona, TIPO_ANNO_IMPOSTA_DIVERSO, istante):
         raise CasoNonModellato(
             f"Persona {persona}: caso non modellato, l'esito {int(fatto.valore)} è stato pagato il {fatto.valido_dal} "
-            "in un anno d'imposta diverso dal previsto: il calcolo fiscale si ferma"
+            "senza l'attribuzione fiscale prevista (anno d'imposta diverso dal previsto, o competenza non più "
+            "ammessa alla valuta reale): il calcolo fiscale si ferma"
         )
 
 
