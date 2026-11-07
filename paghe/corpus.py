@@ -48,6 +48,8 @@ RIF_B_F24EP = frozenset({"nessuno", "anno_pagamento", "anno_imposta", "periodo_f
 MODALITA_F24EP = frozenset({"debito", "debito_credito"})
 LIMITI_CREDITO_F24EP = frozenset({"nessuno", "non_modellato"})
 FONTI_SCADENZA = frozenset({"norma", "prassi"})
+# Trattamento nel part-time (ADR 0026): proporzionale si riduce, intero no, da_integrativo lo fissa l'ente con un input da atto.
+TRATTAMENTI_PART_TIME = frozenset({"proporzionale", "intero", "da_integrativo"})
 
 
 @dataclass(frozen=True)
@@ -242,6 +244,18 @@ class DichiarazioneTrattamentoPartTime:
     dal: date
     riferimento: str
     al: date | None = None
+    # Tipo del fatto del rapporto, con atto, che porta la percentuale fissata dall'ente: solo per `da_integrativo`.
+    fatto: str | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Part-time {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if self.trattamento not in TRATTAMENTI_PART_TIME:
+            raise ErroreCorpus(f"{soggetto}: trattamento uno di {sorted(TRATTAMENTI_PART_TIME)}")
+        if (self.trattamento == "da_integrativo") != bool(self.fatto):
+            raise ErroreCorpus(f"{soggetto}: il fatto di input va indicato se, e solo se, il trattamento è da_integrativo")
 
     def copre(self, giorno: date) -> bool:
         return self.dal <= giorno and (self.al is None or giorno <= self.al)
@@ -670,6 +684,7 @@ class Corpus:
         self._convalida_denuncia()
         self._convalida_fiscale()
         self._convalida_composizione()
+        self._convalida_part_time()
         self._convalida_catalogo_f24ep()
         if reale:
             self._rifiuta_fittizi()
@@ -690,6 +705,7 @@ class Corpus:
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
+        elenco += [(f"Part-time {t.istituto}", t.riferimento) for t in self._trattamenti_part_time]
         elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
         elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
         elenco += [("Proroga della scadenza F24EP", r.proroga.riferimento) for r in self._scadenze_f24ep if r.proroga]
@@ -736,6 +752,15 @@ class Corpus:
             for altra in self._mappature[indice + 1 :]:
                 if (altra.istituto, altra.sistema) == (mappatura.istituto, mappatura.sistema):
                     _vigenze_sovrapposte([mappatura, altra], soggetto)
+
+    def _convalida_part_time(self) -> None:
+        noti = self._istituti_noti()
+        for indice, dichiarazione in enumerate(self._trattamenti_part_time):
+            if dichiarazione.istituto not in noti:
+                raise ErroreCorpus(f"Part-time {dichiarazione.istituto}: istituto ignoto")
+            for altra in self._trattamenti_part_time[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], f"Part-time {dichiarazione.istituto}")
 
     def _convalida_catalogo_f24ep(self) -> None:
         for indice, voce in enumerate(self._codici_f24ep):
@@ -988,6 +1013,11 @@ class Corpus:
                  c.destinatario or "", c.canale or "", c.intermedio, c.riferimento]
                 for c in self._composizioni
             )
+        if self._trattamenti_part_time:
+            contenuto["part_time"] = sorted(
+                [t.istituto, t.trattamento, t.dal.isoformat(), t.al.isoformat() if t.al else "", t.fatto or "", t.riferimento]
+                for t in self._trattamenti_part_time
+            )
         if self._mappature:
             contenuto["mappature"] = sorted(
                 [m.istituto, m.sistema, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
@@ -1153,6 +1183,7 @@ class Corpus:
                     dal=_data(voce["dal"], "dal"),
                     riferimento=voce["riferimento"],
                     al=_data(voce["al"], "al") if "al" in voce else None,
+                    fatto=voce.get("fatto"),
                 )
                 for voce in dati.get("part_time", [])
             )
