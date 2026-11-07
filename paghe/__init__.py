@@ -3,6 +3,8 @@
 from .calcolo import Differenza, calcola, calcola_annuale, differenze, emetti_esito, spiega
 from .corpus import (
     Base,
+    CalendarioFestivi,
+    CodiceF24EP,
     Concorso,
     Corpus,
     DichiarazioneComposizione,
@@ -11,6 +13,7 @@ from .corpus import (
     Massimale,
     Parametro,
     Regola,
+    RegolaScadenzaF24EP,
     RegoleDenuncia,
     VigenzaParametro,
 )
@@ -25,6 +28,21 @@ from .fisco import (
     imponibile_fiscale,
     proiezione_conguaglio,
 )
+from .delega import (
+    Delega,
+    DelegaTrasmessa,
+    RigaDelega,
+    annulla_delega,
+    calcola_scadenza,
+    costruisci_delega,
+    crediti_riportati,
+    delega_attiva,
+    leggi_delega_trasmessa,
+    registra_versamento_delega,
+    situazione_delega,
+    trasmetti_delega,
+)
+from .f24ep import serializza as serializza_f24ep
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
@@ -50,6 +68,22 @@ from .registro import Registro
 from .tempo import Mese, Periodo
 
 __all__ = [
+    "CalendarioFestivi",
+    "CodiceF24EP",
+    "Delega",
+    "DelegaTrasmessa",
+    "RegolaScadenzaF24EP",
+    "RigaDelega",
+    "annulla_delega",
+    "calcola_scadenza",
+    "costruisci_delega",
+    "crediti_riportati",
+    "delega_attiva",
+    "leggi_delega_trasmessa",
+    "registra_versamento_delega",
+    "serializza_f24ep",
+    "situazione_delega",
+    "trasmetti_delega",
     "Atto",
     "Avviso",
     "FiscaleDelPagamento",
