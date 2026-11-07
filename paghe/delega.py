@@ -9,12 +9,14 @@ una regola, la delega si ferma nominando il caso.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from .corpus import Corpus
 from .errori import ErroreCalcolo, ParametroMancante
+from .f24ep import problemi_dati_ente
 from .modello import Importo
 from .proposta import (
     TIPO_PAGAMENTO_ESEGUITO,
@@ -33,6 +35,7 @@ TIPO_DELEGA_ANNULLATA = "delega_annullata"
 
 AVVISO_SCADENZA_PER_PRASSI = "scadenza_per_prassi"
 AVVISO_PROROGA_SU_FESTIVO = "proroga_su_festivo"
+AVVISO_VERSAMENTO_TARDIVO = "versamento_dopo_la_scadenza"
 
 
 @dataclass(frozen=True)
@@ -299,15 +302,22 @@ def _compensa(
 def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, noto_al: datetime | None = None) -> Delega:
     """La delega dei pagamenti eseguiti nel mese: funzione pura di registro, corpus e istante; non scrive nulla."""
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
-    scadenza = calcola_scadenza(corpus, mese_pagamento)
-    data_versamento = registro.data_versamento_scelta(mese_pagamento, istante)
-    ente = _dati_ente(registro, data_versamento or scadenza.data, istante)
-    somme: dict[tuple, list] = {}
-    sorgenti: list[RiferimentoRiga] = []
     fermi: dict[tuple[str, str], FermoDelega] = {}
 
     def ferma(caso: str, soggetto: str, motivo: str) -> None:
         fermi.setdefault((caso, soggetto), FermoDelega(caso, motivo))
+
+    try:
+        scadenza = calcola_scadenza(corpus, mese_pagamento)
+    except ParametroMancante as errore:
+        scadenza = None
+        ferma("scadenza_non_calcolabile", "delega", str(errore))
+    data_versamento = registro.data_versamento_scelta(mese_pagamento, istante)
+    giorno_dei_fatti = data_versamento or (scadenza.data if scadenza else mese_pagamento.ultimo_giorno)
+    ente = _dati_ente(registro, giorno_dei_fatti, istante)
+    somme: dict[tuple, list] = {}
+    sorgenti: list[RiferimentoRiga] = []
+    serve_provincia = False
 
     for riga, riferimento, pagamento in _righe_candidate(registro, mese_pagamento, istante):
         istituto, importo = riga.istituto, riga.importo
@@ -366,6 +376,7 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
                 f"Istituto {istituto}: il codice {codice} vuole l'anno d'imposta e l'importo non lo porta",
             )
             continue
+        serve_provincia = serve_provincia or voce.codice_campo == "provincia"
         chiave = (
             voce.sezione,
             codice,
@@ -402,7 +413,35 @@ def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, 
             "tra più moduli non è modellato",
         )
     mancanti = []
+    obbligatori = (*TIPI_DATI_ENTE, *(("sigla_provincia",) if serve_provincia else ()))
+    for tipo in obbligatori:
+        if getattr(ente, tipo) is None:
+            mancanti.append(DatoMancante(tipo, "ente", f"manca il fatto dell'ente {tipo} valido al {giorno_dei_fatti}"))
+    if data_versamento is None:
+        mancanti.append(
+            DatoMancante(
+                "data_versamento", "ente", f"manca la data di versamento scelta per i pagamenti di {mese_pagamento}"
+            )
+        )
+    if all(getattr(ente, tipo) is not None for tipo in TIPI_DATI_ENTE):
+        for problema in problemi_dati_ente(*(getattr(ente, tipo) for tipo in TIPI_DATI_ENTE)):
+            ferma("dato_non_valido", problema, f"Dati dell'ente: {problema}")
+    if serve_provincia and ente.sigla_provincia is not None and not re.fullmatch(r"[A-Z]{2}", ente.sigla_provincia):
+        ferma(
+            "dato_non_valido",
+            "sigla_provincia",
+            f"Dati dell'ente: sigla di provincia {ente.sigla_provincia!r}, servono due lettere maiuscole",
+        )
+    avvisi = list(scadenza.avvisi) if scadenza else []
+    if scadenza and data_versamento and data_versamento > scadenza.data:
+        avvisi.append(
+            AvvisoDelega(
+                AVVISO_VERSAMENTO_TARDIVO,
+                f"La data di versamento {data_versamento} è dopo la scadenza {scadenza.data}: il versamento sarebbe "
+                "tardivo, il ravvedimento non è modellato",
+            )
+        )
     return Delega(
         mese_pagamento, scadenza, data_versamento, tuple(righe), tuple(sorgenti), ente, tuple(mancanti),
-        tuple(fermi.values()), (), tuple(compensazioni), tuple(residui),
+        tuple(fermi.values()), tuple(avvisi), tuple(compensazioni), tuple(residui),
     )
