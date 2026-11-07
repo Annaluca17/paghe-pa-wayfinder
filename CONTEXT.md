@@ -327,7 +327,7 @@ Riduzione del lordo di chi è in regime TFR, pari al 2,50% soppresso sull'80% de
 _Avoid_: Trattenuta 2,50% (il contributo è soppresso, non trattenuto)
 
 **Ulteriori elementi TFR**:
-Voci utili al TFR ma non al TFS, come la retribuzione di posizione: base propria al 100%, contributo al 6,91%.
+Voci utili al TFR ma non al TFS, come la retribuzione di posizione dell'EQ: base propria al 100%, contributo al 6,91%. Per la posizione di dirigente e segretario il trattamento è da verificare (nota di prassi 9).
 _Avoid_: Voci solo TFR
 
 **Caso**:

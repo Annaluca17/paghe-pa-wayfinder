@@ -50,3 +50,9 @@ def test_la_posizione_del_dirigente_su_un_segretario_ferma_il_calcolo(registro, 
     registro.registra_fatto(R, "posizione_annua_dirigente", "20000.00", date(2026, 1, 1), atto=ATTO)
     with pytest.raises(CasoNonModellato, match="posizione_annua_dirigente"):
         calcola(registro, reale, R, Mese(2026, 11))
+
+
+def test_segretario_cessato_con_la_fascia_rimasta_aperta_non_e_fermato_dopo_la_cessazione(registro, reale):
+    titolare(registro, "segretario", al=date(2026, 11, 15))
+    registro.registra_codice(R, "fascia_segretario", "B", date(2026, 1, 1), atto=ATTO)
+    assert "tabellare_segretario_b" in importi(registro, reale, Mese(2026, 11))

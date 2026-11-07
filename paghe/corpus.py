@@ -218,8 +218,8 @@ class Fermo:
     Con `codice` il fermo scatta solo se il fatto categoriale ha quel valore (ADR 0009).
     Con `manca` scatta al contrario quando il fatto non c'è: serve `se`, la condizione `tipo` o `tipo=codice` su un altro
     fatto che dice per chi quel fatto è obbligatorio (ticket #73, fascia del segretario). Nessun titolo è nominato nel motore.
-    Con `manca`, `valori` limita i codici ammessi del fatto categoriale. Con `solo_se` (da solo) scatta se il fatto c'è in un
-    giorno in cui la condizione non vale: il fatto è fuori dal suo regime.
+    Con `manca`, `valori` limita i codici ammessi del fatto categoriale. Con `solo_se = "tipo=codice"` (da solo) scatta se il
+    fatto c'è in un giorno in cui `tipo` ha un altro codice: il fatto è fuori dal suo regime. I giorni senza `tipo` non contano.
     """
 
     fatto: str
@@ -250,7 +250,8 @@ class Fermo:
         if self.solo_se is not None:
             if self.manca or self.codice is not None:
                 raise ErroreCorpus(f"{soggetto}: `solo_se` non si combina con `manca` né con `codice`")
-            if not isinstance(self.solo_se, str) or not self.solo_se.strip() or self.solo_se != self.solo_se.strip()                     or self.solo_se.startswith("=") or self.solo_se.endswith("="):
+            tipo, uguale, codice = self.solo_se.partition("=") if isinstance(self.solo_se, str) else ("", "", "")
+            if not uguale or not tipo or not codice or tipo != tipo.strip() or codice != codice.strip():
                 raise ErroreCorpus(f"{soggetto}: condizione `solo_se` non valida, {self.solo_se!r}")
         if self.manca and self.ambito == "vista":
             raise ErroreCorpus(f"{soggetto}: `manca` vale per l'ambito calcolo o denuncia, non per la vista")
