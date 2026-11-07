@@ -93,8 +93,14 @@ RAPPORTO_ENTE = "ente"
 
 TIPO_ULTIMO_PAGAMENTO = "ultimo_pagamento_anno"
 # Tipi dei fatti dell'ente: entrano solo quelli che hanno un lettore (ADR 0025).
-TIPI_ENTE_CODICE = frozenset({"codice_fiscale", "denominazione", "email", "iban_tesoreria", "sigla_provincia"})
-TIPI_ENTE_NUMERICI = frozenset({TIPO_ULTIMO_PAGAMENTO})
+# Delega F24EP (ticket #54): la data di versamento scelta dall'Ufficio personale, per mese di pagamento, e il
+# credito non assorbito che passa alla scadenza successiva, con la sua origine.
+TIPO_DATA_VERSAMENTO = "data_versamento_f24ep"
+TIPO_CREDITO_RIPORTATO = "credito_riportato"
+TIPI_ENTE_CODICE = frozenset(
+    {"codice_fiscale", "denominazione", "email", "iban_tesoreria", "sigla_provincia", TIPO_CREDITO_RIPORTATO}
+)
+TIPI_ENTE_NUMERICI = frozenset({TIPO_ULTIMO_PAGAMENTO, TIPO_DATA_VERSAMENTO})
 
 
 def _trigger_immutabilita(tabella: str) -> str:
@@ -278,6 +284,18 @@ class Registro:
     def ultimo_pagamento_dell_anno(self, anno: int, noto_al: datetime) -> date | None:
         """Data prevista dell'ultimo pagamento dell'anno d'imposta, nell'ultima registrazione non annullata."""
         fatti = [f for f in self.fatti_ente_noti(TIPO_ULTIMO_PAGAMENTO, noto_al) if f.valore == anno]
+        return fatti[-1].valido_dal if fatti else None
+
+    def registra_data_versamento(self, mese_pagamento: Mese, data: date, atto: Atto | None = None) -> Fatto:
+        """Data di versamento della delega dei pagamenti del mese, scelta dall'Ufficio personale; l'ultima scelta non annullata vale."""
+        if data < mese_pagamento.primo_giorno:
+            raise ErroreRegistro(f"La data {data} precede il mese di pagamento {mese_pagamento}")
+        chiave = mese_pagamento.anno * 100 + mese_pagamento.mese
+        return self.registra_fatto_ente(TIPO_DATA_VERSAMENTO, chiave, data, data, atto)
+
+    def data_versamento_scelta(self, mese_pagamento: Mese, noto_al: datetime) -> date | None:
+        chiave = mese_pagamento.anno * 100 + mese_pagamento.mese
+        fatti = [f for f in self.fatti_ente_noti(TIPO_DATA_VERSAMENTO, noto_al) if f.valore == chiave]
         return fatti[-1].valido_dal if fatti else None
 
     def fatti_ente_noti(self, tipo: str, noto_al: datetime) -> list[Fatto]:
