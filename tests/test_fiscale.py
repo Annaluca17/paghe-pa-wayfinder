@@ -19,6 +19,7 @@ from paghe import (
     Atto,
     Corpus,
     Mese,
+    Periodo,
     TipoEsito,
     attribuisci_reddito,
     calcola,
@@ -720,3 +721,16 @@ def test_la_versione_dei_corpus_senza_dichiarazione_fisiologica_non_cambia():
     """Valori letti prima della modifica: l'impronta tiene conto della dichiarazione solo se c'è."""
     assert Corpus.da_toml(TESTO).versione == "e41b25349377cf4c"
     assert Corpus.carica(CORPUS_REALE, reale=True).versione == "6fc5c8ad64937294"
+
+
+@pytest.fixture
+def fisiologico():
+    return Corpus.da_toml(TESTO + FISIOLOGICO)
+
+
+def test_il_pagamento_fisiologico_dell_anno_prima_e_attribuito_all_anno_d_imposta_del_pagamento(registro, fisiologico):
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2026, 12))
+    (riga,) = attribuisci_reddito(fisiologico, righe, date(2027, 1, 13))
+    assert (riga.categoria_reddito, riga.anno_imposta) == ("lavoro_dipendente", 2027)
+    assert riga.periodo == Periodo(date(2026, 12, 1), date(2026, 12, 31))

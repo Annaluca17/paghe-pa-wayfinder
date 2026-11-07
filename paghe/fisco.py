@@ -109,7 +109,11 @@ def attribuisci_reddito(corpus: Corpus, importi, valuta_prevista: date) -> tuple
                     f"Rapporto {importo.rapporto}, istituto {importo.istituto}: caso non modellato, la categoria di "
                     f"reddito cambia tra la data di pagamento {valuta_prevista} e l'anno d'imposta {anno}"
                 )
-        if importo.periodo.dal.year != anno or importo.periodo.al.year != anno:
+        fisiologico = (
+            corpus.pagamento_fisiologico(importo.istituto, valuta_prevista) is not None
+            and importo.periodo.dal.year == importo.periodo.al.year == anno - 1
+        )
+        if not fisiologico and (importo.periodo.dal.year != anno or importo.periodo.al.year != anno):
             raise CasoNonModellato(
                 f"Rapporto {importo.rapporto}, istituto {importo.istituto}: caso non modellato, competenza "
                 f"{importo.periodo} pagata nell'anno d'imposta {anno}: serve la causa del pagamento tardivo "
