@@ -73,8 +73,16 @@ Atto della Ragioneria su una versione di proposta: la accetta, cambiando al più
 _Avoid_: Validazione, approvazione contabile
 
 **Evento di ritorno**:
-Fatto contabile che riporta al modello ciò che è accaduto a una versione di proposta dopo l'invio (conferma o rifiuto, impegno e liquidazione numerati, mandato emesso o annullato, pagamento eseguito con valuta).
+Fatto contabile che riporta al modello ciò che è accaduto a una versione di proposta dopo l'invio (conferma o rifiuto, impegno e liquidazione numerati, mandato emesso o annullato, pagamento eseguito con valuta e rapporti pagati). Un identificativo ripetuto con lo stesso contenuto non ha effetto; con un contenuto diverso viene rifiutato.
 _Avoid_: Esito contabile (l'esito è del modello paghe), ritorno dati
+
+**Ricevuta della delega**:
+Evento che riporta una delle fasi dopo la trasmissione di una delega F24EP: controlli formali, controllo dei crediti, addebito. Lo stato della delega (trasmessa, accettata, sospesa, addebitata, scartata) è una vista delle ricevute. Una ricevuta negativa rende la delega scartata e gli importi tornano da versare.
+_Avoid_: Ricevuta AdE (senza dire quale), esito della delega
+
+**Evento di versamento eseguito**:
+Evento che dice che le righe di una liquidazione verso terzi sono state versate e in che data, dall'addebito della delega o dal bonifico al terzo. Da esso nasce l'esito versato, una sola volta. La regolarizzazione del provvisorio lo sostituisce solo se è l'unica notizia disponibile.
+_Avoid_: Quietanza, regolarizzazione (che è un evento contabile successivo)
 
 **Assenza**:
 Fatto giornaliero o orario su un rapporto, con una causale di assenza e l'atto o il documento di origine (attestato INPS, domanda, autorizzazione). Un solo fatto produce più effetti, ciascuno letto da un lettore diverso: riduzione stipendiale, comporto, adempimenti.
@@ -100,9 +108,29 @@ _Avoid_: Riga per dipendente, dettaglio contabile
 Corrispondenza datata tra classificazione ufficiale e capitolo/articolo del bilancio dell'ente, tenuta dalla Ragioneria e applicata fuori dal modello paghe.
 _Avoid_: Tabella capitoli, piano dei conti dell'ente
 
+**Pagamento**:
+Ciò che una versione di proposta confermata fa eseguire: una sola valuta prevista e più rapporti. Non coincide con il mese: stipendio, tredicesima e arretrati possono essere pagamenti diversi.
+_Avoid_: Elaborazione, cedolino, mensilità
+
 **Composizione del pagamento**:
-Dati allegati alla liquidazione che dicono come pagarla: beneficiari e netti, ritenute collegate al mandato, versamenti a terzi. La Ragioneria ne ricava mandati e reversali senza ricostruire il legame netto–ritenute.
+Dati allegati alla liquidazione che dicono come pagarla: beneficiari e netti, ritenute collegate al mandato, versamenti a terzi. È un elenco di righe di composizione, una struttura sola per Ragioneria, ritenute, trattenute a terzi e delega. La Ragioneria ne ricava mandati e reversali senza ricostruire il legame netto–ritenute.
 _Avoid_: Distinta, tracciato mandati
+
+**Riga di composizione**:
+Parte della composizione del pagamento collegata a un importo, mai con un valore riscritto, con natura, effetto sul netto, destinatario e canale.
+_Avoid_: Riga di cedolino, voce
+
+**Dichiarazione di composizione**:
+Dichiarazione datata dell'istituto, con riferimento: natura, effetto sul netto, destinatario e canale, oppure che l'istituto è solo intermedio e non entra nella composizione. Se manca, la proposta si ferma, non il calcolo.
+_Avoid_: Tipo voce, segno della voce
+
+**Netto**:
+Somma delle righe di composizione di un rapporto in un pagamento che hanno effetto sul netto. Se è negativo si ferma quel rapporto, non gli altri. Il netto per persona è una vista.
+_Avoid_: Netto in busta, netto a pagare (senza dire di quale pagamento)
+
+**Ultimo pagamento dell'anno**:
+Fatto sull'ente, uno per anno d'imposta, con la data prevista. La proposta con valuta prevista uguale o successiva, nello stesso anno d'imposta, porta il conguaglio fiscale delle persone che contiene.
+_Avoid_: Mese di conguaglio, flag di conguaglio
 
 **Output obbligatorio**:
 Prodotto richiesto da norma verso un ente esterno o un soggetto (UniEmens/ListaPosPA, lista collaboratori, F24EP, CU, 770, Conto Annuale, PASSWEB, PIAO, trasparenza, conguagli, esiti 730-4, autoliquidazione INAIL). È sempre una vista del modello, mai il prodotto di un tool esistente.
@@ -186,6 +214,10 @@ _Avoid_: Capienza dei gettoni
 Elemento retributivo o trattenuta definito da norma o contratto, con riferimento; i codici esterni (SICO, UniEmens, codice tributo, piano dei conti) sono mappature datate dell'istituto.
 _Avoid_: Voce, codice voce
 
+**Mappatura esterna**:
+Corrispondenza datata, nel corpus e con riferimento, tra un istituto e un codice di un sistema esterno (codice tributo, causale, SICO, punto CU). Più istituti possono avere lo stesso codice; se un istituto dovrebbe avere due codici, sono due istituti. Se manca, si ferma l'invio dell'output, non il calcolo.
+_Avoid_: Tabella codici, codice dell'istituto
+
 **Fatto**:
 Evento su una persona, su un rapporto, su un fondo risorse decentrate o sull'ente, registrato in modo immutabile e bitemporale (validità e registrazione), con atto fonte quando esiste; si corregge solo con un nuovo fatto. Il valore è un numero o, per contratto, qualifica e simili, un codice che una formula non legge.
 _Avoid_: Movimento, variazione anagrafica
@@ -227,7 +259,7 @@ Trattamento fiscale di un importo: ordinario, separato o sostitutivo. Il separat
 _Avoid_: Tassazione dell'istituto, categoria (quando si intende il trattamento)
 
 **Valuta prevista**:
-Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolare ritenute e netti della composizione del pagamento. Se la valuta effettiva è diversa, la differenza si regola sull'esito.
+Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolare ritenute, contributi e netti della composizione del pagamento. Se la valuta effettiva cade in un altro mese, la differenza si regola sul pagamento successivo; se cambia l'anno d'imposta, il calcolo fiscale della persona si ferma.
 _Avoid_: Data di pagamento (finché il pagamento non è eseguito)
 
 **Base imponibile**:
@@ -291,7 +323,7 @@ Documento scritto nel repo che motiva una regola priva di fonte ufficiale puntua
 _Avoid_: Regola di casa
 
 **Esito**:
-Istantanea immutabile di ciò che è stato pagato, dichiarato o versato verso terzi; base del confronto per ogni differenza successiva. L'esito pagato nasce dall'evento di ritorno del pagamento eseguito, con le righe della versione di proposta confermata, non dalla conferma; l'esito versato nasce allo stesso modo dall'evento di versamento eseguito, che sia mandato F24EP o regolarizzazione di un provvisorio. Anche ciò che si invia per gli adempimenti non stipendiali (Tab. 15 e SICI, relazione tecnico-finanziaria, invio al MEF, trasparenza) è un esito dichiarato; se poi un fatto cambia la vista, il modello segnala la differenza con l'ultimo esito.
+Istantanea immutabile di ciò che è stato pagato, dichiarato o versato verso terzi; base del confronto per ogni differenza successiva. L'esito pagato nasce dall'evento di ritorno del pagamento eseguito, non dalla conferma, con tutte le righe di composizione dei soli rapporti pagati; l'esito versato nasce allo stesso modo dall'evento di versamento eseguito, con le righe versate ai terzi. Anche ciò che si invia per gli adempimenti non stipendiali (Tab. 15 e SICI, relazione tecnico-finanziaria, invio al MEF, trasparenza) è un esito dichiarato; se poi un fatto cambia la vista, il modello segnala la differenza con l'ultimo esito.
 _Avoid_: Elaborazione chiusa, storico cedolini
 
 **Vista**:
@@ -337,7 +369,7 @@ _Avoid_: Parametro locale, personalizzazione
 ### Fisco
 
 **Anno d'imposta**:
-Anno a cui un pagamento è attribuito ai fini fiscali: quello della data di pagamento, o l'anno prima per le somme pagate entro il 12 gennaio, se la categoria di reddito dichiara la cassa allargata. Si calcola sulla valuta prevista e si congela nell'esito pagato. Sceglie il testo di legge da applicare. Un importo in tassazione separata conserva anche l'anno di riferimento della sua competenza.
+Anno a cui un pagamento è attribuito ai fini fiscali: quello della data di pagamento, o l'anno prima per le somme pagate entro il 12 gennaio, se la categoria di reddito dichiara la cassa allargata. La proposta lo calcola sulla valuta prevista; l'esito pagato lo congela sulla data reale. Se i due anni differiscono, il calcolo fiscale della persona si ferma. Sceglie il testo di legge da applicare. Un importo in tassazione separata conserva anche l'anno di riferimento della sua competenza.
 _Avoid_: Anno fiscale (senza dire di cosa), anno di competenza (che è un altro asse)
 
 **Imponibile fiscale**:
