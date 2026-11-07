@@ -575,6 +575,18 @@ conteggio = "lun_sab"
 divisore = "divisore_giornaliero"
 decimali = 2
 
+# Co.co.co. (ticket #73, PR B): la rata del piano da atto matura come evento nel giorno della scadenza (ADR 0004, 0015,
+# nota di prassi 10). L'attestazione della prestazione e' la condizione della proposta (`condizione_di_proposta`).
+
+[[regola]]
+istituto = "compenso_collaborazione"
+versione = 1
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2026-02-03;8~par4.1 + prassi:immedia:nota:2026-11-07;10"
+formula = "fatto.rata_collaborazione"
+maturazione = "evento"
+applica_se = "rata_collaborazione"
+
 # Contributi. Totale e quota del lavoratore arrotondati, quota dell'ente per differenza
 # (ricerca #15, proposta B3; nota di prassi 3).
 
