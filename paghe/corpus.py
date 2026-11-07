@@ -578,6 +578,35 @@ class CondizioneDiProposta:
 
 
 @dataclass(frozen=True)
+class DichiarazioneOutput:
+    """Il regime assegna a una vista i rapporti che hanno un importo pagato in certe basi o di certi istituti (ADR 0015).
+
+    Una vista non conosce i titoli: prende i rapporti che la dichiarazione le assegna. `basi` elenca le basi a cui l'importo
+    pagato concorre per intero; `istituti` gli istituti il cui importo pagato basta da solo. Date e fonte come ogni dichiarazione.
+    """
+
+    vista: str
+    dal: date
+    riferimento: str
+    basi: tuple[str, ...] = ()
+    istituti: tuple[str, ...] = ()
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Output {self.vista}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if not isinstance(self.vista, str) or not self.vista.strip() or self.vista != self.vista.strip():
+            raise ErroreCorpus(f"{soggetto}: la vista va nominata")
+        if not self.basi and not self.istituti:
+            raise ErroreCorpus(f"{soggetto}: servono basi o istituti che assegnano i rapporti alla vista")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
 class MappaturaEsterna:
     """Corrispondenza datata tra un istituto e un codice di un sistema esterno: codice tributo, causale, SICO, punto CU."""
 
@@ -767,8 +796,10 @@ class Corpus:
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
         trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
         condizioni_di_proposta: tuple[CondizioneDiProposta, ...] = (),
+        output: tuple[DichiarazioneOutput, ...] = (),
     ):
         self.reale = reale
+        self._output = tuple(output)
         self._condizioni_di_proposta = tuple(condizioni_di_proposta)
         self._trattamenti_part_time = tuple(trattamenti_part_time)
         self._scadenze_f24ep = tuple(scadenze_f24ep)
@@ -806,6 +837,7 @@ class Corpus:
         self._convalida_part_time()
         self._convalida_massimali_di_base()
         self._convalida_condizioni_di_proposta()
+        self._convalida_output()
         self._convalida_mappature_di_fatto()
         self._convalida_catalogo_f24ep()
         if reale:
@@ -833,6 +865,7 @@ class Corpus:
         ]
         elenco += [(f"Part-time {t.istituto}", t.riferimento) for t in self._trattamenti_part_time]
         elenco += [(f"Condizione di proposta {c.istituto}", c.riferimento) for c in self._condizioni_di_proposta]
+        elenco += [(f"Output {o.vista}", o.riferimento) for o in self._output]
         elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
         elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
         elenco += [("Proroga della scadenza F24EP", r.proroga.riferimento) for r in self._scadenze_f24ep if r.proroga]
@@ -884,6 +917,18 @@ class Corpus:
         for base in self._basi.values():
             if base.massimale is not None and base.massimale not in self._parametri:
                 raise ErroreCorpus(f"Base {base.nome}: massimale, parametro ignoto {base.massimale}")
+
+    def _convalida_output(self) -> None:
+        for indice, dichiarazione in enumerate(self._output):
+            for base in dichiarazione.basi:
+                if base not in self._basi:
+                    raise ErroreCorpus(f"Output {dichiarazione.vista}: base ignota {base}")
+            for istituto in dichiarazione.istituti:
+                if istituto not in self._regole:
+                    raise ErroreCorpus(f"Output {dichiarazione.vista}: istituto senza regola {istituto}")
+            for altra in self._output[indice + 1 :]:
+                if altra.vista == dichiarazione.vista:
+                    _vigenze_sovrapposte([dichiarazione, altra], f"Output {dichiarazione.vista}")
 
     def _convalida_condizioni_di_proposta(self) -> None:
         for indice, condizione in enumerate(self._condizioni_di_proposta):
@@ -1171,6 +1216,11 @@ class Corpus:
                 [t.istituto, t.trattamento, t.dal.isoformat(), t.al.isoformat() if t.al else "", t.fatto or "", t.riferimento]
                 for t in self._trattamenti_part_time
             )
+        if self._output:
+            contenuto["output"] = sorted(
+                [o.vista, sorted(o.basi), sorted(o.istituti), o.dal.isoformat(), o.al.isoformat() if o.al else "", o.riferimento]
+                for o in self._output
+            )
         if self._condizioni_di_proposta:
             contenuto["condizioni_di_proposta"] = sorted(
                 [c.istituto, c.fatto, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.riferimento]
@@ -1249,6 +1299,10 @@ class Corpus:
     def composizione(self, istituto: str, giorno: date) -> DichiarazioneComposizione | None:
         """Dichiarazione di composizione vigente alla data; None se l'istituto non ne dichiara."""
         return _vigente([c for c in self._composizioni if c.istituto == istituto], giorno)
+
+    def output(self, vista: str, giorno: date) -> DichiarazioneOutput | None:
+        """Dichiarazione vigente alla data per la vista; None se il regime non la dichiara."""
+        return _vigente([o for o in self._output if o.vista == vista], giorno)
 
     def condizione_di_proposta(self, istituto: str, giorno: date) -> CondizioneDiProposta | None:
         """Condizione vigente alla data della valuta; None se l'istituto non ne richiede."""
@@ -1389,6 +1443,17 @@ class Corpus:
                 )
                 for voce in dati.get("condizione_di_proposta", [])
             )
+            output = tuple(
+                DichiarazioneOutput(
+                    vista=voce["vista"],
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    basi=tuple(voce.get("basi", ())),
+                    istituti=tuple(voce.get("istituti", ())),
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                )
+                for voce in dati.get("output", [])
+            )
             codici_f24ep = tuple(_codice_f24ep_da_toml(voce) for voce in dati.get("codice_f24ep", []))
             scadenze_f24ep = tuple(_scadenza_f24ep_da_toml(voce) for voce in dati.get("scadenza_f24ep", []))
             calendari_festivi = tuple(
@@ -1421,6 +1486,7 @@ class Corpus:
             calendari_festivi=calendari_festivi,
             trattamenti_part_time=trattamenti_part_time,
             condizioni_di_proposta=condizioni_di_proposta,
+            output=output,
         )
 
     @classmethod

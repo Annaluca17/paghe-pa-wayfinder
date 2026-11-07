@@ -480,6 +480,44 @@ def righe_pagate(registro: Registro, rapporto: str, mese: Mese, istante: datetim
     return [riga.importo for riga in _righe_pagate(registro, rapporto, mese, istante)[0]]
 
 
+def rapporti_della_vista(
+    registro: Registro, corpus: Corpus, vista: str, mese: Mese, rapporti, noto_al: datetime | None = None
+) -> tuple[str, ...]:
+    """I `rapporti` che il regime assegna alla vista nel mese, nell'ordine dato (ADR 0015).
+
+    Un rapporto e' della vista se nel mese ha un importo pagato che concorre per intero a una delle basi dichiarate, o di
+    uno degli istituti dichiarati. La vista non conosce i titoli. Senza dichiarazione per la vista il corpus e' incompleto.
+    """
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    dichiarazione = corpus.output(vista, mese.ultimo_giorno)
+    if dichiarazione is None:
+        raise ErroreCorpus(f"Il corpus non dichiara quali rapporti assegna alla vista {vista} per {mese}")
+    risultato = []
+    for rapporto in rapporti:
+        pagamenti = registro.pagamenti(rapporto, istante)
+        for esito in registro.esiti(TipoEsito.PAGATO, istante):
+            fatto = pagamenti.get(esito.id)
+            if fatto is None or not mese.primo_giorno <= fatto.valido_dal <= mese.ultimo_giorno:
+                continue
+            if any(
+                riga.rapporto == rapporto and _assegnata(corpus, dichiarazione, riga, fatto.valido_dal) for riga in esito.righe
+            ):
+                risultato.append(rapporto)
+                break
+    return tuple(risultato)
+
+
+def _assegnata(corpus: Corpus, dichiarazione, riga: Importo, giorno: date) -> bool:
+    if riga.istituto in dichiarazione.istituti:
+        return True
+    if riga.derivazione.maturazione in MATURAZIONI_DERIVATE:
+        return False
+    return any(
+        (concorso := corpus.concorso(riga.istituto, base, giorno)) is not None and concorso.misura == "intero"
+        for base in dichiarazione.basi
+    )
+
+
 def _controlla_cumuli(registro: Registro, corpus: Corpus, denuncia: Denuncia, istante: datetime) -> None:
     """Più rapporti, massimale e conguaglio annuo non sono modellati: se servono, la denuncia si ferma."""
     regole = corpus.denuncia

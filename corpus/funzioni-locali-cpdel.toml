@@ -1437,6 +1437,23 @@ misura = "escluso"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com2 + prassi:immedia:nota:2026-11-07;10"
 
+# Output (ADR 0015): quali rapporti il regime assegna a ciascuna vista. La ListaPosPA prende chi ha importi pagati nelle basi
+# della gestione dipendenti pubblici; la lista collaboratori chi ha importi nella gestione separata, piu' la quota
+# forfettaria dell'art. 86, che non e' su una base.
+
+[[output]]
+vista = "lista_pos_pa"
+basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori"]
+dal = 2026-01-01
+riferimento = "prassi:immedia:nota:2026-11-07;10"
+
+[[output]]
+vista = "lista_collaboratori"
+basi = ["gestione_separata"]
+istituti = ["onere_art86"]
+dal = 2026-01-01
+riferimento = "prassi:immedia:nota:2026-11-07;10"
+
 # Trattamento nel part-time (ADR 0026, ticket #72). Riferimento letto sul testo ARAN: CCNL 16/11/2022, art. 62, c. 10,
 # «il trattamento economico del personale con rapporto di lavoro a tempo parziale è proporzionale alla prestazione
 # lavorativa, con riferimento a tutte le competenze fisse e periodiche»; l'art. 55, c. 10, del CCNL 23/02/2026

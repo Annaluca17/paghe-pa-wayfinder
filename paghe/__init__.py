@@ -58,7 +58,8 @@ from .denuncia_individuale import (
     leggi_invio_denuncia_individuale,
     segnala_scostamento_invio,
 )
-from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
+from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia, rapporti_della_vista
+from .lista_collaboratori import ListaCollaboratori, lista_collaboratori
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
 from .proposta import (
@@ -129,6 +130,7 @@ __all__ = [
     "Fermo",
     "Fatto",
     "Importo",
+    "ListaCollaboratori",
     "ListaPosPA",
     "MappaturaEsterna",
     "Massimale",
@@ -171,6 +173,8 @@ __all__ = [
     "invia_denuncia_individuale",
     "leggi_invio_denuncia_individuale",
     "segnala_scostamento_invio",
+    "lista_collaboratori",
     "lista_pos_pa",
+    "rapporti_della_vista",
     "spiega",
 ]
