@@ -206,3 +206,20 @@ def test_la_proiezione_del_conguaglio_e_sull_imponibile_al_netto_dei_contributi(
     )
     (proiezione,) = fiscale.avvisi_di("proiezione_conguaglio")
     assert proiezione.valore == Decimal("-54.67")
+
+
+# Riduzione del lordo TFR: nessun effetto sull'imponibile finché la fonte non è chiara, ma un avviso (ticket #70)
+
+def test_una_riduzione_tfr_nel_pagamento_lascia_la_ritenuta_com_e_e_porta_un_avviso(registro, con_deduzione, orologio):
+    assumi(registro)
+    giorno = date(2026, 6, 27)
+    (riga,) = stipendio(registro, con_deduzione, Mese(2026, 6))
+    attribuite = attribuisci_reddito(con_deduzione, [riga], giorno)
+    derivazione = replace(riga.derivazione, istituto="riduzione_tfr", maturazione="periodo")
+    riduzione = replace(riga, istituto="riduzione_tfr", valore=Decimal("-30"), derivazione=derivazione)
+    con = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", [*attribuite, riduzione], giorno)
+    senza = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", attribuite, giorno)
+    assert con.ritenuta.valore == senza.ritenuta.valore == Decimal("216.67")
+    (avviso,) = con.avvisi_di("riduzione_tfr_senza_effetto_fiscale")
+    assert (avviso.persona, avviso.anno, avviso.valore) == ("PERSONA-1", 2026, Decimal("-30"))
+    assert senza.avvisi_di("riduzione_tfr_senza_effetto_fiscale") == ()
