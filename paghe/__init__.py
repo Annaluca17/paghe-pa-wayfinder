@@ -9,6 +9,7 @@ from .corpus import (
     Corpus,
     DichiarazioneComposizione,
     Fermo,
+    MappaturaDiFatto,
     MappaturaEsterna,
     Massimale,
     Parametro,
@@ -44,6 +45,19 @@ from .delega import (
 )
 from .esito_730_4 import Esito730, esito_730_4, rimborso_730_4
 from .f24ep import serializza as serializza_f24ep
+from .denuncia_individuale import (
+    Assenza,
+    DenunciaAziendale,
+    DenunciaIndividuale,
+    InvioDenunciaIndividuale,
+    ScostamentoInvio,
+    controlla_completezza,
+    denuncia_aziendale,
+    denuncia_individuale,
+    invia_denuncia_individuale,
+    leggi_invio_denuncia_individuale,
+    segnala_scostamento_invio,
+)
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
@@ -69,6 +83,12 @@ from .registro import Registro
 from .tempo import Mese, Periodo
 
 __all__ = [
+    "Assenza",
+    "DenunciaAziendale",
+    "DenunciaIndividuale",
+    "InvioDenunciaIndividuale",
+    "MappaturaDiFatto",
+    "ScostamentoInvio",
     "CalendarioFestivi",
     "CodiceF24EP",
     "Delega",
@@ -145,6 +165,12 @@ __all__ = [
     "segnala_scostamento_contributi",
     "stato_delega",
     "stato_versione",
+    "controlla_completezza",
+    "denuncia_aziendale",
+    "denuncia_individuale",
+    "invia_denuncia_individuale",
+    "leggi_invio_denuncia_individuale",
+    "segnala_scostamento_invio",
     "lista_pos_pa",
     "spiega",
 ]

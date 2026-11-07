@@ -346,6 +346,10 @@ _Avoid_: Stampa, tabulato
 Verifica che ogni importo pagato sia compreso in ogni output obbligatorio dichiarato dal suo regime, o ne sia escluso da una dichiarazione esplicita. Un'assenza non dichiarata ferma l'invio di quell'output, non il calcolo.
 _Avoid_: Quadratura, controllo finale
 
+**DenunciaIndividuale**:
+Vista della denuncia per chi è a tempo determinato con pensione in CPDEL: dichiara alla gestione privata INPS, sotto la matricola DM dell'ente, il contributo NASpI a carico dell'ente e i dati utili alla prestazione. Accompagna la ListaPosPA dello stesso mese e dello stesso rapporto, che resta la denuncia della pensione. Si emette in ogni mese di rapporto attivo, anche senza imponibile. Produce un esito dichiarato.
+_Avoid_: UniEmens privatistico (che è il canale, non la vista), DM10, flusso DS
+
 **Lista collaboratori**:
 Vista della denuncia per chi è in gestione separata (co.co.co. e quote forfettarie degli amministratori), separata dalla ListaPosPA: ha struttura e identità proprie e segue il mese di erogazione. Produce un esito dichiarato.
 _Avoid_: ListaPosPA dei collaboratori, flusso parasubordinati

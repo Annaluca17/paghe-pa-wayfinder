@@ -23,7 +23,7 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 
 ## Scenario
 
-Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fiscale, denominazione, e-mail, IBAN di tesoreria, sigla di provincia) e l'ultimo pagamento del 2026 al 2026-12-18. Mese: marzo 2026, piu' dicembre 2026 per il conguaglio. Undici rapporti, ognuno per un caso:
+Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fiscale, denominazione, e-mail, IBAN di tesoreria, sigla di provincia) e l'ultimo pagamento del 2026 al 2026-12-18. Mese: marzo 2026, piu' dicembre 2026 per il conguaglio. Dodici rapporti, ognuno per un caso:
 
 | Rapporto | Titolo | Area | Regime di fine servizio | Caso |
 |---|---|---|---|---|
@@ -38,6 +38,7 @@ Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fi
 | R09 | segretario | - | - | segretario comunale |
 | R10 | sindaco | - | - | sindaco, mandato di amministratore |
 | R11 | co.co.co. | - | - | collaboratore coordinato e continuativo |
+| R12 | comparto | operatori | 1 | tempo determinato part-time verticale 50% in sostituzione (tipo impiego 18) |
 
 ## Dove arriva ogni rapporto
 
@@ -54,30 +55,31 @@ Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fi
 | R09 | si ferma al passo «Calcolo»: regime del titolo assente nel corpus | si ferma al passo «Calcolo»: regime del titolo assente nel corpus |
 | R10 | si ferma al passo «Calcolo»: regime del titolo assente nel corpus | si ferma al passo «Calcolo»: regime del titolo assente nel corpus |
 | R11 | si ferma al passo «Calcolo»: regime del titolo assente nel corpus | si ferma al passo «Calcolo»: regime del titolo assente nel corpus |
+| R12 | si ferma al passo «ListaPosPA»: bozza non trasmissibile | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
 
 ## Cosa manca per un mese completo
 
 I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccano e poi per quanti passi del percorso (calcolo, versione, conferma, pagamento, denuncia, ListaPosPA, delega, file, ricevute, esito versato) restano chiusi, sommati su marzo e dicembre.
 
-1. **debito_negativo: Il totale a debito del codice 100E e' negativo**: 6 rapporti bloccati, 24 passi, al passo «Delega F24EP», in dicembre. Casi: R01, R02, R03, R04, R06, R07.
+1. **debito_negativo: Il totale a debito del codice 100E e' negativo**: 7 rapporti bloccati, 28 passi, al passo «Delega F24EP», in dicembre. Casi: R01, R02, R03, R04, R06, R07, R12.
 2. **regime del titolo assente nel corpus**: 4 rapporti bloccati, 80 passi, al passo «Calcolo», in marzo e dicembre. Casi: R08 (dirigente), R09 (segretario), R10 (sindaco), R11 (co.co.co.).
-3. **bozza non trasmissibile**: 1 rapporto bloccato, 5 passi, al passo «ListaPosPA», in marzo. Casi: R04.
+3. **bozza non trasmissibile**: 2 rapporti bloccati, 10 passi, al passo «ListaPosPA», in marzo. Casi: R04, R12.
 
 ## Passaggi manuali
 
 | Categoria | Avvio | Preparazione di febbraio | Marzo | Dicembre |
 |---|---:|---:|---:|---:|
-| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 115 | 0 | 13 | 0 |
+| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 133 | 0 | 13 | 0 |
 | Fatti ricorrenti del mese (atti, variazioni, cessazioni, 730) | 0 | 0 | 16 | 1 |
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
 | Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 5 | 1 |
 | Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 1 |
-| **Totale senza i comandi** | **115** | **3** | **37** | **6** |
+| **Totale senza i comandi** | **133** | **3** | **37** | **6** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
 
-Fatti di avvio per soggetto: R01 14, R02 14, R03 14, R04 16, R05 14, R07 14, R08 6, R09 6, R10 6, R11 6, ente 5.
+Fatti di avvio per soggetto: R01 14, R02 14, R03 14, R04 16, R05 14, R07 14, R08 6, R09 6, R10 6, R11 6, R12 18, ente 5.
 Assunzione di marzo (avvio di un rapporto nuovo): R06 13.
 
 Dettaglio di Marzo, escluso l'avvio:
@@ -129,7 +131,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Fatti**
 
 - Riuscito:
-  - 128 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
+  - 146 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
   - 16 fatti del mese: performance, progressione, cessazione
 - Fermi: nessuno
 - Su dati fittizi:
@@ -147,6 +149,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R05: 2 importi, lordo 946.94
   - R06: 3 importi, lordo 982.22
   - R07: 2 importi, lordo 2051.69
+  - R12: 3 importi, lordo 873.45
 - Fermi:
   - R08 (dirigente): nessun importo; il fatto compenso_mensile registrato dall'Ufficio personale non e' letto da nessuna regola del corpus
   - R09 (segretario): nessun importo; il fatto compenso_mensile registrato dall'Ufficio personale non e' letto da nessuna regola del corpus
@@ -158,7 +161,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Versione di proposta**
 
 - Riuscito:
-  - versione 2: 62 righe di composizione, valuta prevista 2026-03-27, 7 rapporti
+  - versione 2: 70 righe di composizione, valuta prevista 2026-03-27, 8 rapporti
   - netto R01: 1945.99
   - netto R02: 2085.69
   - netto R03: 2111.25
@@ -166,18 +169,19 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - netto R05: 841.19
   - netto R06: 866.05
   - netto R07: 1806.31
+  - netto R12: 775.85
   - conguaglio fiscale sull'ultimo pagamento: R05 0.00
 - Fermi: nessuno
 - Su dati fittizi:
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
-  - avviso proiezione_conguaglio: R01, R02, R03, R04, R06, R07
-  - avviso senza_dichiarazione_sostituito: R04, R06
+  - avviso proiezione_conguaglio: R01, R02, R03, R04, R06, R07, R12
+  - avviso senza_dichiarazione_sostituito: R04, R06, R12
 
 **Conferma della Ragioneria**
 
 - Riuscito:
-  - versione 2 confermata (7 rapporti)
+  - versione 2 confermata (8 rapporti)
 - Fermi: nessuno
 - Su dati fittizi:
   - la conferma e' una chiamata del percorso: nessun adattatore verso la Ragioneria
@@ -185,7 +189,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Pagamento eseguito**
 
 - Riuscito:
-  - esito pagato 2: 62 righe, valuta 2026-03-27
+  - esito pagato 2: 70 righe, valuta 2026-03-27
 - Fermi: nessuno
 - Su dati fittizi:
   - l'evento di pagamento eseguito e' simulato dal percorso, con valuta uguale alla prevista
@@ -200,6 +204,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R05: 1 quadri, contributi nei quadri 354.67; contributi trattenuti uguali ai dovuti
   - R06: 1 quadri, contributi nei quadri 367.90; contributi trattenuti uguali ai dovuti
   - R07: 1 quadri, contributi nei quadri 768.44; contributi trattenuti uguali ai dovuti
+  - R12: 1 quadri, contributi nei quadri 327.25; contributi trattenuti uguali ai dovuti
 - Fermi: nessuno
 - Su dati fittizi:
   - basi, concorsi e contributi del corpus reale; concorsi della performance e del rimborso 730 fittizi
@@ -214,10 +219,16 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R05: E0 2026-03-01/2026-03-14
   - R06: E0 2026-03-16/2026-03-31
   - R07: E0 2026-03-01/2026-03-31
-  - file lista-pos-pa-2026-03.xml: 6 rapporti trasmissibili su 7 pagati (in produzione la fornitura e' un blocco solo; qui contiene i soli rapporti trasmissibili)
+  - R12: E0 2026-03-01/2026-03-31 (non trasmissibile)
+  - R12: DenunciaIndividuale 71 2/V/A, imponibile 873, contributo 14.06, PercPartTime 5000, PercPartTimeMese 5000, 5 settimane (1 D), 11 giorni lavorati su 31
+  - DenunciaAziendale 2026-03: NumDenIndiv 1, TotaleADebito 14
+  - controllo di completezza della DenunciaIndividuale: nessuna assenza
+  - file lista-pos-pa-2026-03.xml: 6 rapporti trasmissibili su 8 pagati (in produzione la fornitura e' un blocco solo; qui contiene i soli rapporti trasmissibili)
 - Fermi:
   - R04: Part-time verticale dal 2026-03-01: percentuale mensile (PercPartTime) non determinata dal documento tecnico INPS per un periodo lavorato in parte (docs/research/part-time-lista-pos-pa.md): bozza non trasmissibile
+  - R12: Part-time verticale dal 2026-03-01: percentuale mensile (PercPartTime) non determinata dal documento tecnico INPS per un periodo lavorato in parte (docs/research/part-time-lista-pos-pa.md): bozza non trasmissibile
 - Su dati fittizi:
+  - mappature della DenunciaIndividuale e calendario dei festivi: le prime sono del corpus reale, il calendario e' fittizio
   - ente dichiarante, mittente e codici fiscali dei firmatari di fantasia
 
 **Delega F24EP**
@@ -225,11 +236,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Riuscito:
   - scadenza 2026-04-16, data di versamento scelta 2026-04-16
   - riga F 100E: debito 171.65, credito 0.00
-  - riga Q P201: debito 3946.25, credito 0.00
+  - riga Q P201: debito 4231.43, credito 0.00
   - riga Q P607: debito 504.55, credito 0.00
-  - riga Q P608: debito 47.21, credito 0.00
-  - riga Q P909: debito 42.30, credito 0.00
-  - saldo 4711.96
+  - riga Q P608: debito 89.28, credito 0.00
+  - riga Q P909: debito 45.36, credito 0.00
+  - saldo 5042.27
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
 - Su dati fittizi:
@@ -254,7 +265,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 4: 42 righe, 4711.96 versati il 2026-04-16
+  - esito versato 4: 47 righe, 5042.27 versati il 2026-04-16
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:
@@ -272,6 +283,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R06: 3 importi, lordo 1824.12
   - R07: 3 importi, lordo 2051.69
   - R07: rimborso del 730-4: 150.00, anno dei redditi dichiarati 2025
+  - R12: 3 importi, lordo 873.45
 - Fermi:
   - R08 (dirigente): nessun importo; il fatto compenso_mensile registrato dall'Ufficio personale non e' letto da nessuna regola del corpus
   - R09 (segretario): nessun importo; il fatto compenso_mensile registrato dall'Ufficio personale non e' letto da nessuna regola del corpus
@@ -285,24 +297,25 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Versione di proposta**
 
 - Riuscito:
-  - versione 3: 55 righe di composizione, valuta prevista 2026-12-18, 6 rapporti
+  - versione 3: 64 righe di composizione, valuta prevista 2026-12-18, 7 rapporti
   - netto R01: 2013.01
   - netto R02: 2046.51
   - netto R03: 1674.31
   - netto R04: 941.77
   - netto R06: 1626.83
   - netto R07: 1988.79
-  - conguaglio fiscale sull'ultimo pagamento: R01 -67.02, R02 -100.52, R03 -53.93, R04 -21.50, R06 -96.99, R07 -32.48
+  - netto R12: 775.85
+  - conguaglio fiscale sull'ultimo pagamento: R01 -67.02, R02 -100.52, R03 -53.93, R04 -21.50, R06 -96.99, R07 -32.48, R12 0.00
 - Fermi: nessuno
 - Su dati fittizi:
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
-  - avviso senza_dichiarazione_sostituito: R04, R06
+  - avviso senza_dichiarazione_sostituito: R04, R06, R12
 
 **Conferma della Ragioneria**
 
 - Riuscito:
-  - versione 3 confermata (6 rapporti)
+  - versione 3 confermata (7 rapporti)
 - Fermi: nessuno
 - Su dati fittizi:
   - la conferma e' una chiamata del percorso: nessun adattatore verso la Ragioneria
@@ -310,7 +323,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Pagamento eseguito**
 
 - Riuscito:
-  - esito pagato 5: 55 righe, valuta 2026-12-18
+  - esito pagato 5: 64 righe, valuta 2026-12-18
 - Fermi: nessuno
 - Su dati fittizi:
   - l'evento di pagamento eseguito e' simulato dal percorso, con valuta uguale alla prevista
@@ -330,31 +343,31 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Riuscito:
   - scadenza 2027-01-18, data di versamento scelta 2027-01-18
 - Fermi:
-  - R01, R02, R03, R04, R06, R07: Il totale a debito del codice 100E e' negativo (-187.89; sezione F, riferimenti 0012/2026): i conguagli a credito superano le ritenute della delega. Il recupero dell'eccedenza non ha ancora una fonte, la delega non si trasmette
+  - R01, R02, R03, R04, R06, R07, R12: Il totale a debito del codice 100E e' negativo (-187.89; sezione F, riferimenti 0012/2026): i conguagli a credito superano le ritenute della delega. Il recupero dell'eccedenza non ha ancora una fonte, la delega non si trasmette
 - Su dati fittizi:
   - mappatura dei codici, catalogo dei codici F24EP, scadenza e festivi del corpus fittizio
 - Note:
-  - righe costruite ma non trasmissibili: 100E -187.89, 150E -150.00, P201 3658.38, P607 450.65, P608 87.67, P909 39.21
+  - righe costruite ma non trasmissibili: 100E -187.89, 150E -150.00, P201 3943.56, P607 450.65, P608 129.74, P909 42.27
 
 **File telematico**
 
 - Riuscito: niente
 - Fermi:
-  - R01, R02, R03, R04, R06, R07: non eseguito, la delega del mese non e' trasmessa
+  - R01, R02, R03, R04, R06, R07, R12: non eseguito, la delega del mese non e' trasmessa
 - Su dati fittizi:
 
 **Ricevute della delega**
 
 - Riuscito: niente
 - Fermi:
-  - R01, R02, R03, R04, R06, R07: non eseguito, la delega del mese non e' trasmessa
+  - R01, R02, R03, R04, R06, R07, R12: non eseguito, la delega del mese non e' trasmessa
 - Su dati fittizi:
 
 **Esito versato**
 
 - Riuscito: niente
 - Fermi:
-  - R01, R02, R03, R04, R06, R07: non eseguito, la delega del mese non e' trasmessa
+  - R01, R02, R03, R04, R06, R07, R12: non eseguito, la delega del mese non e' trasmessa
 - Su dati fittizi:
 
 ## Difetti del nucleo trovati

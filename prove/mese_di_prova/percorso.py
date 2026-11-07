@@ -22,6 +22,9 @@ from paghe import (
     TipoEsito,
     calcola,
     conferma_versione,
+    controlla_completezza,
+    denuncia_aziendale,
+    denuncia_individuale,
     costruisci_delega,
     differenze,
     emetti_versione,
@@ -237,6 +240,7 @@ class Esecuzione:
     difetti: list[Difetto] = field(default_factory=list)
     file_prodotti: list[str] = field(default_factory=list)
     uno_per_cento: bool = False  # almeno un quadro porta il contributo aggiuntivo dell'1%
+    denunce_individuali: dict = field(default_factory=dict)  # (mese, rapporto) -> DenunciaIndividuale dei tempi determinati
     arrivi: dict = field(default_factory=dict)  # (mese, rapporto) -> passo in cui il rapporto si ferma, o "completo"
     registro: Registro | None = None
     corpus: Corpus | None = None
@@ -366,6 +370,11 @@ def _fatti_di_avvio(c: _Contesto) -> dict[str, dict[str, object]]:
         c.ufficio.fatto("R04", "part_time", S.PART_TIME_PERCENTUALE, date(2026, 1, 1))
         c.ufficio.codice("R04", "tipo_part_time", S.PART_TIME_TIPO, date(2026, 1, 1))
         c.ufficio.programmazione_part_time("R04", S.programmazione_part_time_2026(), S.ATTO_PROGRAMMAZIONE)
+        c.ufficio.fatto("R12", "part_time", S.TD_PERCENTUALE, date(2026, 1, 1))
+        c.ufficio.codice("R12", "tipo_part_time", S.TD_TIPO_PART_TIME, date(2026, 1, 1))
+        c.ufficio.codice("R12", "termine_per_sostituzione", S.TD_TERMINE_PER_SOSTITUZIONE, date(2026, 1, 1))
+        c.ufficio.codice("R12", "prima_iscrizione_dal_1996", S.TD_PRIMA_ISCRIZIONE_DAL_1996, date(2026, 1, 1))
+        c.ufficio.programmazione_part_time("R12", S.programmazione_td_2026(), S.ATTO_PROGRAMMAZIONE_TD)
     return fatti
 
 
@@ -459,7 +468,8 @@ def _controlla_fiscale(c: _Contesto, versione) -> None:
                 "dedurli. Da confermare con chi conosce il fisco: se l'imponibile IRPEF e' al netto dei contributi "
                 "obbligatori, la ritenuta e' calcolata troppo alta.",
             )
-        if r.al is not None and not any(riga.istituto == "conguaglio_irpef" for riga in righe):
+        # Cessato prima del pagamento: un contratto che finisce dopo la valuta (R12, 31/12) non e' una cessazione a meta' anno.
+        if r.al is not None and r.al < versione.valuta_prevista and not any(riga.istituto == "conguaglio_irpef" for riga in righe):
             esecuzione.difetto(
                 "Il conguaglio fiscale alla cessazione non c'e'",
                 f"{r.id} cessa il {r.al}: il suo ultimo pagamento ({versione.valuta_prevista}) ha solo la ritenuta e un "
@@ -546,12 +556,40 @@ def _ente_e_mittente() -> tuple[Ente, Mittente]:
     return ente, Mittente(mittente, "UFFICIO PERSONALE DI PROVA", S.CF_ENTE, "98765432103", "1")
 
 
+def _denuncia_individuale(c: _Contesto, tag: str, mese: Mese, rapporto: str, passo: Passo, individuali: list) -> None:
+    """La DenunciaIndividuale dei tempi determinati, nel passo della ListaPosPA che accompagna (ADR 0027)."""
+    try:
+        vista = denuncia_individuale(c.registro, c.corpus, rapporto, mese)
+    except ErrorePaghe as errore:
+        passo.fermi.append(Fermo(tag, "lista_pos_pa", (rapporto,), causa_di(str(errore)), str(errore)))
+        return
+    if vista is None:
+        return
+    c.esecuzione.denunce_individuali[(tag, rapporto)] = vista
+    individuali.append(vista)
+    passo.riuscito.append(
+        f"{rapporto}: DenunciaIndividuale {vista.tipo_contribuzione} {vista.qualifica1}/{vista.qualifica2}/{vista.qualifica3}, "
+        f"imponibile {vista.imponibile}, contributo {_soldi(vista.contributo) if vista.contributo is not None else '-'}, "
+        f"PercPartTime {vista.perc_part_time}, PercPartTimeMese {vista.perc_part_time_mese}, "
+        f"{len(vista.settimane)} settimane ({sum(1 for s in vista.settimane if s.copertura == 'D')} D), "
+        f"{sum(1 for g in vista.giorni if g.lavorato == 'S')} giorni lavorati su {len(vista.giorni)}"
+        + ("" if vista.trasmissibile else " (non trasmissibile)")
+    )
+    for fermo in vista.fermi:
+        passo.fermi.append(Fermo(tag, "lista_pos_pa", (rapporto,), "DenunciaIndividuale non prodotta", fermo.motivo))
+    for dato in vista.mancanti:
+        passo.fermi.append(Fermo(tag, "lista_pos_pa", (rapporto,), f"DenunciaIndividuale: dato mancante {dato.fatto}", str(dato)))
+    for motivo in vista.bozza:
+        passo.fermi.append(Fermo(tag, "lista_pos_pa", (rapporto,), "DenunciaIndividuale: bozza non trasmissibile", motivo))
+
+
 def _denuncia_e_lista(c: _Contesto, tag: str, mese: Mese, giorno: date, versione, arrivi: dict) -> None:
     pd = c.passo(tag, "denuncia")
     pl = c.passo(tag, "lista_pos_pa")
     c.vai(giorno)
     c.comando(tag, f"produzione della denuncia e della ListaPosPA ({tag})")
     viste_ok = []
+    individuali = []
     for rapporto in versione.rapporti:
         try:
             scostamenti = segnala_scostamento_contributi(c.registro, c.corpus, rapporto, mese)
@@ -596,6 +634,19 @@ def _denuncia_e_lista(c: _Contesto, tag: str, mese: Mese, giorno: date, versione
             viste_ok.append(vista)
         else:
             arrivi.setdefault(rapporto, "lista_pos_pa")
+        _denuncia_individuale(c, tag, mese, rapporto, pl, individuali)
+    if individuali:
+        quadratura = denuncia_aziendale(individuali)
+        pl.riuscito.append(
+            f"DenunciaAziendale {mese}: NumDenIndiv {quadratura.num_den_indiv}, TotaleADebito {quadratura.totale_a_debito}"
+        )
+        assenze = controlla_completezza(c.registro, c.corpus, mese)
+        pl.riuscito.append(
+            "controllo di completezza della DenunciaIndividuale: " + ("nessuna assenza" if not assenze else f"{len(assenze)} assenze")
+        )
+        for assenza in assenze:
+            pl.fermi.append(Fermo(tag, "lista_pos_pa", (assenza.rapporto,), "assenza dalla DenunciaIndividuale", assenza.motivo))
+        pl.fittizio.append("mappature della DenunciaIndividuale e calendario dei festivi: le prime sono del corpus reale, il calendario e' fittizio")
     if viste_ok:
         ente, mittente = _ente_e_mittente()
         nome = c.scrivi(f"lista-pos-pa-{mese}.xml", in_xml(viste_ok, ente, mittente, mese))

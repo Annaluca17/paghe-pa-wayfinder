@@ -67,11 +67,11 @@ def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
     per_causa = {g["causa"]: g for g in cause_ordinate(esecuzione)}
     assert per_causa["regime del titolo assente nel corpus"]["bloccati"] == {"R08", "R09", "R10", "R11"}
     assert "part-time, riproporzionamento non modellato" not in per_causa
-    assert per_causa["bozza non trasmissibile"]["bloccati"] == {"R04"}
+    assert per_causa["bozza non trasmissibile"]["bloccati"] == {"R04", "R12"}  # ListaPosPA del part-time verticale
     # Il rimborso 730 di R07 non ferma piu' la delega di dicembre: il fermo e' il debito negativo del 100E, nominato.
     assert not [causa for causa in per_causa if "150E" in causa]
     (stop_debito,) = [g for causa, g in per_causa.items() if causa.startswith("debito_negativo")]
-    assert "100E" in stop_debito["causa"] and stop_debito["bloccati"] == {"R01", "R02", "R03", "R04", "R06", "R07"}
+    assert "100E" in stop_debito["causa"] and stop_debito["bloccati"] == {"R01", "R02", "R03", "R04", "R06", "R07", "R12"}
 
 
 def test_il_rimborso_730_di_r07_e_sul_netto_e_credito_nella_delega_di_dicembre(esecuzione, resoconto):
@@ -153,3 +153,13 @@ def test_i_titoli_senza_regime_hanno_il_rapporto_e_si_fermano_nominando_il_caso(
     assert {f.caso for f in fermi} == {"dirigente", "segretario", "sindaco", "co.co.co."}
     assert all(f.passo == "calcolo" for f in fermi)
 
+
+
+def test_r12_a_tempo_determinato_ha_la_denuncia_individuale_di_marzo_trasmissibile(esecuzione):
+    """Part-time verticale 50% in sostituzione: una settimana interamente non lavorata e una percentuale del mese intermedia."""
+    vista = esecuzione.denunce_individuali[("2026-03", "R12")]
+    assert vista.trasmissibile
+    assert (vista.qualifica2, vista.qualifica3, vista.perc_part_time) == ("V", "A", 5000)
+    assert 0 < vista.perc_part_time_mese < 10000
+    assert (12, "D") in [(s.id, s.copertura) for s in vista.settimane]
+    assert {r for (m, r) in esecuzione.denunce_individuali} == {"R12"}  # gli altri non sono a tempo determinato

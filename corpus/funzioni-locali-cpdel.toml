@@ -114,6 +114,24 @@ dal = 1993-01-01
 valore = "1"
 riferimento = "urn:nir:stato:decreto.legge:1992-09-19;384~art3ter + prassi:inps:circolare:2026-01-30;6~par5"
 
+# Contributo NASpI a carico dell'ente per i tempi determinati, in punti percentuali (ADR 0027, ticket #77): 1,61%,
+# somma di due componenti, sulla base pensionistica CPDEL arrotondata all'euro. Norma certa: circolari INPS 140/2012
+# e 125/2025, riscontro nella ricerca docs/research/uniemens-privatistico-tempo-determinato.md § 1.2.
+
+[[parametro]]
+nome = "aliquota_naspi_ordinaria"
+[[parametro.vigenza]]
+dal = 2013-01-01
+valore = "1.31"
+riferimento = "urn:nir:stato:legge:2012-06-28;92~art2-com25 + prassi:inps:circolare:2012-12-14;140~par3 + prassi:inps:circolare:2025-09-11;125~par4"
+
+[[parametro]]
+nome = "aliquota_naspi_integrativa"
+[[parametro.vigenza]]
+dal = 2013-01-01
+valore = "0.30"
+riferimento = "urn:nir:stato:legge:1978-12-21;845~art25-com4 + prassi:inps:circolare:2012-12-14;140~par3 + prassi:inps:circolare:2025-09-11;125~par4"
+
 # TFS ex INADEL: 6,10% della retribuzione contributiva considerata all'80%, dal 01/01/1972.
 
 [[parametro]]
@@ -171,6 +189,27 @@ dal = 2026-01-01
 al = 2026-12-31
 valore = "122295.00"
 riferimento = "prassi:inps:circolare:2026-01-30;6~par6 + urn:nir:stato:legge:1995-08-08;335~art2-com18"
+
+# Orario settimanale del tempo pieno, in ore: serve alla DenunciaIndividuale dei tempi determinati per le settimane
+# utili e le ore lavorabili del part-time (ADR 0027, ticket #77). 36 ore settimanali nel comparto Funzioni Locali
+# (CCNL 21/05/2018 art. 22). Norma certa; il comma e' DA VERIFICARE sul testo.
+
+[[parametro]]
+nome = "orario_settimanale_tempo_pieno"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "36"
+riferimento = "ccnl:S105:2018-05-21~art22"
+
+# Giorni lavorativi della settimana a tempo pieno: cinque (lunedi'-venerdi'); l'orario giornaliero e' 36 / 5 = 7,2 ore.
+# CCNL 21/05/2018 art. 22, stessa fonte e stesso DA VERIFICARE.
+
+[[parametro]]
+nome = "giorni_settimana_tempo_pieno"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "5"
+riferimento = "ccnl:S105:2018-05-21~art22"
 
 # Mese parziale (nota di prassi 1)
 
@@ -722,3 +761,112 @@ istituto = "comparto_operatori"
 trattamento = "proporzionale"
 dal = 2026-01-01
 riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+# Mappature degli elementi della DenunciaIndividuale dei tempi determinati (ADR 0027, ticket #77): il codice
+# dell'elemento per il valore di un fatto del rapporto. Nessun codice sta nel programma.
+
+# Qualifica3: «A» tempo determinato per sostituzione di lavoratori assenti (dal 01/2013), «D» restanti tipologie.
+# Allegato tecnico 4.33.1, p. 110; msg INPS 4152/2014 par. 1.1. Norma certa sui codici.
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "Qualifica3"
+fatto = "termine_per_sostituzione"
+valore = "si"
+codice = "A"
+dal = 2013-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag110 + prassi:inps:messaggio:2014-04-17;4152~par1.1"
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "Qualifica3"
+fatto = "termine_per_sostituzione"
+valore = "no"
+codice = "D"
+dal = 2013-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag110"
+
+# Qualifica1: «2» impiegato. Il codice è certo (Allegato tecnico 4.33.1, pp. 108-109) e la circolare INPS 31/2025
+# par. 3 lo vuole per i tempi determinati delle pubbliche amministrazioni con contratti dell'art. 3-ter D.L. 44/2023;
+# per le aree del comparto (operatori, operatori esperti, istruttori, funzionari) non c'è una regola di
+# corrispondenza letta sul testo: DA VERIFICARE (docs/research/uniemens-privatistico-tempo-determinato.md § 2.2).
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "Qualifica1"
+fatto = "area"
+valore = "funzionari"
+codice = "2"
+dal = 2026-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "Qualifica1"
+fatto = "area"
+valore = "istruttori"
+codice = "2"
+dal = 2026-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "Qualifica1"
+fatto = "area"
+valore = "operatori_esperti"
+codice = "2"
+dal = 2026-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "Qualifica1"
+fatto = "area"
+valore = "operatori"
+codice = "2"
+dal = 2026-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
+
+# RegimePost95: «S» se il lavoratore è soggetto al regime contributivo, «N» altrimenti (documento tecnico 4.33, p. 42).
+# Quale valore spetti a un lavoratore con pensione in cassa pubblica non è detto dalle fonti: la corrispondenza con la
+# prima iscrizione dal 01/01/1996 (L. 335/1995 art. 1 c. 6) è una lettura nostra, DA VERIFICARE.
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "RegimePost95"
+fatto = "prima_iscrizione_dal_1996"
+valore = "si"
+codice = "S"
+dal = 2015-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-09-29;4.33~pag42 + urn:nir:stato:legge:1995-08-08;335~art1-com6"
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "RegimePost95"
+fatto = "prima_iscrizione_dal_1996"
+valore = "no"
+codice = "N"
+dal = 2015-01-01
+riferimento = "prassi:inps:documento.tecnico:2026-09-29;4.33~pag42 + urn:nir:stato:legge:1995-08-08;335~art1-com6"
+
+# CodiceContratto «CPUB» (codice unico CNEL del macrosettore Amministrazione pubblica) e TipoCodiceContratto «02»
+# (dalla competenza 02/2022), per il contratto RALN (Regioni e autonomie locali) del rapporto. Msg INPS 1058/2022.
+# DA VERIFICARE dopo il file «Codici Contratto» v. 60 (09/2026), che non porta più il macrosettore CNEL.
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "CodiceContratto"
+fatto = "contratto"
+valore = "RALN"
+codice = "CPUB"
+dal = 2022-02-01
+riferimento = "prassi:inps:messaggio:2022-03-07;1058"
+
+[[mappatura_fatto]]
+sistema = "uniemens.denuncia_individuale"
+elemento = "TipoCodiceContratto"
+fatto = "contratto"
+valore = "RALN"
+codice = "02"
+dal = 2022-02-01
+riferimento = "prassi:inps:messaggio:2022-03-07;1058 + prassi:inps:documento.tecnico:2026-09-29;4.33~pag42"

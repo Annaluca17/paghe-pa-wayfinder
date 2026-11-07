@@ -100,6 +100,10 @@ class Quota:
 # Fatti del part-time (ADR 0026): la percentuale è numerica, il tipo un codice.
 FATTO_PART_TIME = "part_time"
 FATTO_TIPO_PART_TIME = "tipo_part_time"
+# Il termine del tempo determinato è per sostituzione di un lavoratore assente: «si» o «no» (ADR 0027, ticket #77).
+FATTO_TERMINE_PER_SOSTITUZIONE = "termine_per_sostituzione"
+# La prima iscrizione a una forma previdenziale obbligatoria è dal 01/01/1996 in poi (regime contributivo): «si» o «no».
+FATTO_PRIMA_ISCRIZIONE_DAL_1996 = "prima_iscrizione_dal_1996"
 
 
 @dataclass(frozen=True)

@@ -259,7 +259,7 @@ def scrivi(esecuzione: Esecuzione) -> str:
         "",
         f"Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fiscale, denominazione, e-mail, "
         f"IBAN di tesoreria, sigla di provincia) e l'ultimo pagamento del 2026 al {S.ULTIMO_PAGAMENTO_2026}. "
-        "Mese: marzo 2026, piu' dicembre 2026 per il conguaglio. Undici rapporti, ognuno per un caso:",
+        "Mese: marzo 2026, piu' dicembre 2026 per il conguaglio. Dodici rapporti, ognuno per un caso:",
         "",
         *_scenario(),
         "",
