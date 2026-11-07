@@ -383,12 +383,16 @@ def _rapporto(
 def _persone_assenti(registro: Registro, anno: int, presenti: set[str], istante: datetime) -> list[Avviso]:
     """Chi ha già redditi pagati nell'anno d'imposta ma non è in questo ultimo pagamento: niente conguaglio per lui."""
     pagate: set[str] = set()
+    conguagliate: set[str] = set()
     for esito in registro.esiti(TipoEsito.PAGATO, istante):
         for riga in esito.righe:
-            if _e_reddito(riga) and riga.anno_imposta == anno:
-                persona = registro.persona_del_rapporto(riga.rapporto, istante)
-                if persona is not None:
-                    pagate.add(persona)
+            persona = registro.persona_del_rapporto(riga.rapporto, istante)
+            if persona is None or riga.anno_imposta != anno:
+                continue
+            if _e_reddito(riga):
+                pagate.add(persona)
+            elif riga.derivazione.maturazione == "conguaglio":
+                conguagliate.add(persona)  # già conguagliata, per esempio alla cessazione: non è assente
     return [
         Avviso(
             AVVISO_PERSONA_ASSENTE,
@@ -397,7 +401,7 @@ def _persone_assenti(registro: Registro, anno: int, presenti: set[str], istante:
             persona,
             anno,
         )
-        for persona in sorted(pagate - presenti)
+        for persona in sorted(pagate - presenti - conguagliate)
     ]
 
 
