@@ -768,3 +768,18 @@ def test_una_competenza_a_cavallo_di_due_anni_ferma_anche_con_la_dichiarazione(r
     cavallo = replace(riga, periodo=Periodo(date(2026, 12, 15), date(2027, 1, 14)))
     with pytest.raises(CasoNonModellato, match="a cavallo di due anni"):
         attribuisci_reddito(fisiologico, [cavallo], date(2027, 1, 20))
+
+
+def test_il_pagamento_fisiologico_entra_nell_imponibile_nella_ritenuta_e_nel_conguaglio_dell_anno_del_pagamento(
+    registro, orologio, fisiologico
+):
+    """Stipendio di dicembre 2026 di 1500 pagato il 13/01/2027: è reddito 2027, non 2026."""
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2026, 12))
+    esito, fiscale = paga(registro, orologio, fisiologico, righe, date(2027, 1, 13), ultimo=True)
+    assert imponibile_fiscale(registro, P, 2027).valore == Decimal("1500")
+    assert imponibile_fiscale(registro, P, 2026).valore == Decimal(0)
+    assert fiscale.ritenuta.valore == Decimal("216.67")  # 0,10 * 833,33 + 0,20 * (1500 - 833,33)
+    assert fiscale.ritenuta.anno_imposta == 2027
+    assert fiscale.conguaglio.valore == Decimal("-66.67")  # imposta annua 0,10 * 1500 = 150, meno 216,67 operati
+    assert fiscale.conguaglio.anno_imposta == 2027
