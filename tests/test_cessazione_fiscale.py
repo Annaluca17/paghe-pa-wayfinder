@@ -14,9 +14,9 @@ from decimal import Decimal
 import pytest
 
 from paghe import Mese, calcola
-from paghe.proposta import emetti_versione
+from paghe.proposta import AVVISO_PERSONA_ASSENTE, emetti_versione
 
-from materiale_proposta import CF, IBAN, P, R, paga, corpus_proposta, per_istituto, stipendio
+from materiale_proposta import CF, IBAN, P, P2, R, R2, paga, corpus_proposta, per_istituto, stipendio
 
 
 @pytest.fixture
@@ -98,3 +98,37 @@ def test_un_arretrato_pagato_dopo_la_cessazione_porta_un_conguaglio_per_differen
         Decimal("80.00"),
         Decimal("20.00"),
     )
+
+
+def test_cessata_a_dicembre_prima_dell_ultimo_pagamento_dell_ente_ha_il_conguaglio_al_pagamento_finale(registro, corpus_c, orologio):
+    """Il 18 dicembre è l'ultimo pagamento dell'ente; la persona cessa il 10 e viene pagata il 10: è il suo pagamento
+    finale, con il conguaglio -220,00. Un arretrato di 500 pagato il 18 è nello stesso mese: ritenuta del mese
+    (2000 - 100) * 0,20 = 380,00 meno 280,00 già operati = 100,00; imposta dell'anno su 2000 = 160,00, operato
+    280 - 220 + 100 = 160: conguaglio per differenza 0,00, presente perché il 18 è l'ultimo pagamento dell'ente."""
+    registro.registra_ultimo_pagamento(2026, date(2026, 12, 18))
+    assumi_fino_al(registro, R, P, al=date(2026, 12, 10))
+    dicembre = stipendio_fino_al(registro, corpus_c, Mese(2026, 12), date(2026, 12, 10))
+    orologio.vai(12, 5)
+    finale = paga(registro, corpus_c, orologio, dicembre, date(2026, 12, 10), "pag-dic")
+    assert per_istituto(finale.righe)["conguaglio_irpef"].importo.valore == Decimal("-220.00")
+    arretrato = stipendio_fino_al(registro, corpus_c, Mese(2026, 11), date(2026, 11, 30), "500")
+    orologio.vai(12, 12)
+    versione = emetti_versione(registro, corpus_c, date(2026, 12, 18), arretrato)
+    righe = per_istituto(versione.righe)
+    assert (righe["ritenuta_irpef"].importo.valore, righe["conguaglio_irpef"].importo.valore) == (
+        Decimal("100.00"),
+        Decimal("0.00"),
+    )
+
+
+def test_la_persona_cessata_con_il_conguaglio_gia_fatto_non_e_assente_dall_ultimo_pagamento(registro, corpus_c, orologio):
+    assumi_fino_al(registro, R, P, al=date(2026, 3, 14))
+    assumi_fino_al(registro, R2, P2)
+    orologio.vai(3, 20)
+    paga(registro, corpus_c, orologio, stipendio_fino_al(registro, corpus_c, Mese(2026, 3), date(2026, 3, 14)), date(2026, 3, 27), "pag-p")
+    registro.registra_ultimo_pagamento(2026, date(2026, 12, 18))
+    paga(registro, corpus_c, orologio, stipendio_fino_al(registro, corpus_c, Mese(2026, 1), date(2026, 1, 31), rapporto=R2), date(2026, 3, 28), "pag-p2")
+    orologio.vai(12, 10)
+    dicembre = stipendio_fino_al(registro, corpus_c, Mese(2026, 12), date(2026, 12, 31), rapporto=R2)
+    versione = emetti_versione(registro, corpus_c, date(2026, 12, 18), dicembre)
+    assert [a for a in versione.avvisi if a.tipo == AVVISO_PERSONA_ASSENTE] == []
