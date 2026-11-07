@@ -22,7 +22,7 @@ from .calcolo import _somma_righe
 from .corpus import Corpus
 from .denuncia import MATURAZIONI_DERIVATE, calcola_denuncia
 from .errori import CasoNonModellato, ComposizioneMancante, ErroreCalcolo, ErroreRegistro, RedditoMancante
-from .fisco import Avviso, _controlla_competenza, anno_imposta, attribuisci_reddito, calcola_fiscale
+from .fisco import Avviso, _controlla_competenza, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
 from .modello import Esito, Evento, Importo, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, Registro
 from .tempo import Mese, in_utc
@@ -349,7 +349,10 @@ def _rapporto(
     ultimo, manca_ultimo = _ultimo_dell_anno(registro, anno, valuta, istante)
     # I contributi leggono solo le basi previdenziali, mai la ritenuta: si calcolano prima, perché la ritenuta li deduce.
     contributi = _contributi_per_differenza(registro, corpus, rapporto, valuta, reddito, istante)
-    fiscale = calcola_fiscale(registro, corpus, rapporto, [*attribuiti, *contributi], valuta, ultimo, istante)
+    persona = registro.persona_del_rapporto(rapporto, istante)
+    finale = persona is not None and pagamento_finale(registro, corpus, persona, anno, valuta, istante)
+    manca_ultimo = manca_ultimo and not finale
+    fiscale = calcola_fiscale(registro, corpus, rapporto, [*attribuiti, *contributi], valuta, ultimo or finale, istante)
     fiscali = [fiscale.ritenuta] + ([fiscale.conguaglio] if fiscale.conguaglio is not None else [])
     fiscali = [replace(i, esiti_confrontati=_esiti_con_la_stessa_chiave(registro, i, istante)) for i in fiscali]
 

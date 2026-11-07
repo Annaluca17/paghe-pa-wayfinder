@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import calendar
 from dataclasses import dataclass, replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
@@ -478,6 +478,30 @@ def _importo_conguaglio(
             importi=annuale.righe,
         ),
     )
+
+
+def pagamento_finale(
+    registro: Registro, corpus: Corpus, persona: str, anno: int, valuta: date, noto_al: datetime | None = None
+) -> bool:
+    """Un pagamento della persona alla `valuta` dopo il quale nessun suo rapporto ha servizio nell'anno d'imposta.
+
+    La fine del servizio è la fine del fatto di servizio del corpus (ADR 0019: alla cessazione il conguaglio si fa
+    sul pagamento finale); il registro non ha un fatto «cessazione». Vale per la persona: se un altro suo rapporto
+    ha ancora servizio, non è finale. Serve che la persona abbia avuto servizio fino alla valuta. Per una valuta
+    oltre il 31 dicembre (cassa allargata) conta il servizio del giorno dopo la valuta.
+    """
+    if corpus.fatto_servizio is None:
+        return False
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    dopo = valuta + timedelta(days=1)
+    seguente = Periodo(dopo, max(date(anno, 12, 31), dopo))
+    avuto = False
+    for rapporto in registro.rapporti_della_persona(persona, istante):
+        if any(fatto.valido_dal <= valuta for fatto in registro.fatti_noti(rapporto, corpus.fatto_servizio, istante)):
+            avuto = True
+        if any(fatto is not None for fatto in registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, seguente, istante)):
+            return False
+    return avuto
 
 
 def _controlla_ultimo(registro: Registro, persona: str, anno: int, data_pagamento: date, istante: datetime) -> None:
