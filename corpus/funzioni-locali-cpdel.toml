@@ -158,6 +158,66 @@ manca = true
 valori = ["gestione_separata", "pensionato", "altra_cassa"]
 riferimento = "prassi:inps:circolare:2026-02-03;8~par1 + prassi:immedia:nota:2026-11-07;10"
 
+# Sindaco (ticket #73, PR B): condizione lavorativa e carica obbligatorie dove c'e' una misura, posizione previdenziale per la quota art. 86.
+
+[[fermo]]
+fatto = "condizione_lavorativa"
+caso = "indennita' di funzione senza una condizione lavorativa nota (non_dipendente, dipendente_senza_aspettativa, dipendente_in_aspettativa): il dimezzamento non ha un valore di default"
+ambito = "calcolo"
+se = "misura_indennita_funzione"
+manca = true
+valori = ["non_dipendente", "dipendente_senza_aspettativa", "dipendente_in_aspettativa"]
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1 + prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "carica"
+caso = "carica non modellata: l'onere dell'art. 86 e la misura sono modellati solo per il sindaco"
+ambito = "calcolo"
+se = "misura_indennita_funzione"
+manca = true
+valori = ["sindaco"]
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com1 + prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "posizione_previdenziale"
+caso = "quota dell'art. 86 verso una cassa diversa dalla gestione separata, o posizione previdenziale ignota: non modellata"
+ambito = "calcolo"
+se = "carica=sindaco"
+manca = true
+valori = ["gestione_separata"]
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com2 + prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "condizione_lavorativa"
+caso = "oneri in aspettativa dell'art. 86 c. 1 e rimborsi al datore di lavoro (art. 80), non modellati: l'importo viene da fuori"
+ambito = "calcolo"
+codice = "dipendente_in_aspettativa"
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com1 + prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "presenza_seduta"
+caso = "gettoni di presenza e loro tetto, non modellati"
+ambito = "calcolo"
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com2 + prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "rimborso_datore_lavoro"
+caso = "rimborsi al datore di lavoro dell'amministratore, non modellati"
+ambito = "calcolo"
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art80 + prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "indennita_fine_mandato"
+caso = "indennita' di fine mandato, a tassazione separata, non modellata"
+ambito = "calcolo"
+riferimento = "prassi:immedia:nota:2026-11-07;10"
+
+[[fermo]]
+fatto = "fascia_popolazione"
+caso = "importo atteso dell'indennita' per fascia di popolazione, non modellato: nessuna regola di confronto"
+ambito = "calcolo"
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1 + urn:nir:stato:legge:2021-12-30;234~art1-com583 + prassi:immedia:nota:2026-11-07;10"
+
 # Basi imponibili (ADR 0005)
 
 [[base]]
@@ -346,6 +406,15 @@ dal = 2026-01-01
 al = 2026-12-31
 valore = "122295.00"
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com18 + prassi:inps:circolare:2026-02-03;8~par6.1 + prassi:inps:circolare:2026-02-09;14"
+
+# Art. 82 c. 1 TUEL: l'indennita' di funzione e' dimezzata per i lavoratori dipendenti che non abbiano richiesto l'aspettativa.
+# Una sola fonte (testo vigente su Normattiva al 06/11/2026): da verificare (ricerca regimi-titolo-cifre-2026.md sez. 4b).
+[[parametro]]
+nome = "divisore_dimezzamento_indennita"
+[[parametro.vigenza]]
+dal = 2000-10-13
+valore = "2"
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1"
 
 # Orario settimanale del tempo pieno, in ore: serve alla DenunciaIndividuale dei tempi determinati per le settimane
 # utili e le ore lavorabili del part-time (ADR 0027, ticket #77). 36 ore settimanali nel comparto Funzioni Locali
@@ -677,6 +746,29 @@ riferimento = "prassi:inps:circolare:2026-02-03;8~par4.1 + prassi:immedia:nota:2
 formula = "fatto.rata_collaborazione"
 maturazione = "evento"
 applica_se = "rata_collaborazione"
+
+# Sindaco (ticket #73, PR B): la misura mensile piena dell'indennita' di funzione e' un input da atto (ADR 0016), a giorni
+# sul mese di calendario. Il dimezzamento e' una regola sulla condizione lavorativa. Nota di prassi 10.
+
+[[regola]]
+istituto = "indennita_funzione"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1 + urn:nir:stato:legge:2021-12-30;234~art1-com583 + prassi:immedia:nota:2026-11-07;10"
+formula = "fatto.misura_indennita_funzione"
+maturazione = "giorni"
+applica_se = "misura_indennita_funzione"
+conteggio = "calendario"
+decimali = 2
+
+[[regola]]
+istituto = "dimezzamento_indennita"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1 + prassi:immedia:nota:2026-11-07;10"
+formula = "-arrotonda(importo.indennita_funzione / parametro.divisore_dimezzamento_indennita, 2)"
+maturazione = "evento"
+applica_se = "condizione_lavorativa=dipendente_senza_aspettativa"
 
 [[condizione_di_proposta]]
 istituto = "compenso_collaborazione"
@@ -1289,6 +1381,22 @@ basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori"]
 misura = "escluso"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+# Indennita' di funzione e suo dimezzamento: dichiarate escluse da ogni base previdenziale (ADR 0016, nota di prassi 10).
+
+[[concorso]]
+istituto = "indennita_funzione"
+basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori", "gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com2 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "dimezzamento_indennita"
+basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori", "gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com2 + prassi:immedia:nota:2026-11-07;10"
 
 # Trattamento nel part-time (ADR 0026, ticket #72). Riferimento letto sul testo ARAN: CCNL 16/11/2022, art. 62, c. 10,
 # «il trattamento economico del personale con rapporto di lavoro a tempo parziale è proporzionale alla prestazione
