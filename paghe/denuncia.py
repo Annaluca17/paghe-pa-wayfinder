@@ -35,7 +35,8 @@ from .tempo import Mese, Periodo, in_utc
 FORMULA_BASE = "somma degli importi pagati nel periodo"
 FORMULA_BASE_MESE = "somma delle basi dei periodi del mese"
 # Derivano dagli importi pagati: non sono retribuzione e non concorrono a una base.
-MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa"} | MATURAZIONI_FISCALI
+# `onere`: a carico dell'ente, non e' retribuzione della persona (ticket #73).
+MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere"} | MATURAZIONI_FISCALI
 IN_SERVIZIO = "in servizio"
 SU_CESSATO = "su cessato"
 
@@ -343,6 +344,8 @@ class _Contributi:
             if condizione is None or not self.lettore.soddisfa(regola, condizione):
                 return None
             fatti[condizione.id] = condizione
+            if not self.lettore.condizioni_aggiuntive(regola, self.condizione_su, fatti):
+                return None
 
         def risolvi(origine: str, nome: str) -> Decimal:
             if origine == "fatto":

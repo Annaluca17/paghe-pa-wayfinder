@@ -416,6 +416,28 @@ dal = 2000-10-13
 valore = "2"
 riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1"
 
+# Quota forfettaria dell'art. 86 c. 2 TUEL (ricerca regimi-titolo-cifre-2026.md sez. 4a): D.M. 25/05/2001 art. 2 lett. v) e
+# Circ. INPS 205/2001 dicono che si applica l'aliquota vigente al minimale di artigiani e commercianti. Minimale 2026
+# 18.808,00 euro, due fonti (Circ. INPS 8/2026 par. 6.2 e Circ. INPS 14/2026 par. 2). Aliquota degli amministratori di
+# enti locali iscritti alla gestione separata, tipo 04: 33,72% (33,00 + 0,50 + 0,22, senza DIS-COLL), Circ. INPS 8/2026.
+# L'applicazione all'art. 86 e' prassi-interpretazione (nota di prassi 10): nessuna fonte INPS la applica espressamente.
+
+[[parametro]]
+nome = "minimale_gs"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "18808.00"
+riferimento = "urn:nir:stato:legge:1990-08-02;233~art1-com3 + prassi:inps:circolare:2026-02-03;8~par6.2 + prassi:inps:circolare:2026-02-09;14"
+
+[[parametro]]
+nome = "aliquota_gs_amministratori"
+[[parametro.vigenza]]
+dal = 2026-01-01
+al = 2026-12-31
+valore = "33.72"
+riferimento = "prassi:inps:circolare:2026-02-03;8~par1 + prassi:inps:circolare:2001-11-21;205"
+
 # Orario settimanale del tempo pieno, in ore: serve alla DenunciaIndividuale dei tempi determinati per le settimane
 # utili e le ore lavorabili del part-time (ADR 0027, ticket #77). 36 ore settimanali nel comparto Funzioni Locali
 # (CCNL 21/05/2018 art. 22). Norma certa; il comma e' DA VERIFICARE sul testo.
@@ -769,6 +791,23 @@ riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1 + pra
 formula = "-arrotonda(importo.indennita_funzione / parametro.divisore_dimezzamento_indennita, 2)"
 maturazione = "evento"
 applica_se = "condizione_lavorativa=dipendente_senza_aspettativa"
+
+# Art. 86 c. 2 TUEL: all'amministratore che non e' lavoratore dipendente e che ha la carica del c. 1 spetta una quota
+# forfettaria annuale, a carico dell'ente, versata per quote mensili verso la gestione separata (ADR 0016). La regola
+# decide il diritto: carica, condizione lavorativa e posizione previdenziale; se non spetta non nasce nessun importo.
+# Minimale e aliquota sono parametri; la quota e' un onere dell'ente, non reddito e non base (maturazione `onere`).
+
+[[regola]]
+istituto = "onere_art86"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com2 + prassi:inps:circolare:2001-11-21;205 + prassi:immedia:nota:2026-11-07;10"
+formula = "arrotonda(arrotonda(parametro.minimale_gs * parametro.aliquota_gs_amministratori / 100, 2) / 12, 2)"
+maturazione = "onere"
+applica_se = "carica=sindaco"
+anche_se = ["condizione_lavorativa=non_dipendente", "posizione_previdenziale=gestione_separata"]
+conteggio = "calendario"
+decimali = 2
 
 [[condizione_di_proposta]]
 istituto = "compenso_collaborazione"

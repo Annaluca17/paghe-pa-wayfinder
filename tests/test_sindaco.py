@@ -122,3 +122,37 @@ def test_una_posizione_diversa_dalla_gestione_separata_ferma_la_quota_verso_altr
     misura(registro)
     with pytest.raises(CasoNonModellato, match="posizione_previdenziale"):
         calcola(registro, reale, R, Mese(2026, 11))
+
+
+def test_all_amministratore_non_lavoratore_dipendente_spetta_la_quota_forfettaria_dell_art_86(registro, reale):
+    mandato(registro)
+    misura(registro)
+    valori = importi(registro, reale, Mese(2026, 11))
+    # 18.808,00 x 33,72% = 6.342,06 euro annui, un dodicesimo: 528,505 arrotondato a 528,51.
+    assert valori["onere_art86"] == Decimal("528.51")
+
+
+def test_al_lavoratore_dipendente_la_quota_dell_art_86_non_spetta_e_non_nasce_nessun_importo(registro, reale):
+    mandato(registro, condizione="dipendente_senza_aspettativa")
+    misura(registro)
+    assert "onere_art86" not in importi(registro, reale, Mese(2026, 11))
+
+
+def test_la_quota_a_meta_mese_e_proporzionale_ai_giorni_in_cui_il_diritto_vale(registro, reale):
+    mandato(registro, condizione=None)
+    registro.registra_codice(R, "condizione_lavorativa", "non_dipendente", date(2026, 1, 1), date(2026, 11, 15), atto=ATTO)
+    registro.registra_codice(R, "condizione_lavorativa", "dipendente_senza_aspettativa", date(2026, 11, 16), atto=ATTO)
+    misura(registro)
+    (quota,) = [r for r in calcola(registro, reale, R, Mese(2026, 11)) if r.istituto == "onere_art86"]
+    assert quota.valore == Decimal("264.26")  # 528,51 x 15/30
+    assert quota.periodo.dal == date(2026, 11, 1) and quota.periodo.al == date(2026, 11, 15)
+
+
+def test_la_quota_e_un_onere_dell_ente_non_e_reddito_ne_base(registro, reale, orologio):
+    mandato(registro)
+    misura(registro)
+    righe = calcola(registro, reale, R, Mese(2026, 11))
+    assert {r.derivazione.maturazione for r in righe if r.istituto == "onere_art86"} == {"onere"}
+    paga(registro, orologio, righe, date(2026, 11, 27))
+    (periodo,) = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
+    assert (periodo.basi, periodo.contributi) == ((), ())

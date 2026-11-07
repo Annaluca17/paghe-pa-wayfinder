@@ -25,7 +25,8 @@ def _riferimento_obbligatorio(riferimento: str, soggetto: str) -> None:
         raise ErroreCorpus(f"{soggetto}: riferimento non valido, {motivo}")
 
 
-MATURAZIONI = {"giorni", "evento", "periodo", "mese", "annuale"}
+# `onere`: come `giorni`, ma l'importo e' a carico dell'ente: non e' reddito della persona e non concorre a nessuna base.
+MATURAZIONI = {"giorni", "evento", "periodo", "mese", "annuale", "onere"}
 # Maturazioni che leggono le basi della denuncia: sul periodo dichiarato o sul totale del mese.
 MATURAZIONI_DI_CASSA = {"periodo", "mese"}
 CONTEGGI = {"lun_sab", "calendario"}
@@ -122,6 +123,12 @@ class Regola:
     conteggio: str | None = None
     divisore: str | None = None
     decimali: int | None = None
+    anche_se: tuple[str, ...] = ()
+
+    @property
+    def condizioni_aggiuntive(self) -> tuple[tuple[str, str], ...]:
+        """Le altre condizioni `tipo=codice` che devono valere insieme ad `applica_se` (ticket #73, art. 86 TUEL)."""
+        return tuple(tuple(condizione.split("=", 1)) for condizione in self.anche_se)
 
     @property
     def fatto_condizione(self) -> str | None:
@@ -140,6 +147,7 @@ class Regola:
             tipo, codice = self.applica_se.split("=", 1)
             if not tipo.strip() or not codice.strip() or tipo != tipo.strip() or codice != codice.strip():
                 raise ErroreCorpus(f"Regola {self.istituto}: applica_se va scritto come tipo=codice")
+        self._controlla_condizioni_aggiuntive()
         self._controlla_maturazione()
         if type(self.versione) is not int or self.versione < 1:
             raise ErroreCorpus(f"Regola {self.istituto}: versione non valida")
@@ -148,11 +156,24 @@ class Regola:
         if riferimenti(self.formula).fisco:
             raise ErroreCorpus(f"Regola {self.istituto}: `fisco.` vale solo per le formule di [[ritenuta]]")
 
+    def _controlla_condizioni_aggiuntive(self) -> None:
+        if not self.anche_se:
+            return
+        soggetto = f"Regola {self.istituto}"
+        if not self.applica_se:
+            raise ErroreCorpus(f"{soggetto}: anche_se richiede applica_se")
+        if not isinstance(self.anche_se, tuple):
+            raise ErroreCorpus(f"{soggetto}: anche_se e' un elenco di condizioni tipo=codice")
+        for condizione in self.anche_se:
+            tipo, uguale, codice = condizione.partition("=") if isinstance(condizione, str) else ("", "", "")
+            if not uguale or not tipo or not codice or tipo != tipo.strip() or codice != codice.strip():
+                raise ErroreCorpus(f"{soggetto}: condizione anche_se non valida, {condizione!r}: va scritta tipo=codice")
+
     def _controlla_maturazione(self) -> None:
         soggetto = f"Regola {self.istituto}"
         if self.maturazione not in MATURAZIONI:
             raise ErroreCorpus(f"{soggetto}: maturazione obbligatoria, una di {sorted(MATURAZIONI)}")
-        a_quota = self.maturazione in ("giorni", "annuale")
+        a_quota = self.maturazione in ("giorni", "annuale", "onere")
         if a_quota:
             if not self.applica_se:
                 raise ErroreCorpus(f"{soggetto}: una maturazione a quota richiede applica_se, il fatto che dà il servizio")
@@ -1084,7 +1105,8 @@ class Corpus:
             "regole": sorted(
                 [
                     [r.istituto, r.dal.isoformat(), r.versione, r.al.isoformat() if r.al else None,
-                     r.riferimento, r.formula, r.applica_se, r.maturazione, r.conteggio, r.divisore, r.decimali]
+                     r.riferimento, r.formula, r.applica_se, r.maturazione, r.conteggio, r.divisore, r.decimali,
+                     *(["anche_se", list(r.anche_se)] if r.anche_se else [])]
                     for regole in self._regole.values()
                     for r in regole
                 ],
@@ -1284,6 +1306,7 @@ class Corpus:
                 tipi |= riferimenti(regola.formula).fatti
                 if regola.applica_se and regola.maturazione != "annuale":
                     tipi.add(regola.fatto_condizione)
+                    tipi |= {tipo for tipo, _ in regola.condizioni_aggiuntive}
         return tuple(sorted(tipi))
 
     def firma_giorno(self, giorno: date) -> tuple:
@@ -1595,4 +1618,5 @@ def _regola_da_toml(voce: dict) -> Regola:
         conteggio=voce.get("conteggio"),
         divisore=voce.get("divisore"),
         decimali=voce.get("decimali"),
+        anche_se=tuple(voce["anche_se"]) if voce.get("anche_se") is not None else (),
     )

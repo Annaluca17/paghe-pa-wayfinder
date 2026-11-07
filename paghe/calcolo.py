@@ -85,6 +85,22 @@ class _Lettore:
             )
         return fatto.valore == codice
 
+    def condizioni_aggiuntive(self, regola: Regola, periodo: Periodo, fatti: dict[int, Fatto]) -> bool:
+        """`anche_se`: ogni altra condizione `tipo=codice` vale nel periodo; i fatti letti restano nella derivazione."""
+        for tipo, codice in regola.condizioni_aggiuntive:
+            fatto = self.fatto(tipo, periodo)
+            if fatto is None:
+                return False
+            if not fatto.categoriale:
+                raise ErroreCalcolo(
+                    f"Rapporto {self.rapporto}, istituto {regola.istituto}: il fatto {tipo} non è un codice, "
+                    f"la condizione {tipo}={codice} non si può verificare"
+                )
+            if fatto.valore != codice:
+                return False
+            fatti[fatto.id] = fatto
+        return True
+
     def controlla_fermi(self, periodo: Mese | Periodo, ambiti: set[str]) -> None:
         """Un fatto dichiarato come fermo nel periodo chiede un caso non modellato (ADR 0005)."""
         for fermo in self.corpus.fermi:
@@ -161,6 +177,8 @@ class _Lettore:
             if condizione is None or not self.soddisfa(regola, condizione):
                 return None
             fatti[condizione.id] = condizione
+            if not self.condizioni_aggiuntive(regola, periodo, fatti):
+                return None
 
         parametri: dict[str, ParametroLetto] = {}
         dipendenze: dict[tuple, Importo] = {}
@@ -303,7 +321,7 @@ class _Calcolo:
     def _applica_quote(self, istituto: str, righe: dict[int, Importo]) -> dict[int, Importo]:
         """Le regole a giorni: la formula dà il mensile, la quota lo riporta alla frazione."""
         ordinate = sorted(righe)
-        if not ordinate or righe[ordinate[0]].derivazione.maturazione != "giorni":
+        if not ordinate or righe[ordinate[0]].derivazione.maturazione not in ("giorni", "onere"):
             return righe
         coperti = sum(righe[indice].periodo.giorni_calendario for indice in ordinate)
         intero = coperti == len(self.competenza.giorni())
