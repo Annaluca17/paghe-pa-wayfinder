@@ -54,8 +54,17 @@ TABELLE = ("fatti", "annullamenti", "esiti")
 TIPO_DATA_PAGAMENTO = "data_pagamento"
 TIPO_PERSONA = "persona"
 TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
+TIPO_IBAN = "iban"
 SOGGETTO_RAPPORTO = "rapporto"
 SOGGETTO_PERSONA = "persona"
+SOGGETTO_ENTE = "ente"
+# L'ente è un solo soggetto per registro: nessun identificativo da gestire (ADR 0025).
+RAPPORTO_ENTE = "ente"
+
+TIPO_ULTIMO_PAGAMENTO = "ultimo_pagamento_anno"
+# Tipi dei fatti dell'ente: entrano solo quelli che hanno un lettore (ADR 0025).
+TIPI_ENTE_CODICE = frozenset({"codice_fiscale", "denominazione", "email", "iban_tesoreria", "sigla_provincia"})
+TIPI_ENTE_NUMERICI = frozenset({TIPO_ULTIMO_PAGAMENTO})
 
 
 def _trigger_immutabilita(tabella: str) -> str:
@@ -163,6 +172,69 @@ class Registro:
         if not isinstance(codice, str) or not codice.strip():
             raise ErroreRegistro(f"Codice non valido: {codice!r}")
         return self._inserisci_fatto(persona, tipo, codice, True, valido_dal, valido_al, atto, SOGGETTO_PERSONA)
+
+    def registra_iban_persona(
+        self,
+        persona: str,
+        iban: str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """IBAN del beneficiario: fatto datato della persona. Se manca, la proposta lo segnala come dato mancante."""
+        return self.registra_codice_persona(persona, TIPO_IBAN, iban, valido_dal, valido_al, atto)
+
+    def registra_fatto_ente(
+        self,
+        tipo: str,
+        valore: Decimal | int | str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Fatto numerico dell'ente (ADR 0025)."""
+        if tipo not in TIPI_ENTE_NUMERICI:
+            raise ErroreRegistro(f"Il tipo {tipo!r} non è un fatto numerico dell'ente; ammessi {sorted(TIPI_ENTE_NUMERICI)}")
+        return self._inserisci_fatto(
+            RAPPORTO_ENTE, tipo, _in_decimale(valore), False, valido_dal, valido_al, atto, SOGGETTO_ENTE
+        )
+
+    def registra_codice_ente(
+        self,
+        tipo: str,
+        codice: str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Fatto categoriale dell'ente, come il codice fiscale o l'IBAN di tesoreria."""
+        if tipo not in TIPI_ENTE_CODICE:
+            raise ErroreRegistro(f"Il tipo {tipo!r} non è un fatto categoriale dell'ente; ammessi {sorted(TIPI_ENTE_CODICE)}")
+        if not isinstance(codice, str) or not codice.strip():
+            raise ErroreRegistro(f"Codice non valido: {codice!r}")
+        return self._inserisci_fatto(RAPPORTO_ENTE, tipo, codice, True, valido_dal, valido_al, atto, SOGGETTO_ENTE)
+
+    def registra_ultimo_pagamento(self, anno: int, data: date, atto: Atto | None = None) -> Fatto:
+        """Ultimo pagamento dell'anno d'imposta, con la data prevista; uno per anno, un nuovo fatto lo corregge.
+
+        La data cade nell'anno o, con la cassa allargata, entro il 12 gennaio dopo (ADR 0019).
+        """
+        if not date(anno, 1, 1) <= data <= date(anno + 1, 1, 12):
+            raise ErroreRegistro(f"La data {data} non cade nell'anno d'imposta {anno}")
+        return self.registra_fatto_ente(TIPO_ULTIMO_PAGAMENTO, anno, data, data, atto)
+
+    def ultimo_pagamento_dell_anno(self, anno: int, noto_al: datetime) -> date | None:
+        """Data prevista dell'ultimo pagamento dell'anno d'imposta, nell'ultima registrazione non annullata."""
+        fatti = [f for f in self.fatti_ente_noti(TIPO_ULTIMO_PAGAMENTO, noto_al) if f.valore == anno]
+        return fatti[-1].valido_dal if fatti else None
+
+    def fatti_ente_noti(self, tipo: str, noto_al: datetime) -> list[Fatto]:
+        return self.fatti_noti(RAPPORTO_ENTE, tipo, noto_al, SOGGETTO_ENTE)
+
+    def vigente_ente(self, tipo: str, giorno: date, noto_al: datetime) -> Fatto | None:
+        """L'ultimo fatto registrato dell'ente che copre il giorno."""
+        noti = self.fatti_ente_noti(tipo, noto_al)
+        return next((fatto for fatto in reversed(noti) if fatto.copre(giorno)), None)
 
     def registra_dichiarazione_sostituito(
         self, persona: str, detrazioni: str, valido_dal: date, valido_al: date | None, atto: Atto | None
