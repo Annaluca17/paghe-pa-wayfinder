@@ -30,6 +30,15 @@ La vista ListaPosPA (`lista_pos_pa`) e la sua serializzazione (`paghe.uniemens.i
 python -m pytest
 ```
 
+## Mese di prova
+
+Un mese intero di un ente fittizio, dai fatti ai file, con il resoconto di dove il nucleo si ferma (ticket #68). Lo scenario è in `prove/mese_di_prova/`: undici rapporti, il corpus reale più un'aggiunta fittizia (`corpus_fittizio.toml`, tutti i riferimenti `fittizio:`), un percorso che fa girare marzo 2026 e il conguaglio di dicembre. Il resoconto fissato dal test è `prove/mese_di_prova/resoconto-atteso.md`; i file prodotti vanno in `prove/mese_di_prova/uscita/`, ignorata da Git.
+
+```bash
+python -m prove.mese_di_prova                      # stampa il resoconto
+python -m prove.mese_di_prova --aggiorna-atteso    # dopo un ticket, riscrive il resoconto atteso
+```
+
 ## Lavoro in locale
 
 ```bash

@@ -11,3 +11,6 @@ dist/
 *.sqlite3
 *.db
 samples/
+
+# Cartella dei file prodotti dal mese di prova (ticket #68)
+prove/mese_di_prova/uscita/
