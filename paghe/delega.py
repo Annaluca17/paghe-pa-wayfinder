@@ -19,7 +19,7 @@ from .corpus import Corpus
 from .errori import ErroreCalcolo, ErroreRegistro, ParametroMancante, VistaFerma
 from .f24ep import problemi_dati_ente
 from .f24ep import FornituraF24EP, ModelloF24EP, ModuloF24EP, RigaF24EP, serializza
-from .modello import Evento, Importo, TipoEsito
+from .modello import Esito, Evento, Importo, TipoEsito
 from .proposta import (
     TIPO_PAGAMENTO_ESEGUITO,
     TIPO_VERSAMENTO_ESEGUITO,
@@ -29,6 +29,7 @@ from .proposta import (
     StatoDelega,
     _evento_gia_noto,
     leggi_versione,
+    registra_versamento_eseguito,
     stato_delega,
 )
 from .registro import TIPO_CREDITO_RIPORTATO, Fatto, Registro
@@ -823,3 +824,54 @@ def annulla_delega(registro: Registro, corpus: Corpus, chiave: str, adattatore: 
             "il termine dell'Allegato 2 è passato"
         )
     return registro.registra_evento(chiave, TIPO_DELEGA_ANNULLATA, contenuto, adattatore)
+
+
+# Esito versato
+
+def registra_versamento_delega(
+    registro: Registro, chiave: str, adattatore: str, delega_id: str, data: date, provenienza: str = "addebito"
+) -> Esito:
+    """L'addebito (o la regolarizzazione) della delega: ne nasce l'esito versato, una sola volta, con la data reale.
+
+    Usa l'evento di versamento eseguito del nucleo: il suo identificativo di versamento è quello della delega e le
+    righe versate sono quelle che la delega ha trasmesso, crediti compresi. Una delega scartata o annullata non si versa.
+    """
+    trasmessa = leggi_delega_trasmessa(registro, delega_id)
+    istante = registro.adesso()
+    if any(e.contenuto["delega"] == delega_id for e in registro.eventi(TIPO_DELEGA_ANNULLATA, istante)):
+        raise ErroreRegistro(f"Delega {delega_id}: annullata, gli importi vanno versati con una nuova")
+    return registra_versamento_eseguito(
+        registro, chiave, adattatore, delega_id, data, trasmessa.sorgenti, "f24ep", provenienza
+    )
+
+
+@dataclass(frozen=True)
+class SituazioneDelega:
+    """Dove è arrivata la delega: stato dalle ricevute, data del versamento e ciò che la ferma."""
+
+    stato: StatoDelega
+    attiva: bool
+    versata_il: date | None
+    fermi: tuple[FermoDelega, ...]
+
+
+def situazione_delega(registro: Registro, delega_id: str, noto_al: datetime | None = None) -> SituazioneDelega:
+    """Un versamento dopo la scadenza ferma quella delega: il ravvedimento non è nel modello."""
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    trasmessa = leggi_delega_trasmessa(registro, delega_id)
+    versamento = next(
+        (e for e in registro.eventi(TIPO_VERSAMENTO_ESEGUITO, istante) if e.contenuto["versamento"] == delega_id), None
+    )
+    versata_il = registro.esito(versamento.esito_id).data if versamento is not None else None
+    fermi = []
+    if versata_il is not None and versata_il > trasmessa.scadenza:
+        fermi.append(
+            FermoDelega(
+                "versamento_tardivo",
+                f"Delega {delega_id}: versata il {versata_il}, dopo la scadenza {trasmessa.scadenza}: "
+                "il ravvedimento non è modellato",
+            )
+        )
+    return SituazioneDelega(
+        stato_delega(registro, delega_id, istante), delega_attiva(registro, delega_id, istante), versata_il, tuple(fermi)
+    )
