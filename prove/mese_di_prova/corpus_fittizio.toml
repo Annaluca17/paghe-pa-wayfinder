@@ -1,0 +1,581 @@
+# Aggiunta FITTIZIA al corpus reale per il "mese di prova" (ticket #68).
+#
+# Si carica DOPO corpus/funzioni-locali-cpdel.toml, unita al testo del corpus reale, e il corpus che ne risulta e
+# NON reale (Corpus.da_toml(..., reale=False)): il corpus reale rifiuta i riferimenti `fittizio:` (ADR 0003).
+#
+# Tutti i riferimenti qui sono `fittizio:`. I valori fiscali (franchigia, aliquota, detrazione) sono dichiaratamente
+# finti e non corrispondono a nessuna norma. Questo file da' valori ai parametri e alle dichiarazioni che mancano
+# al corpus reale (categorie di reddito, ritenuta, conguaglio, composizione, mappatura, catalogo dei codici F24EP,
+# scadenza, festivi) e dichiara due istituti che leggono un fatto (performance, rimborso 730): nessuna regola di
+# calcolo nuova, solo l'input da atto letto cosi' com'e'. I codici tributo sono quelli di
+# docs/research/versamenti-f24ep.md.
+
+# --- Parametri fiscali: valori finti ---
+
+[[parametro]]
+nome = "ritenuta_franchigia_annua"
+[[parametro.vigenza]]
+dal = 2025-01-01
+valore = "9999"
+riferimento = "fittizio:ritenuta-franchigia-annua"
+
+[[parametro]]
+nome = "ritenuta_aliquota"
+[[parametro.vigenza]]
+dal = 2025-01-01
+valore = "0.11"
+riferimento = "fittizio:ritenuta-aliquota"
+
+[[parametro]]
+nome = "ritenuta_detrazione_annua"
+[[parametro.vigenza]]
+dal = 2025-01-01
+valore = "1111"
+riferimento = "fittizio:ritenuta-detrazione-annua"
+
+# --- Categoria di reddito, ritenuta e conguaglio ---
+
+[[categoria_reddito]]
+nome = "lavoro_dipendente"
+[[categoria_reddito.cassa_allargata]]
+dal = 2025-01-01
+vale = true
+riferimento = "fittizio:cassa-allargata-lavoro-dipendente"
+
+[[ritenuta]]
+istituto = "ritenuta_irpef"
+versione = 1
+dal = 2025-01-01
+riferimento = "fittizio:ritenuta-irpef"
+categorie = ["lavoro_dipendente"]
+detrazione_richiesta = "lavoro_dipendente"
+imposta = "arrotonda(max(0, fisco.imponibile - parametro.ritenuta_franchigia_annua / fisco.periodi) * parametro.ritenuta_aliquota, 2)"
+detrazione = "arrotonda(parametro.ritenuta_detrazione_annua / fisco.periodi, 2)"
+
+[[conguaglio]]
+istituto = "conguaglio_irpef"
+versione = 1
+dal = 2025-01-01
+riferimento = "fittizio:conguaglio-irpef"
+
+# --- Due istituti che leggono un fatto (input da atto), senza regola di calcolo ---
+# La performance e' di competenza 2025 e pagata nel 2026: pagamento fisiologico dichiarato qui sotto.
+# Il rimborso da 730-4 ha maturazione `periodo`: e' l'unica maturazione che non produce reddito imponibile ne' entra
+# nelle basi (non e' retribuzione). Il nucleo non ha il tipo di fatto "esito 730-4": l'importo e' un fatto generico.
+
+[[regola]]
+istituto = "performance"
+versione = 1
+dal = 2025-01-01
+riferimento = "fittizio:performance"
+formula = "fatto.performance"
+maturazione = "evento"
+applica_se = "performance"
+
+[[regola]]
+istituto = "rimborso_irpef_730"
+versione = 1
+dal = 2026-01-01
+riferimento = "fittizio:rimborso-irpef-730"
+formula = "fatto.rimborso_irpef_730"
+maturazione = "periodo"
+applica_se = "rimborso_irpef_730"
+
+[[pagamento_fisiologico]]
+istituto = "performance"
+dal = 2026-01-01
+riferimento = "fittizio:performance-pagamento-fisiologico"
+
+# --- Reddito: gli istituti retributivi sono lavoro dipendente ---
+
+[[reddito]]
+istituto = "tabellare_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-funzionari"
+
+[[reddito]]
+istituto = "tabellare_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-istruttori"
+
+[[reddito]]
+istituto = "tabellare_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-operatori-esperti"
+
+[[reddito]]
+istituto = "tabellare_operatori"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-operatori"
+
+[[reddito]]
+istituto = "comparto_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-comparto-funzionari"
+
+[[reddito]]
+istituto = "comparto_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-comparto-istruttori"
+
+[[reddito]]
+istituto = "comparto_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-comparto-operatori-esperti"
+
+[[reddito]]
+istituto = "comparto_operatori"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-comparto-operatori"
+
+[[reddito]]
+istituto = "performance"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-performance"
+
+# --- Concorsi della performance (il corpus reale non li dichiara) e del rimborso 730 ---
+
+[[concorso]]
+istituto = "performance"
+basi = ["cpdel"]
+misura = "intero"
+dal = 2025-01-01
+riferimento = "fittizio:concorso-performance-cpdel"
+
+[[concorso]]
+istituto = "performance"
+basi = ["fondo_credito"]
+misura = "intero"
+dal = 2025-01-01
+riferimento = "fittizio:concorso-performance-fondo-credito"
+
+[[concorso]]
+istituto = "performance"
+basi = ["tfs"]
+misura = "escluso"
+dal = 2025-01-01
+riferimento = "fittizio:concorso-performance-tfs"
+
+[[concorso]]
+istituto = "performance"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2025-01-01
+riferimento = "fittizio:concorso-performance-tfr-ulteriori"
+
+[[concorso]]
+istituto = "rimborso_irpef_730"
+basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "fittizio:concorso-rimborso-730"
+
+# --- Dichiarazioni di composizione del pagamento ---
+
+[[composizione]]
+istituto = "tabellare_funzionari"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-funzionari"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tabellare_istruttori"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-istruttori"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tabellare_operatori_esperti"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-operatori-esperti"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tabellare_operatori"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-operatori"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "comparto_funzionari"
+dal = 2025-01-01
+riferimento = "fittizio:comp-comparto-funzionari"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "comparto_istruttori"
+dal = 2025-01-01
+riferimento = "fittizio:comp-comparto-istruttori"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "comparto_operatori_esperti"
+dal = 2025-01-01
+riferimento = "fittizio:comp-comparto-operatori-esperti"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "comparto_operatori"
+dal = 2025-01-01
+riferimento = "fittizio:comp-comparto-operatori"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "performance"
+dal = 2025-01-01
+riferimento = "fittizio:comp-performance"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+# Dichiarazione ASSUNTA: la riduzione del lordo TFR (valore negativo) entra nel netto come retribuzione con effetto "piu".
+[[composizione]]
+istituto = "riduzione_tfr"
+dal = 2025-01-01
+riferimento = "fittizio:comp-riduzione-tfr"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "rimborso_irpef_730"
+dal = 2025-01-01
+riferimento = "fittizio:comp-rimborso-irpef-730"
+natura = "rimborso_730"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "ritenuta_irpef"
+dal = 2025-01-01
+riferimento = "fittizio:comp-ritenuta-irpef"
+natura = "ritenuta"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "conguaglio_irpef"
+dal = 2025-01-01
+riferimento = "fittizio:comp-conguaglio-irpef"
+natura = "ritenuta"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "cpdel_lavoratore"
+dal = 2025-01-01
+riferimento = "fittizio:comp-cpdel-lavoratore"
+natura = "contributo_lavoratore"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "fondo_credito"
+dal = 2025-01-01
+riferimento = "fittizio:comp-fondo-credito"
+natura = "contributo_lavoratore"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "tfs_lavoratore"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tfs-lavoratore"
+natura = "contributo_lavoratore"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "cpdel_ente"
+dal = 2025-01-01
+riferimento = "fittizio:comp-cpdel-ente"
+natura = "contributo_ente"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "tfs_ente"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tfs-ente"
+natura = "contributo_ente"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "contributo_tfr"
+dal = 2025-01-01
+riferimento = "fittizio:comp-contributo-tfr"
+natura = "contributo_ente"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "contributo_tfr_ulteriori"
+dal = 2025-01-01
+riferimento = "fittizio:comp-contributo-tfr-ulteriori"
+natura = "contributo_ente"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "cpdel_totale"
+dal = 2025-01-01
+riferimento = "fittizio:comp-cpdel-totale"
+intermedio = true
+
+[[composizione]]
+istituto = "imponibile_tfs"
+dal = 2025-01-01
+riferimento = "fittizio:comp-imponibile-tfs"
+intermedio = true
+
+[[composizione]]
+istituto = "tfs_totale"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tfs-totale"
+intermedio = true
+
+[[composizione]]
+istituto = "imponibile_tfr"
+dal = 2025-01-01
+riferimento = "fittizio:comp-imponibile-tfr"
+intermedio = true
+
+[[composizione]]
+istituto = "retribuzione_valutabile_tfr"
+dal = 2025-01-01
+riferimento = "fittizio:comp-retribuzione-valutabile-tfr"
+intermedio = true
+
+# --- Mappatura verso i codici tributo e le causali F24EP ---
+
+[[mappatura]]
+istituto = "ritenuta_irpef"
+sistema = "codice_tributo_f24ep"
+codice = "100E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-ritenuta-irpef"
+
+[[mappatura]]
+istituto = "conguaglio_irpef"
+sistema = "codice_tributo_f24ep"
+codice = "100E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-conguaglio-irpef"
+
+[[mappatura]]
+istituto = "cpdel_lavoratore"
+sistema = "codice_tributo_f24ep"
+codice = "P201"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-cpdel-lavoratore"
+
+[[mappatura]]
+istituto = "cpdel_ente"
+sistema = "codice_tributo_f24ep"
+codice = "P201"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-cpdel-ente"
+
+[[mappatura]]
+istituto = "fondo_credito"
+sistema = "codice_tributo_f24ep"
+codice = "P909"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-fondo-credito"
+
+[[mappatura]]
+istituto = "tfs_lavoratore"
+sistema = "codice_tributo_f24ep"
+codice = "P607"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-tfs-lavoratore"
+
+[[mappatura]]
+istituto = "tfs_ente"
+sistema = "codice_tributo_f24ep"
+codice = "P607"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-tfs-ente"
+
+[[mappatura]]
+istituto = "contributo_tfr"
+sistema = "codice_tributo_f24ep"
+codice = "P608"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-contributo-tfr"
+
+[[mappatura]]
+istituto = "contributo_tfr_ulteriori"
+sistema = "codice_tributo_f24ep"
+codice = "P632"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-contributo-tfr-ulteriori"
+
+[[mappatura]]
+istituto = "rimborso_irpef_730"
+sistema = "codice_tributo_f24ep"
+codice = "150E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-rimborso-irpef-730"
+
+# --- Catalogo dei codici F24EP ---
+# 100E, P201 e 150E con la forma confermata dalla ricerca. P607, P608, P632 e P909 esistono (ricerca, tema 5) ma la
+# loro forma e' qui ASSUNTA uguale a quella di P201: non verificata.
+
+[[codice_f24ep]]
+codice = "100E"
+sezione = "F"
+codice_campo = "nessuno"
+estremi = "nessuno"
+rif_a = "mese_pagamento"
+rif_b = "anno_pagamento"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-100e"
+
+[[codice_f24ep]]
+codice = "150E"
+sezione = "F"
+codice_campo = "nessuno"
+estremi = "nessuno"
+rif_a = "nessuno"
+rif_b = "anno_imposta"
+modalita = "debito_credito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-150e"
+
+[[codice_f24ep]]
+codice = "P201"
+sezione = "Q"
+codice_campo = "provincia"
+estremi = "facoltativo"
+rif_a = "periodo_inizio"
+rif_b = "periodo_fine"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-p201"
+
+[[codice_f24ep]]
+codice = "P607"
+sezione = "Q"
+codice_campo = "provincia"
+estremi = "facoltativo"
+rif_a = "periodo_inizio"
+rif_b = "periodo_fine"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-p607"
+
+[[codice_f24ep]]
+codice = "P608"
+sezione = "Q"
+codice_campo = "provincia"
+estremi = "facoltativo"
+rif_a = "periodo_inizio"
+rif_b = "periodo_fine"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-p608"
+
+[[codice_f24ep]]
+codice = "P632"
+sezione = "Q"
+codice_campo = "provincia"
+estremi = "facoltativo"
+rif_a = "periodo_inizio"
+rif_b = "periodo_fine"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-p632"
+
+[[codice_f24ep]]
+codice = "P909"
+sezione = "Q"
+codice_campo = "provincia"
+estremi = "facoltativo"
+rif_a = "periodo_inizio"
+rif_b = "periodo_fine"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-p909"
+
+# --- Scadenza F24EP e festivi (calendario dichiarato per anno) ---
+
+[[scadenza_f24ep]]
+dal = 2025-01-01
+al = 2026-12-31
+giorno = 16
+riferimento = "fittizio:scadenza-2026"
+[scadenza_f24ep.proroga]
+mese = 8
+dal_giorno = 1
+al_giorno = 20
+fonte = "prassi"
+riferimento = "fittizio:proroga-agosto-2026"
+
+[[scadenza_f24ep]]
+dal = 2027-01-01
+giorno = 16
+riferimento = "fittizio:scadenza-2027"
+[scadenza_f24ep.proroga]
+mese = 8
+dal_giorno = 1
+al_giorno = 20
+fonte = "prassi"
+riferimento = "fittizio:proroga-agosto-2027"
+
+[[calendario_festivi]]
+anno = 2026
+giorni = [2026-01-01, 2026-01-06, 2026-04-06, 2026-04-25, 2026-05-01, 2026-06-02, 2026-08-15, 2026-11-01, 2026-12-08, 2026-12-25, 2026-12-26]
+riferimento = "fittizio:festivi-2026"
+
+[[calendario_festivi]]
+anno = 2027
+giorni = [2027-01-01, 2027-01-06, 2027-03-29, 2027-04-25, 2027-05-01, 2027-06-02, 2027-08-15, 2027-11-01, 2027-12-08, 2027-12-25, 2027-12-26]
+riferimento = "fittizio:festivi-2027"
