@@ -214,7 +214,14 @@ class _Vista:
         if lavorabili == 0:
             self._motivo_bozza("Nessuna ora lavorabile del tempo pieno nel periodo di rapporto del mese: PercPartTimeMese indeterminata")
             return None
-        return int((ore / lavorabili * 10000).to_integral_value(ROUND_HALF_UP))
+        perc = int((ore / lavorabili * 10000).to_integral_value(ROUND_HALF_UP))
+        if perc > 10000:
+            self._motivo_bozza(
+                f"Ore programmate oltre le ore lavorabili del tempo pieno nel mese ({ore} su {lavorabili}): "
+                "PercPartTimeMese oltre il 100%"
+            )
+            return None
+        return perc
 
     def ore_lavorabili_tempo_pieno(self) -> Decimal | None:
         """Giorni lavorativi (lun-ven non festivi) del periodo di rapporto per l'orario giornaliero del tempo pieno."""
@@ -254,13 +261,47 @@ class _Vista:
         senza_ore = part_time.qualifica2 in PART_TIME_CON_PERCENTUALE_DEL_MESE
         if senza_ore and part_time.ore is None:
             return ()  # la programmazione manca: già chiesta
+        ore = dict(part_time.ore or {})
+        if senza_ore:
+            # La copertura è della settimana intera: a cavallo di mese, se i giorni del mese sono senza ore, contano
+            # anche i giorni di rapporto dell'altro mese, perché la stessa settimana non sia D in un mese e X nell'altro.
+            a_cavallo = [
+                d
+                for d, giorni in per_settimana.items()
+                if (d < self.mese.primo_giorno or d + timedelta(days=6) > self.mese.ultimo_giorno)
+                and all(ore[g] == 0 for g in giorni)
+            ]
+            fuori = self.ore_fuori_mese(a_cavallo)
+            if fuori is None:
+                return ()
+            ore.update(fuori)
         return tuple(
             Settimana(
                 _id_settimana(domenica, self.mese.anno),
-                "D" if senza_ore and all(part_time.ore[g] == 0 for g in giorni) else "X",
+                "D"
+                if senza_ore and all(v == 0 for g, v in ore.items() if domenica <= g <= domenica + timedelta(days=6))
+                else "X",
             )
-            for domenica, giorni in per_settimana.items()
+            for domenica in per_settimana
         )
+
+    def ore_fuori_mese(self, domeniche: list[date]) -> dict[date, Decimal] | None:
+        """Ore programmate dei giorni di rapporto fuori dal mese nelle settimane a cavallo; se mancano si chiedono."""
+        ore: dict[date, Decimal] = {}
+        for domenica in domeniche:
+            esterni = [domenica + timedelta(days=i) for i in range(7)]
+            esterni = [g for g in esterni if not (self.mese.primo_giorno <= g <= self.mese.ultimo_giorno)]
+            for altro in {Mese(g.year, g.month) for g in esterni}:
+                in_servizio = {
+                    g for p in periodi_in_servizio(self.registro, self.corpus, self.rapporto, altro, self.istante) for g in p.giorni()
+                }
+                programmazione = programmazione_del_mese(self.registro, self.rapporto, altro, self.istante)
+                for giorno in (g for g in esterni if g in in_servizio):
+                    if giorno not in programmazione.ore:
+                        self._chiedi(TIPO_PROGRAMMAZIONE)
+                        return None
+                    ore[giorno] = programmazione.ore[giorno]
+        return ore
 
     def ore_programmate(self) -> Mapping[date, Decimal] | None:
         """Ore programmate nei giorni di rapporto del mese; se un giorno non è programmato, il dato si chiede."""
@@ -322,9 +363,18 @@ def _vista_e_righe(
     periodi = periodi_in_servizio(registro, corpus, rapporto, mese, istante)
     if not periodi:
         return None, ()
-    primo = periodi[0].dal
-    fatto = registro.vigenti_per_giorno(rapporto, "tipo_impiego", Periodo(primo, primo), istante)[0]
-    impiego = str(fatto.valore)
+    giorni = sorted({g for p in periodi for g in p.giorni()})
+    tutto = Periodo(giorni[0], giorni[-1])
+    per_giorno = dict(zip(tutto.giorni(), registro.vigenti_per_giorno(rapporto, "tipo_impiego", tutto, istante)))
+    impieghi = {str(per_giorno[g].valore) for g in giorni if per_giorno[g] is not None}
+    if len(impieghi) > 1 and impieghi & (IMPIEGHI_TEMPO_DETERMINATO | set(IMPIEGHI_FUORI_PERIMETRO)):
+        # Un tempo determinato stabilizzato o assunto nel mese: l'Imponibile NASpI vale solo per una parte del mese.
+        motivo = (
+            f"Il fatto tipo_impiego cambia nel mese ({', '.join(sorted(impieghi))}): la DenunciaIndividuale "
+            "di una parte del mese non è modellata"
+        )
+        return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),)), ()
+    impiego = impieghi.pop() if impieghi else None
     if impiego in IMPIEGHI_FUORI_PERIMETRO:
         motivo = f"Tipo impiego {impiego}, {IMPIEGHI_FUORI_PERIMETRO[impiego]}: fuori dal perimetro della vista (ADR 0027)"
         return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),)), ()
@@ -338,7 +388,7 @@ def _vista_e_righe(
             "fuori dal perimetro della vista (ADR 0027)"
         )
         return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),)), ()
-    vista = _Vista(registro, corpus, rapporto, mese, istante, sorted({g for p in periodi for g in p.giorni()}))
+    vista = _Vista(registro, corpus, rapporto, mese, istante, giorni)
     qualifica1 = vista.codice("Qualifica1", "area")
     qualifica3 = vista.codice("Qualifica3", FATTO_TERMINE_PER_SOSTITUZIONE)
     regime_post95 = vista.codice("RegimePost95", FATTO_PRIMA_ISCRIZIONE_DAL_1996)

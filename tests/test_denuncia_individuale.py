@@ -380,6 +380,8 @@ def test_il_verticale_con_il_mese_interamente_non_lavorato_e_dr00_con_tutte_le_s
     registro, orologio, corpus_con_festivi
 ):
     td_part_time(registro, orologio, corpus_con_festivi, "verticale", "50", lambda giorno: Decimal(0))
+    # La settimana 29/03-04/04 è a cavallo: senza ore a marzo, la sua copertura legge anche i giorni di aprile.
+    registra_programmazione(registro, R, {date(2026, 4, g): Decimal(0) for g in range(1, 5)}, ATTO_PROGRAMMAZIONE)
     vista = denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
     assert vista.tipo_lav_stat == "DR00"
     assert {s.copertura for s in vista.settimane} == {"D"} and {g.lavorato for g in vista.giorni} == {"N"}
