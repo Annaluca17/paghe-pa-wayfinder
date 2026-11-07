@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Callable, Iterable
 
 from .errori import ErroreRegistro, ValiditaNonUniforme
-from .modello import Atto, Esito, Fatto, Importo, TipoEsito
+from .modello import Atto, Esito, Evento, Fatto, Importo, TipoEsito
 from .riferimento import data_atto, motivo_rifiuto
 from .tempo import Mese, Periodo, in_utc, istante_in_testo
 
@@ -48,14 +49,52 @@ CREATE TABLE IF NOT EXISTS esiti (
     registrato_il TEXT NOT NULL,
     righe TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS versioni_proposta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    valuta_prevista TEXT NOT NULL,
+    registrato_il TEXT NOT NULL,
+    contenuto TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS stati_versione (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    versione_id INTEGER NOT NULL REFERENCES versioni_proposta (id),
+    stato TEXT NOT NULL,
+    motivo TEXT,
+    registrato_il TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS eventi_ritorno (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chiave TEXT NOT NULL UNIQUE,
+    tipo TEXT NOT NULL,
+    contenuto TEXT NOT NULL,
+    adattatore TEXT NOT NULL,
+    versione_id INTEGER REFERENCES versioni_proposta (id),
+    esito_id INTEGER REFERENCES esiti (id),
+    registrato_il TEXT NOT NULL
+);
 """
 
-TABELLE = ("fatti", "annullamenti", "esiti")
+TABELLE = ("fatti", "annullamenti", "esiti", "versioni_proposta", "stati_versione", "eventi_ritorno")
 TIPO_DATA_PAGAMENTO = "data_pagamento"
 TIPO_PERSONA = "persona"
 TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
+TIPO_IBAN = "iban"
+# Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
+# Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
+TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
 SOGGETTO_RAPPORTO = "rapporto"
 SOGGETTO_PERSONA = "persona"
+SOGGETTO_ENTE = "ente"
+# L'ente è un solo soggetto per registro: nessun identificativo da gestire (ADR 0025).
+RAPPORTO_ENTE = "ente"
+
+TIPO_ULTIMO_PAGAMENTO = "ultimo_pagamento_anno"
+# Tipi dei fatti dell'ente: entrano solo quelli che hanno un lettore (ADR 0025).
+TIPI_ENTE_CODICE = frozenset({"codice_fiscale", "denominazione", "email", "iban_tesoreria", "sigla_provincia"})
+TIPI_ENTE_NUMERICI = frozenset({TIPO_ULTIMO_PAGAMENTO})
 
 
 def _trigger_immutabilita(tabella: str) -> str:
@@ -98,6 +137,7 @@ class Registro:
         self._db.executescript(SCHEMA + "".join(_trigger_immutabilita(t) for t in TABELLE))
         self._aggiorna_schema()
         self._ultimo = self._ultimo_istante()
+        self._in_atomico = False
 
     def _aggiorna_schema(self) -> None:
         """Un registro creato prima dei codici riceve la colonna: i dati non cambiano."""
@@ -120,6 +160,27 @@ class Registro:
         if self._ultimo is not None and istante < self._ultimo:
             raise ErroreRegistro(f"Orologio indietro: {istante} precede {self._ultimo}")
         return istante
+
+    @contextmanager
+    def atomico(self):
+        """Più scritture in una transazione sola: se una fallisce, nessuna resta."""
+        if self._in_atomico:
+            yield
+            return
+        ultimo = self._ultimo
+        self._in_atomico = True
+        try:
+            with self._db:
+                yield
+        except BaseException:
+            self._ultimo = ultimo
+            raise
+        finally:
+            self._in_atomico = False
+
+    def _scrittura(self):
+        """Dentro `atomico` la transazione è dell'esterno; fuori, ogni scrittura è la sua."""
+        return nullcontext() if self._in_atomico else self._db
 
     def _registra(self, istante: datetime) -> str:
         self._ultimo = istante
@@ -163,6 +224,69 @@ class Registro:
         if not isinstance(codice, str) or not codice.strip():
             raise ErroreRegistro(f"Codice non valido: {codice!r}")
         return self._inserisci_fatto(persona, tipo, codice, True, valido_dal, valido_al, atto, SOGGETTO_PERSONA)
+
+    def registra_iban_persona(
+        self,
+        persona: str,
+        iban: str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """IBAN del beneficiario: fatto datato della persona. Se manca, la proposta lo segnala come dato mancante."""
+        return self.registra_codice_persona(persona, TIPO_IBAN, iban, valido_dal, valido_al, atto)
+
+    def registra_fatto_ente(
+        self,
+        tipo: str,
+        valore: Decimal | int | str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Fatto numerico dell'ente (ADR 0025)."""
+        if tipo not in TIPI_ENTE_NUMERICI:
+            raise ErroreRegistro(f"Il tipo {tipo!r} non è un fatto numerico dell'ente; ammessi {sorted(TIPI_ENTE_NUMERICI)}")
+        return self._inserisci_fatto(
+            RAPPORTO_ENTE, tipo, _in_decimale(valore), False, valido_dal, valido_al, atto, SOGGETTO_ENTE
+        )
+
+    def registra_codice_ente(
+        self,
+        tipo: str,
+        codice: str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Fatto categoriale dell'ente, come il codice fiscale o l'IBAN di tesoreria."""
+        if tipo not in TIPI_ENTE_CODICE:
+            raise ErroreRegistro(f"Il tipo {tipo!r} non è un fatto categoriale dell'ente; ammessi {sorted(TIPI_ENTE_CODICE)}")
+        if not isinstance(codice, str) or not codice.strip():
+            raise ErroreRegistro(f"Codice non valido: {codice!r}")
+        return self._inserisci_fatto(RAPPORTO_ENTE, tipo, codice, True, valido_dal, valido_al, atto, SOGGETTO_ENTE)
+
+    def registra_ultimo_pagamento(self, anno: int, data: date, atto: Atto | None = None) -> Fatto:
+        """Ultimo pagamento dell'anno d'imposta, con la data prevista; uno per anno, un nuovo fatto lo corregge.
+
+        La data cade nell'anno o, con la cassa allargata, entro il 12 gennaio dopo (ADR 0019).
+        """
+        if not date(anno, 1, 1) <= data <= date(anno + 1, 1, 12):
+            raise ErroreRegistro(f"La data {data} non cade nell'anno d'imposta {anno}")
+        return self.registra_fatto_ente(TIPO_ULTIMO_PAGAMENTO, anno, data, data, atto)
+
+    def ultimo_pagamento_dell_anno(self, anno: int, noto_al: datetime) -> date | None:
+        """Data prevista dell'ultimo pagamento dell'anno d'imposta, nell'ultima registrazione non annullata."""
+        fatti = [f for f in self.fatti_ente_noti(TIPO_ULTIMO_PAGAMENTO, noto_al) if f.valore == anno]
+        return fatti[-1].valido_dal if fatti else None
+
+    def fatti_ente_noti(self, tipo: str, noto_al: datetime) -> list[Fatto]:
+        return self.fatti_noti(RAPPORTO_ENTE, tipo, noto_al, SOGGETTO_ENTE)
+
+    def vigente_ente(self, tipo: str, giorno: date, noto_al: datetime) -> Fatto | None:
+        """L'ultimo fatto registrato dell'ente che copre il giorno."""
+        noti = self.fatti_ente_noti(tipo, noto_al)
+        return next((fatto for fatto in reversed(noti) if fatto.copre(giorno)), None)
 
     def registra_dichiarazione_sostituito(
         self, persona: str, detrazioni: str, valido_dal: date, valido_al: date | None, atto: Atto | None
@@ -236,7 +360,7 @@ class Registro:
         if atto is not None:
             _controlla_atto(atto)
         istante = self.adesso()
-        with self._db:
+        with self._scrittura():
             cursore = self._db.execute(
                 "INSERT INTO fatti (rapporto, tipo, valore, valido_dal, valido_al, registrato_il,"
                 " atto_riferimento, atto_data, categoriale, soggetto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -264,7 +388,7 @@ class Registro:
             raise ErroreRegistro("Il motivo dell'annullamento è obbligatorio")
         istante = self.adesso()
         try:
-            with self._db:
+            with self._scrittura():
                 self._db.execute(
                     "INSERT INTO annullamenti (fatto_id, motivo, registrato_il) VALUES (?, ?, ?)",
                     (fatto_id, motivo, istante_in_testo(istante)),
@@ -343,12 +467,13 @@ class Registro:
         elenco = tuple(righe)
         if not elenco:
             raise ErroreRegistro("Un esito deve contenere almeno un importo")
-        chiavi = [riga.chiave for riga in elenco]
+        # Un contributo per differenza è un altro importo: ha la stessa chiave ma confronta altri esiti.
+        chiavi = [(riga.chiave, riga.esiti_confrontati) for riga in elenco]
         if len(set(chiavi)) != len(chiavi):
             raise ErroreRegistro("Un esito non può contenere due volte lo stesso importo")
         istante = self.adesso()
         testo = json.dumps([riga.in_dizionario() for riga in elenco], ensure_ascii=False, sort_keys=True)
-        with self._db:
+        with self._scrittura():
             cursore = self._db.execute(
                 "INSERT INTO esiti (tipo, data, registrato_il, righe) VALUES (?, ?, ?, ?)",
                 (tipo.value, data.isoformat(), istante_in_testo(istante), testo),
@@ -369,8 +494,114 @@ class Registro:
         ).fetchall()
         return [_esito_da_riga(riga) for riga in righe]
 
+    def registra_versione(self, valuta_prevista: date, contenuto: dict) -> tuple[int, datetime]:
+        """Versione di proposta: istantanea immutabile, con lo stato iniziale `inviata` (ADR 0013, 0025)."""
+        istante = self.adesso()
+        with self.atomico():
+            cursore = self._db.execute(
+                "INSERT INTO versioni_proposta (valuta_prevista, registrato_il, contenuto) VALUES (?, ?, ?)",
+                (valuta_prevista.isoformat(), istante_in_testo(istante), _testo(contenuto)),
+            )
+            self._db.execute(
+                "INSERT INTO stati_versione (versione_id, stato, motivo, registrato_il) VALUES (?, 'inviata', NULL, ?)",
+                (cursore.lastrowid, istante_in_testo(istante)),
+            )
+        self._registra(istante)
+        return cursore.lastrowid, istante
+
+    def versione_registrata(self, versione_id: int) -> tuple[date, datetime, dict]:
+        riga = self._db.execute("SELECT * FROM versioni_proposta WHERE id = ?", (versione_id,)).fetchone()
+        if riga is None:
+            raise ErroreRegistro(f"Versione di proposta {versione_id} inesistente")
+        return (
+            date.fromisoformat(riga["valuta_prevista"]),
+            datetime.fromisoformat(riga["registrato_il"]),
+            json.loads(riga["contenuto"]),
+        )
+
+    def versioni_registrate(self, noti_al: datetime) -> list[int]:
+        righe = self._db.execute(
+            "SELECT id FROM versioni_proposta WHERE registrato_il <= ? ORDER BY id", (istante_in_testo(noti_al),)
+        ).fetchall()
+        return [riga[0] for riga in righe]
+
+    def registra_stato_versione(self, versione_id: int, stato: str, motivo: str | None = None) -> None:
+        """Uno stato è un evento: il precedente resta, l'ultimo vale."""
+        self.versione_registrata(versione_id)
+        istante = self.adesso()
+        with self._scrittura():
+            self._db.execute(
+                "INSERT INTO stati_versione (versione_id, stato, motivo, registrato_il) VALUES (?, ?, ?, ?)",
+                (versione_id, stato, motivo, istante_in_testo(istante)),
+            )
+        self._registra(istante)
+
+    def stati_versione(self, versione_id: int, noto_al: datetime) -> list[tuple[str, str | None, datetime]]:
+        """Stati della versione noti all'istante, in ordine di registrazione."""
+        righe = self._db.execute(
+            "SELECT stato, motivo, registrato_il FROM stati_versione WHERE versione_id = ? AND registrato_il <= ?"
+            " ORDER BY id",
+            (versione_id, istante_in_testo(noto_al)),
+        ).fetchall()
+        return [(riga["stato"], riga["motivo"], datetime.fromisoformat(riga["registrato_il"])) for riga in righe]
+
+    def registra_evento(
+        self,
+        chiave: str,
+        tipo: str,
+        contenuto: dict,
+        adattatore: str,
+        versione_id: int | None = None,
+        esito_id: int | None = None,
+    ) -> Evento:
+        """Evento di ritorno con identificativo stabile; l'adattatore che l'ha portato resta nel fatto."""
+        if not chiave or not chiave.strip() or not adattatore or not adattatore.strip():
+            raise ErroreRegistro("Identificativo e adattatore dell'evento sono obbligatori")
+        istante = self.adesso()
+        try:
+            with self._scrittura():
+                cursore = self._db.execute(
+                    "INSERT INTO eventi_ritorno (chiave, tipo, contenuto, adattatore, versione_id, esito_id, registrato_il)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (chiave, tipo, _testo(contenuto), adattatore, versione_id, esito_id, istante_in_testo(istante)),
+                )
+        except sqlite3.IntegrityError as errore:
+            raise ErroreRegistro(f"Evento {chiave}: identificativo già registrato") from errore
+        self._registra(istante)
+        return self._evento_da_riga(
+            self._db.execute("SELECT * FROM eventi_ritorno WHERE id = ?", (cursore.lastrowid,)).fetchone()
+        )
+
+    def evento(self, chiave: str) -> Evento | None:
+        riga = self._db.execute("SELECT * FROM eventi_ritorno WHERE chiave = ?", (chiave,)).fetchone()
+        return self._evento_da_riga(riga) if riga else None
+
+    def eventi(self, tipo: str, noti_al: datetime) -> list[Evento]:
+        righe = self._db.execute(
+            "SELECT * FROM eventi_ritorno WHERE tipo = ? AND registrato_il <= ? ORDER BY id",
+            (tipo, istante_in_testo(noti_al)),
+        ).fetchall()
+        return [self._evento_da_riga(riga) for riga in righe]
+
+    @staticmethod
+    def _evento_da_riga(riga: sqlite3.Row) -> Evento:
+        return Evento(
+            id=riga["id"],
+            chiave=riga["chiave"],
+            tipo=riga["tipo"],
+            contenuto=json.loads(riga["contenuto"]),
+            adattatore=riga["adattatore"],
+            registrato_il=datetime.fromisoformat(riga["registrato_il"]),
+            versione_id=riga["versione_id"],
+            esito_id=riga["esito_id"],
+        )
+
     def chiudi(self) -> None:
         self._db.close()
+
+
+def _testo(contenuto: dict) -> str:
+    return json.dumps(contenuto, ensure_ascii=False, sort_keys=True)
 
 
 def _fatto_da_riga(riga: sqlite3.Row) -> Fatto:

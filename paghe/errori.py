@@ -51,3 +51,7 @@ class VistaFerma(ErrorePaghe):
 
 class CasoNonModellato(ErroreCalcolo):
     """Situazione reale non ancora modellata come caso: il calcolo si ferma e la nomina (ADR 0005)."""
+
+
+class ComposizioneMancante(ErrorePaghe):
+    """L'istituto di un importo non ha una dichiarazione di composizione: la proposta si ferma, non il calcolo (ADR 0025)."""

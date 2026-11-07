@@ -72,14 +72,36 @@ class Denuncia:
 
 @dataclass(frozen=True)
 class _RigaPagata:
+    """`fatto` è la data di pagamento registrata; None per una riga ipotetica, mai registrata."""
+
     importo: Importo
-    fatto: Fatto
+    fatto: Fatto | None
+
+
+def _righe_ipotetiche(rapporto: str, mese: Mese, ipotetiche) -> list[_RigaPagata]:
+    """Righe che si ipotizza pagate, ciascuna con la propria data di pagamento: entrano solo se cadono nel mese."""
+    righe = []
+    for riga in ipotetiche:
+        if riga.data_pagamento is None:
+            raise ErroreCalcolo(
+                f"Rapporto {riga.rapporto}, istituto {riga.istituto}: una riga ipotetica vuole la data di pagamento"
+            )
+        if (
+            riga.rapporto == rapporto
+            and riga.derivazione.maturazione not in MATURAZIONI_DERIVATE
+            and mese.primo_giorno <= riga.data_pagamento <= mese.ultimo_giorno
+        ):
+            righe.append(_RigaPagata(riga, None))
+    return righe
 
 
 def _righe_pagate(
-    registro: Registro, rapporto: str, mese: Mese, istante: datetime
+    registro: Registro, rapporto: str, mese: Mese, istante: datetime, ipotetiche=()
 ) -> tuple[list[_RigaPagata], tuple[int, ...]]:
-    """Righe del rapporto pagate nel mese, ed esiti che ancora non hanno una data di pagamento."""
+    """Righe del rapporto pagate nel mese, ed esiti che ancora non hanno una data di pagamento.
+
+    Le righe `ipotetiche` si aggiungono a quelle registrate: servono alla simulazione di un pagamento (ADR 0025).
+    """
     pagamenti = registro.pagamenti(rapporto, istante)
     pagate: list[_RigaPagata] = []
     senza_data: list[int] = []
@@ -96,6 +118,7 @@ def _righe_pagate(
             senza_data.append(esito.id)
         elif mese.primo_giorno <= fatto.valido_dal <= mese.ultimo_giorno:
             pagate.extend(_RigaPagata(replace(riga, data_pagamento=fatto.valido_dal), fatto) for riga in righe)
+    pagate.extend(_righe_ipotetiche(rapporto, mese, ipotetiche))
     return pagate, tuple(senza_data)
 
 
@@ -210,7 +233,7 @@ def _base_del_periodo(
             entrano.append(riga)
     if not entrano:
         return None
-    fatti = {riga.fatto.id: riga.fatto for riga in entrano}
+    fatti = {riga.fatto.id: riga.fatto for riga in entrano if riga.fatto is not None}
     return Importo(
         rapporto=entrano[0].importo.rapporto,
         istituto=f"base.{base.nome}",
@@ -334,21 +357,29 @@ def calcola_denuncia(
     rapporto: str,
     mese: Mese,
     noto_al: datetime | None = None,
+    ipotetiche=(),
 ) -> Denuncia:
-    """Periodi dichiarati del mese con basi e contributi; funzione pura di registro, corpus e istante."""
+    """Periodi dichiarati del mese con basi e contributi; funzione pura di registro, corpus e istante.
+
+    Con `ipotetiche`, righe con la loro data di pagamento, simula un pagamento non ancora avvenuto:
+    non scrive nulla nel registro (ADR 0025).
+    """
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
-    denuncia = _denuncia(registro, corpus, rapporto, mese, istante)
+    ipotetiche = tuple(ipotetiche)
+    denuncia = _denuncia(registro, corpus, rapporto, mese, istante, ipotetiche)
     if denuncia.periodi:
         _controlla_cumuli(registro, corpus, denuncia, istante)
     return denuncia
 
 
-def _denuncia(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime) -> Denuncia:
+def _denuncia(
+    registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime, ipotetiche=()
+) -> Denuncia:
     if not corpus.basi():
         raise ErroreCorpus("Il corpus non dichiara alcuna base imponibile")
     lettore = _Lettore(registro, corpus, rapporto, istante)
     lettore.controlla_fermi(mese, {"calcolo", "denuncia"})
-    pagate, senza_data = _righe_pagate(registro, rapporto, mese, istante)
+    pagate, senza_data = _righe_pagate(registro, rapporto, mese, istante, ipotetiche)
 
     periodi = _periodi_in_servizio(lettore, mese)
     in_servizio = bool(periodi)

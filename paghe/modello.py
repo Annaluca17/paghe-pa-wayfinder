@@ -258,3 +258,20 @@ class Esito:
     def noti_al(self) -> frozenset[datetime]:
         """Tempo di registrazione dei fatti letti per ciascuna riga."""
         return frozenset(riga.derivazione.noto_al for riga in self.righe)
+
+
+@dataclass(frozen=True)
+class Evento:
+    """Evento di ritorno registrato (ADR 0025): identificativo stabile, contenuto e adattatore che l'ha portato.
+
+    `versione_id` è la versione di proposta a cui si riferisce; `esito_id` l'esito che ne è nato o a cui si riferisce.
+    """
+
+    id: int
+    chiave: str
+    tipo: str
+    contenuto: dict
+    adattatore: str
+    registrato_il: datetime
+    versione_id: int | None = None
+    esito_id: int | None = None

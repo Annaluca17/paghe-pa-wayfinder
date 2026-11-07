@@ -6,13 +6,13 @@ La **delega F24EP** è una vista delle **liquidazioni verso terzi** (ADR 0013). 
 
 **Dati dell'ente.** Codice fiscale, denominazione, email, IBAN del conto di tesoreria e sigla della provincia per la sezione INPDAP sono **fatti sull'ente**, datati, con il lettore F24EP. Se ne manca uno, è un dato mancante e l'invio si ferma.
 
-**Scadenza.** Una regola con fonte ricava la scadenza. La **data di versamento** è un fatto scelto dall'Ufficio personale; se cade dopo la scadenza calcolata, il modello avvisa.
+**Scadenza.** Una regola con fonte ricava la scadenza: il 16 del mese successivo; se cade di sabato o di giorno festivo, anche infrasettimanale, il primo giorno lavorativo dopo. Le scadenze dal 1° al 20 agosto slittano al 20 agosto: per l'F24EP questa proroga vale per prassi, non per testo di legge. La **data di versamento** è un fatto scelto dall'Ufficio personale; se cade dopo la scadenza calcolata, il modello avvisa.
 
-**Esiti.** L'**esito dichiarato** è la delega trasmessa, immutabile, con la ricevuta dell'AdE. L'**esito versato** nasce dall'evento di versamento eseguito (ADR 0013). Una correzione è una nuova delega; l'annullamento entro il termine di trasmissione è un fatto a sé.
+**Esiti.** L'**esito dichiarato** è la delega trasmessa, immutabile. Dopo l'invio ci sono tre ricevute dell'AdE: controlli formali, controllo dei crediti (solo con compensazioni, con possibile sospensione fino a 30 giorni) e addebito. L'**esito versato** nasce dall'evento di versamento eseguito (ADR 0013, 0025). Una correzione è una nuova delega; l'annullamento entro il termine di trasmissione è un fatto a sé.
 
 **File telematico.** Lo scrive un serializzatore del nucleo, in Python, sulla specifica AdE (Allegato 2). F24EP-editor è il controllo: i test replicano i controlli del suo validatore e il confronto con i file AdE già ricostruiti.
 
-**IRAP** è un istituto a carico dell'ente con una base propria e una regola datata; finché la regola non ha fonte è un **fermo dichiarato** che blocca l'invio della delega, non il calcolo dei netti.
+**IRAP** è un istituto a carico dell'ente con una base propria e una regola datata: 8,5% sulla base retributiva, acconto mensile, codice 380E. Il **fermo dichiarato** si riduce a due casi, **scadenza** e **riparto per regione**, e blocca l'invio della delega, non il calcolo dei netti.
 
 **Ravvedimento.** Un versamento tardivo (esito versato dopo la scadenza) si segnala e ferma quella delega. Il ravvedimento resta per ora a F24EP-editor; come vista del modello verrà con un ticket successivo.
 
@@ -32,10 +32,24 @@ Scelto da Luca il 06/11/2026 nel grilling del ticket #45, domande 2, 3, 4, 5, 10
 - Il premio INAIL entra nella sezione INAIL della stessa delega senza compensazioni (ADR 0024).
 - La lista collaboratori (ADR 0015) versa nella sezione INPS con la causale della gestione separata, da verificare per aliquota.
 
-**Da verificare** (ticket di ricerca #51)
+- Il nuovo codice **179E** (e gemelli) per la sostitutiva sul trattamento accessorio del personale non dirigenziale entra nella mappatura (L. 199/2025, art. 1 c. 237; ris. AdE 4/E del 29/01/2026).
+- 700E e 701E servono al recupero di un 170E indebito.
+- F24EP-editor spegne di default la proroga di Ferragosto e l'estrattore ignora i festivi infrasettimanali: sono da correggere nei tool, se restano controlli.
 
-- Scadenza del 16 e slittamento; proroga di Ferragosto al 20 agosto per l'F24EP: i due tool si contraddicono e il vault non ne parla.
-- Ordine, limiti e riporto delle compensazioni (150E, 153E, 154E, 170E, 175E dalla tabella AdE riportata dal vault). La prassi «trattamento integrativo compensato con la CPDEL» non ha norma a supporto.
-- IRAP: aliquota, base, soggetti esclusi.
-- Codice dell'addizionale comunale a saldo; causali C10 o CXX; P608, P632 e l'1% aggiuntivo in P201, provvisori in F24EP-editor.
-- Se tutti gli enti del target sono in Tesoreria Unica (ADR 0013).
+**Esito della ricerca #51** (`docs/research/versamenti-f24ep.md`)
+
+- **Norma certa:** scadenza del 16 e slittamento anche per i festivi infrasettimanali, art. 4 c. 2 D.Lgs. 33/2025 dal 01/01/2027; nel 2026 vale la fonte originaria, art. 32-ter DL 185/2008, non letta direttamente. Saldo del modello non negativo (Allegato 2, record V). Tre fasi dopo l'invio (Allegato 2). Codici 384E (saldo), 385E (acconto), 380E, P608, P632.
+- **Prassi-interpretazione:** proroga di Ferragosto per l'F24EP, comunicato AdE del 06/08/2008 riferito da Fisco Oggi: l'art. 11 D.Lgs. 33/2025 non richiama l'art. 4. Criterio di cassa dell'IRAP. Scadenza del 16 per l'IRAP.
+- **IRAP, aliquota:** 8,5% con due fonti concordi (art. 16 c. 2 D.Lgs. 446/1997 in sintesi, risoluzione DF 1/2021 riportata da fonte secondaria). La base retributiva è letta in sintesi: l'art. 10-bis va riaperto prima di citarlo in una regola.
+- **Scelte del modello:** ordine dei crediti e riporto, senza norma che li fissi. Il debito contro cui compensare per primo si decide nel ticket #54.
+- **Dal 01/01/2027** cambiano i riferimenti, non il contenuto: D.Lgs. 33/2025 per i versamenti, D.Lgs. 141/2026 per i rimborsi da assistenza fiscale.
+
+**Da verificare**
+
+- Il comunicato AdE del 2008 sulla proroga, sull'originale; lo slittamento se il 20 agosto cade di sabato o domenica.
+- Il limite di 2 milioni per il 175E; ordine e riporto sulle istruzioni ufficiali del 770.
+- La prassi «trattamento integrativo compensato con la CPDEL»: compatibile con la norma generale, nessuna fonte specifica.
+- IRAP: il decreto ministeriale della scadenza (art. 30 c. 5), il riparto per regione, LSU, co.co.co. al netto dei contributi, indennità di fine mandato.
+- Causali C10 o CXX sulla circolare INPS 8/2026; l'1% aggiuntivo in P201, senza causale dedicata.
+- Se tutti gli enti del target usano l'F24EP: elenco delle tabelle della L. 720/1984 non letto (ADR 0013).
+- Se esiste un testo unico che sostituisce il D.Lgs. 446/1997.

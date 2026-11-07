@@ -22,7 +22,7 @@ from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
 from .modello import MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
-from .registro import TIPO_DICHIARAZIONE_SOSTITUITO, Registro
+from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, Registro
 from .denuncia import MATURAZIONI_DERIVATE
 from .tempo import Periodo, in_utc
 
@@ -119,10 +119,20 @@ def attribuisci_reddito(corpus: Corpus, importi, valuta_prevista: date) -> tuple
     return tuple(risultato)
 
 
+def _controlla_anno_dei_pagamenti(registro: Registro, persona: str, istante: datetime) -> None:
+    """Un pagamento eseguito in un anno d'imposta diverso dal previsto ferma il calcolo fiscale della persona (ADR 0025)."""
+    for fatto in registro.fatti_persona_noti(persona, TIPO_ANNO_IMPOSTA_DIVERSO, istante):
+        raise CasoNonModellato(
+            f"Persona {persona}: caso non modellato, l'esito {int(fatto.valore)} è stato pagato il {fatto.valido_dal} "
+            "in un anno d'imposta diverso dal previsto: il calcolo fiscale si ferma"
+        )
+
+
 def _persona(registro: Registro, rapporto: str, istante: datetime) -> str:
     persona = registro.persona_del_rapporto(rapporto, istante)
     if persona is None:
         raise FattoMancante(f"Rapporto {rapporto}: manca il legame con la persona, serve per il calcolo fiscale")
+    _controlla_anno_dei_pagamenti(registro, persona, istante)
     return persona
 
 
@@ -474,6 +484,7 @@ def proiezione_conguaglio(
 ) -> Avviso:
     """Il conguaglio che risulterebbe sugli esiti pagati fino ad ora: un avviso, non cambia le ritenute."""
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    _controlla_anno_dei_pagamenti(registro, persona, istante)
     return _avviso_proiezione(persona, anno, _annuale(registro, corpus, persona, anno, data_pagamento, istante))
 
 

@@ -31,6 +31,14 @@ CONTEGGI = {"lun_sab", "calendario"}
 MISURE = {"intero", "parziale", "escluso"}
 AMBITI_FERMO = {"calcolo", "denuncia", "vista"}
 FITTIZIO = "fittizio:"
+# Dichiarazione di composizione (ADR 0025): valori ammessi.
+NATURE = frozenset({
+    "retribuzione", "ritenuta", "addizionale", "contributo_lavoratore", "contributo_ente",
+    "rata_730", "rimborso_730", "credito_sostituto", "trattenuta_terzi",
+})
+EFFETTI = frozenset({"piu", "meno", "nessuno"})
+DESTINATARI = frozenset({"beneficiario", "terzo"})
+CANALI = frozenset({"accredito", "f24ep", "bonifico"})
 
 
 @dataclass(frozen=True)
@@ -374,6 +382,74 @@ class RegoleFiscali:
         return bool(self.categorie or self.redditi or self.ritenute or self.conguagli)
 
 
+@dataclass(frozen=True)
+class DichiarazioneComposizione:
+    """L'istituto dichiara come entra nella composizione del pagamento (ADR 0025), con date e fonte.
+
+    Natura, effetto sul netto, destinatario e canale; oppure `intermedio`: l'istituto, come un totale
+    che somma altri, non entra nella composizione.
+    """
+
+    istituto: str
+    dal: date
+    riferimento: str
+    natura: str | None = None
+    effetto: str | None = None
+    destinatario: str | None = None
+    canale: str | None = None
+    intermedio: bool = False
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Composizione {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if type(self.intermedio) is not bool:
+            raise ErroreCorpus(f"{soggetto}: `intermedio` è vero o falso")
+        campi = {
+            "natura": (self.natura, NATURE),
+            "effetto": (self.effetto, EFFETTI),
+            "destinatario": (self.destinatario, DESTINATARI),
+            "canale": (self.canale, CANALI),
+        }
+        if self.intermedio:
+            if any(valore is not None for valore, _ in campi.values()):
+                raise ErroreCorpus(f"{soggetto}: un istituto intermedio non dichiara natura, effetto, destinatario o canale")
+            return
+        for nome, (valore, ammessi) in campi.items():
+            if valore not in ammessi:
+                raise ErroreCorpus(f"{soggetto}: {nome} obbligatorio, uno di {sorted(ammessi)}")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
+class MappaturaEsterna:
+    """Corrispondenza datata tra un istituto e un codice di un sistema esterno: codice tributo, causale, SICO, punto CU."""
+
+    istituto: str
+    sistema: str
+    codice: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Mappatura {self.istituto} -> {self.sistema}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if not isinstance(self.sistema, str) or not self.sistema.strip():
+            raise ErroreCorpus(f"{soggetto}: sistema obbligatorio")
+        if not isinstance(self.codice, str) or not self.codice.strip():
+            raise ErroreCorpus(f"{soggetto}: il codice va scritto come testo")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
 class Corpus:
     """Insieme coerente e immutabile; la versione è l'impronta del contenuto."""
 
@@ -389,8 +465,12 @@ class Corpus:
         denuncia: RegoleDenuncia | None = None,
         reale: bool = False,
         fiscale: RegoleFiscali | None = None,
+        composizioni: tuple[DichiarazioneComposizione, ...] = (),
+        mappature: tuple[MappaturaEsterna, ...] = (),
     ):
         self.reale = reale
+        self._composizioni = tuple(composizioni)
+        self._mappature = tuple(mappature)
         self.fiscale = fiscale or RegoleFiscali()
         self.fermi = tuple(fermi)
         self.denuncia = denuncia or RegoleDenuncia()
@@ -413,6 +493,7 @@ class Corpus:
         self._convalida_cassa()
         self._convalida_denuncia()
         self._convalida_fiscale()
+        self._convalida_composizione()
         if reale:
             self._rifiuta_fittizi()
         self.versione = self._impronta()
@@ -428,6 +509,8 @@ class Corpus:
         elenco += [(f"Reddito {r.istituto}", r.riferimento) for r in fiscale.redditi]
         elenco += [(f"Ritenuta {r.istituto}", r.riferimento) for r in fiscale.ritenute]
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
+        elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
+        elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
         return elenco
 
     def _rifiuta_fittizi(self) -> None:
@@ -449,6 +532,27 @@ class Corpus:
                 raise ErroreCorpus(f"Conguaglio annuo: {istituto} non è una regola sul mese")
         if (regole.persona or massimale or regole.conguaglio_annuo) and not self._basi:
             raise ErroreCorpus("[denuncia] richiede almeno una base imponibile")
+
+    def _istituti_noti(self) -> set[str]:
+        """Istituti con una regola, o con la ritenuta e il conguaglio fiscale."""
+        fiscale = self.fiscale
+        return set(self._regole) | {r.istituto for r in fiscale.ritenute} | {c.istituto for c in fiscale.conguagli}
+
+    def _convalida_composizione(self) -> None:
+        noti = self._istituti_noti()
+        for indice, dichiarazione in enumerate(self._composizioni):
+            if dichiarazione.istituto not in noti:
+                raise ErroreCorpus(f"Composizione {dichiarazione.istituto}: istituto ignoto")
+            for altra in self._composizioni[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], f"Composizione {dichiarazione.istituto}")
+        for indice, mappatura in enumerate(self._mappature):
+            soggetto = f"Mappatura {mappatura.istituto} -> {mappatura.sistema}"
+            if mappatura.istituto not in noti:
+                raise ErroreCorpus(f"{soggetto}: istituto ignoto")
+            for altra in self._mappature[indice + 1 :]:
+                if (altra.istituto, altra.sistema) == (mappatura.istituto, mappatura.sistema):
+                    _vigenze_sovrapposte([mappatura, altra], soggetto)
 
     def _convalida_fiscale(self) -> None:
         fiscale = self.fiscale
@@ -660,6 +764,17 @@ class Corpus:
                     for c in fiscale.conguagli
                 ),
             }
+        if self._composizioni:
+            contenuto["composizioni"] = sorted(
+                [c.istituto, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.natura or "", c.effetto or "",
+                 c.destinatario or "", c.canale or "", c.intermedio, c.riferimento]
+                for c in self._composizioni
+            )
+        if self._mappature:
+            contenuto["mappature"] = sorted(
+                [m.istituto, m.sistema, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
+                for m in self._mappature
+            )
         testo = json.dumps(contenuto, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(testo.encode("utf-8")).hexdigest()[:16]
 
@@ -694,6 +809,17 @@ class Corpus:
 
     def regola_conguaglio(self, giorno: date) -> RegolaConguaglio | None:
         return _vigente(self.fiscale.conguagli, giorno)
+
+    def composizione(self, istituto: str, giorno: date) -> DichiarazioneComposizione | None:
+        """Dichiarazione di composizione vigente alla data; None se l'istituto non ne dichiara."""
+        return _vigente([c for c in self._composizioni if c.istituto == istituto], giorno)
+
+    def mappatura(
+        self, istituto: str, sistema: str, data_pagamento: date, anno_imposta: int | None = None
+    ) -> MappaturaEsterna | None:
+        """Codice del sistema esterno: per anno d'imposta, al 31 dicembre, se l'importo lo porta; altrimenti per data di pagamento."""
+        giorno = date(anno_imposta, 12, 31) if anno_imposta is not None else data_pagamento
+        return _vigente([m for m in self._mappature if (m.istituto, m.sistema) == (istituto, sistema)], giorno)
 
     def regola_iniziata(self, istituto: str, giorno: date) -> bool:
         """Vero se l'istituto ha già una regola decorrente a quella data, anche se oggi scaduta."""
@@ -760,6 +886,8 @@ class Corpus:
             )
             denuncia = _denuncia_da_toml(dati.get("denuncia", {}))
             fiscale = _fiscale_da_toml(dati)
+            composizioni = tuple(_composizione_da_toml(voce) for voce in dati.get("composizione", []))
+            mappature = tuple(_mappatura_da_toml(voce) for voce in dati.get("mappatura", []))
         except (tomllib.TOMLDecodeError, KeyError, TypeError, AttributeError) as errore:
             raise ErroreCorpus(f"Corpus TOML non valido: {errore!r}") from errore
         periodo = dati.get("periodo_dichiarato", {})
@@ -774,6 +902,8 @@ class Corpus:
             denuncia=denuncia,
             reale=reale,
             fiscale=fiscale,
+            composizioni=composizioni,
+            mappature=mappature,
         )
 
     @classmethod
@@ -785,6 +915,31 @@ def _data(valore: object, campo: str) -> date:
     if isinstance(valore, datetime) or not isinstance(valore, date):
         raise ErroreCorpus(f"{campo}: serve una data, trovato {valore!r}")
     return valore
+
+
+def _composizione_da_toml(voce: dict) -> DichiarazioneComposizione:
+    return DichiarazioneComposizione(
+        istituto=voce["istituto"],
+        dal=_data(voce["dal"], "dal"),
+        riferimento=voce["riferimento"],
+        natura=voce.get("natura"),
+        effetto=voce.get("effetto"),
+        destinatario=voce.get("destinatario"),
+        canale=voce.get("canale"),
+        intermedio=voce.get("intermedio", False),
+        al=_data(voce["al"], "al") if "al" in voce else None,
+    )
+
+
+def _mappatura_da_toml(voce: dict) -> MappaturaEsterna:
+    return MappaturaEsterna(
+        istituto=voce["istituto"],
+        sistema=voce["sistema"],
+        codice=voce["codice"],
+        dal=_data(voce["dal"], "dal"),
+        riferimento=voce["riferimento"],
+        al=_data(voce["al"], "al") if "al" in voce else None,
+    )
 
 
 def _parametro_da_toml(voce: dict) -> Parametro:
