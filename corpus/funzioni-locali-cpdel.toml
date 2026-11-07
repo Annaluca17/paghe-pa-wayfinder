@@ -63,6 +63,18 @@ caso = "retribuzione ridotta, non modellata"
 ambito = "calcolo"
 riferimento = "prassi:immedia:nota:2026-11-06;3"
 
+[[fermo]]
+fatto = "retribuzione_risultato"
+caso = "retribuzione di risultato di dirigente o segretario, fondo non modellato"
+ambito = "calcolo"
+riferimento = "ccnl:S105:2026-02-23~art24 + prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "interim"
+caso = "interim del dirigente, a carico del fondo dirigenti non modellato"
+ambito = "calcolo"
+riferimento = "ccnl:S105:2024-07-16~art64 + prassi:immedia:nota:2026-11-07;9"
+
 # Basi imponibili (ADR 0005)
 
 [[base]]
@@ -266,6 +278,38 @@ dal = 2027-01-01
 valore = "21060.47"
 riferimento = "ccnl:S105:2026-10-28~tabB"
 
+# Stipendio tabellare annuo della dirigenza dell'Area Funzioni Locali, per 13 mensilita' (tredicesima compresa), e dei
+# segretari per fascia (ticket #73, PR A). Norma certa; seconda fonte: riscontro aritmetico con il CCNL 16/07/2024
+# (47.015,77 + 230,00 x 13; fascia C 37.612,59 + 184,00 x 13), ricerca regimi-titolo-cifre-2026.md, sezioni 1 e 2.
+
+[[parametro]]
+nome = "tabellare_annuo_dirigenti"
+[[parametro.vigenza]]
+dal = 2024-01-01
+valore = "50005.77"
+riferimento = "ccnl:S105:2026-02-23~art22-com3 + ccnl:S105:2024-07-16~art37-com3"
+
+[[parametro]]
+nome = "tabellare_annuo_segretario_a"
+[[parametro.vigenza]]
+dal = 2024-01-01
+valore = "50005.77"
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + ccnl:S105:2024-07-16~art57-com3"
+
+[[parametro]]
+nome = "tabellare_annuo_segretario_b"
+[[parametro.vigenza]]
+dal = 2024-01-01
+valore = "50005.77"
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + ccnl:S105:2024-07-16~art57-com3"
+
+[[parametro]]
+nome = "tabellare_annuo_segretario_c"
+[[parametro.vigenza]]
+dal = 2024-01-01
+valore = "40004.59"
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + ccnl:S105:2024-07-16~art57-com3"
+
 # Indennità di comparto mensile, tab. C CCNL 28/10/2026, per 12 mensilità.
 # L'incremento dal 01/07/2027 dipende, per i Comuni, dal decreto di riparto (art. 36-bis c. 3):
 # non è modellato, quindi la vigenza si chiude il 30/06/2027.
@@ -400,6 +444,32 @@ conteggio = "lun_sab"
 divisore = "divisore_giornaliero"
 decimali = 2
 
+# Dirigente e segretario (ticket #73, PR A): mensile = arrotonda(annuo / 13, 2), nota di prassi 9. A giorni come il comparto.
+
+[[regola]]
+istituto = "tabellare_dirigenti"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-02-23~art22-com3 + prassi:immedia:nota:2026-11-07;9"
+formula = "arrotonda(parametro.tabellare_annuo_dirigenti / 13, 2)"
+maturazione = "giorni"
+applica_se = "area=dirigente"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "posizione_dirigenti"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-02-23~art22-com6 + prassi:immedia:nota:2026-11-07;9"
+formula = "arrotonda(fatto.posizione_annua_dirigente / 13, 2)"
+maturazione = "giorni"
+applica_se = "posizione_annua_dirigente"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
 # Contributi. Totale e quota del lavoratore arrotondati, quota dell'ente per differenza
 # (ricerca #15, proposta B3; nota di prassi 3).
 
@@ -482,7 +552,7 @@ istituto = "riduzione_tfr"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + prassi:immedia:nota:2026-11-06;5"
-formula = "-arrotonda(arrotonda((importo.tabellare_funzionari + importo.tabellare_istruttori + importo.tabellare_operatori_esperti + importo.tabellare_operatori) * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
+formula = "-arrotonda(arrotonda((importo.posizione_dirigenti + importo.tabellare_dirigenti + importo.tabellare_funzionari + importo.tabellare_istruttori + importo.tabellare_operatori_esperti + importo.tabellare_operatori) * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
 maturazione = "periodo"
 applica_se = "regime_fine_servizio=1"
 
@@ -707,6 +777,51 @@ basi = ["tfr_ulteriori"]
 misura = "escluso"
 dal = 2026-01-01
 riferimento = "ccnl:S105:2000-09-14~art49 + prassi:immedia:nota:2026-11-06;5"
+
+# Concorsi del dirigente e del segretario (nota di prassi 9): come il tabellare del comparto. Il comparto non ha
+# la posizione: per questa la nota 9 segnala il dubbio sulla base TFS.
+
+[[concorso]]
+istituto = "tabellare_dirigenti"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tabellare_dirigenti"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-07;9"
+
+[[concorso]]
+istituto = "tabellare_dirigenti"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "posizione_dirigenti"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "posizione_dirigenti"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-07;9"
+
+[[concorso]]
+istituto = "posizione_dirigenti"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
 
 # Trattamento nel part-time (ADR 0026, ticket #72). Riferimento letto sul testo ARAN: CCNL 16/11/2022, art. 62, c. 10,
 # «il trattamento economico del personale con rapporto di lavoro a tempo parziale è proporzionale alla prestazione
