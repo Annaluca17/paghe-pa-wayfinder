@@ -752,9 +752,13 @@ class Corpus:
             for altra in fiscale.fisiologici[indice + 1 :]:
                 if altra.istituto == dichiarazione.istituto:
                     _vigenze_sovrapposte([dichiarazione, altra], soggetto)
-        for dichiarazione in fiscale.deduzioni:
+        for indice, dichiarazione in enumerate(fiscale.deduzioni):
+            soggetto = f"Deduzione fiscale {dichiarazione.istituto}"
             if dichiarazione.istituto not in self._regole:
-                raise ErroreCorpus(f"Deduzione fiscale {dichiarazione.istituto}: istituto ignoto")
+                raise ErroreCorpus(f"{soggetto}: istituto ignoto")
+            for altra in fiscale.deduzioni[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], soggetto)
         for gruppo, soggetto in ((fiscale.ritenute, "Ritenuta"), (fiscale.conguagli, "Conguaglio")):
             for indice, regola in enumerate(gruppo):
                 if regola.istituto in self._regole:

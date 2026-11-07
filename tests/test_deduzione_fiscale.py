@@ -50,3 +50,12 @@ def test_l_istituto_dichiara_che_l_importo_riduce_l_imponibile_fiscale_con_date_
 def test_la_deduzione_di_un_istituto_ignoto_e_rifiutata():
     with pytest.raises(ErroreCorpus, match="istituto ignoto"):
         Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE.replace('"contributo_lavoratore"', '"contributo_inesistente"'))
+
+
+def test_due_deduzioni_dello_stesso_istituto_non_si_sovrappongono():
+    seconda = DEDUZIONE.replace("2020-01-01", "2026-01-01").replace("deduzione-contributo-lavoratore", "deduzione-bis")
+    with pytest.raises(ErroreCorpus, match="sovrappost"):
+        Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2026-06-30") + seconda)
+    adiacenti = DEDUZIONE.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2025-12-31") + seconda
+    corpus = Corpus.da_toml(TESTO + CONTRIBUTO + adiacenti)
+    assert corpus.deduzione_fiscale("contributo_lavoratore", date(2026, 1, 1)).riferimento == "fittizio:deduzione-bis"
