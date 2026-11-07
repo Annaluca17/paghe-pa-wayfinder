@@ -257,8 +257,9 @@ def _ultimo_dell_anno(registro: Registro, anno: int, valuta: date, istante: date
     data = registro.ultimo_pagamento_dell_anno(anno, istante)
     if data is not None:
         return valuta >= data, False
-    nella_finestra = valuta.month == 12 or (valuta.month == 1 and valuta.day <= 12)
-    return False, nella_finestra
+    a_dicembre = (valuta.year, valuta.month) == (anno, 12)
+    entro_il_12_gennaio = (valuta.year, valuta.month) == (anno + 1, 1) and valuta.day <= 12
+    return False, a_dicembre or entro_il_12_gennaio
 
 
 def _contributi_gia_compresi(
@@ -760,6 +761,11 @@ def registra_versamento_eseguito(
         return registro.esito(gia.esito_id)
 
     istante = registro.adesso()
+    if canale == "f24ep" and stato_delega(registro, versamento, istante) is StatoDelega.SCARTATA:
+        raise ErroreRegistro(f"Versamento {versamento}: la delega è scartata, gli importi vanno versati con una nuova")
+    for evento in registro.eventi(TIPO_VERSAMENTO_ESEGUITO, istante):
+        if evento.contenuto["versamento"] != versamento and any(r in evento.contenuto["righe"] for r in riferimenti):
+            raise ErroreRegistro(f"Versamento {versamento}: una riga è già versata dal versamento {evento.contenuto['versamento']}")
     importi = [
         _riga_riferita(
             registro,
@@ -809,6 +815,9 @@ def segnala_scostamento_contributi(
     dovuti: dict[str, Decimal] = {}
     for periodo in denuncia.periodi:
         for riga in periodo.contributi:
+            dichiarazione = corpus.composizione(riga.istituto, mese.ultimo_giorno)
+            if dichiarazione is not None and dichiarazione.intermedio:
+                continue  # non entra in nessun esito: non c'è nulla con cui confrontarlo
             dovuti[riga.istituto] = dovuti.get(riga.istituto, Decimal(0)) + riga.valore
     trattenuti, _, _ = _contributi_gia_compresi(registro, corpus, rapporto, mese, istante)
     return tuple(
