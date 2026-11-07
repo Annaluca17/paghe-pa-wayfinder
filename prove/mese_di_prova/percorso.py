@@ -338,21 +338,26 @@ def _registra_ente(c: _Contesto) -> None:
 
 
 def _registra_rapporto(c: _Contesto, r: S.Rapporto) -> dict[str, object]:
-    """Anagrafica e inquadramento di un rapporto. Per i titoli senza regime c'e' solo il compenso: nessun lettore."""
+    """Anagrafica e inquadramento di un rapporto. Per i titoli senza regime (sindaco, co.co.co.) c'e' solo il compenso: nessun lettore."""
     u = c.ufficio
     u.codice_persona(r.persona, "codice_fiscale", r.cf, r.nascita)
     u.codice_persona(r.persona, "cognome", r.cognome, r.nascita)
     u.codice_persona(r.persona, "nome", r.nome, r.nascita)
     u.iban_persona(r.persona, S.IBAN_PERSONE, date(2026, 1, 1))
-    if r.comparto and r.detrazioni:
+    if r.dipendente and r.detrazioni:
         u.dichiarazione_sostituito(r.persona, "lavoro_dipendente", date(2026, 1, 1), S.ATTO_DETRAZIONI)
     u.collega(r.id, r.persona, r.dal)
     fatti: dict[str, object] = {}
-    if r.comparto:
+    if r.dipendente:
         u.codice(r.id, "comune_sede_lavoro", S.COMUNE_SEDE, r.dal)
         u.codice(r.id, "cap_sede_lavoro", S.CAP_SEDE, r.dal)
         for tipo, valore in S.fatti_inquadramento(r).items():
             fatti[tipo] = u.codice(r.id, tipo, valore, r.dal, r.al)
+        if r.fascia is not None:
+            u.codice(r.id, "fascia_segretario", r.fascia, r.dal, atto=S.ATTO_FASCIA_SEGRETARIO)
+        if r.posizione is not None:
+            atto = S.ATTO_POSIZIONE_DIRIGENTE if r.titolo == "dirigente" else S.ATTO_POSIZIONE_SEGRETARIO
+            u.fatto(r.id, S.FATTO_POSIZIONE[r.titolo], r.posizione, r.dal, atto=atto)
     else:
         u.fatto(r.id, "compenso_mensile", S.COMPENSI_SENZA_REGIME[r.id], r.dal)
     return fatti
@@ -416,7 +421,7 @@ def _importi_del_mese(c: _Contesto, mese: Mese, tag: str, passo: Passo, arrivi: 
             passo.fermi.append(Fermo(tag, "calcolo", (r.id,), causa_di(str(errore)), str(errore), caso=causa_di(str(errore))))
             arrivi[r.id] = "calcolo"
             continue
-        if not righe and r.comparto and _fuori_servizio(r, mese):
+        if not righe and r.dipendente and _fuori_servizio(r, mese):
             passo.note.append(f"{r.id}: non in servizio nel mese, nessun importo")
             arrivi[r.id] = "fuori servizio"
             continue
