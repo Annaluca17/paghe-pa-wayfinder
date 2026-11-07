@@ -47,11 +47,8 @@ def reale():
 
 
 def assumi(registro, area="istruttori", dal=date(2026, 1, 1), al=None, regime="3", senza=()):
-    """Rapporto completo per la ListaPosPA; `senza` toglie i fatti indicati."""
+    """Rapporto completo per la ListaPosPA; `senza` toglie i fatti indicati. Codice fiscale, cognome e nome sono della persona."""
     fatti = {
-        "codice_fiscale": (CF, None),
-        "cognome": ("ROSSI", None),
-        "nome": ("MARIO", None),
         "comune_sede_lavoro": ("H501", None),
         "cap_sede_lavoro": ("00100", None),
         "tipo_impiego": ("1", al),
@@ -62,13 +59,14 @@ def assumi(registro, area="istruttori", dal=date(2026, 1, 1), al=None, regime="3
     }
     if regime is not None:
         fatti["regime_fine_servizio"] = (regime, al)
-    if "codice_fiscale" in fatti and "codice_fiscale" not in senza:
-        registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1980, 1, 1))
+    for tipo, valore in {"codice_fiscale": CF, "cognome": "ROSSI", "nome": "MARIO"}.items():
+        if tipo not in senza:
+            registro.registra_codice_persona("PERSONA-1", tipo, valore, date(1980, 1, 1))
     registro.collega_rapporto(R, "PERSONA-1", dal)
     return {
         tipo: registro.registra_codice(R, tipo, valore, dal, fine)
         for tipo, (valore, fine) in fatti.items()
-        if tipo not in senza and tipo != "codice_fiscale"
+        if tipo not in senza
     }
 
 
@@ -551,3 +549,16 @@ def test_un_fermo_con_ambito_vista_rende_ancora_la_lista_una_bozza(registro, oro
     with pytest.raises(VistaFerma, match="bozza"):
         in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11))
     assert "<!-- BOZZA NON TRASMISSIBILE" in in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True)
+
+
+# --- Cognome e nome sono fatti della persona (ticket #61, ADR 0012) -------------------------------
+
+
+def test_cognome_e_nome_si_leggono_dalla_persona_del_rapporto(registro, reale, orologio):
+    assumi(registro, senza=("cognome", "nome"))
+    registro.registra_codice_persona("PERSONA-1", "cognome", "ROSSI", date(1980, 1, 1))
+    registro.registra_codice_persona("PERSONA-1", "nome", "MARIO", date(1980, 1, 1))
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    assert (vista.lavoratore.cognome, vista.lavoratore.nome) == ("ROSSI", "MARIO")
+    assert vista.mancanti == ()

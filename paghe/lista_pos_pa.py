@@ -22,8 +22,9 @@ from .registro import Registro
 from .tempo import Mese, Periodo, in_utc
 
 ANAGRAFICA = ("codice_fiscale", "cognome", "nome", "comune_sede_lavoro", "cap_sede_lavoro")
-# Il codice fiscale è un fatto della persona (ADR 0012); gli altri dati restano sul rapporto finché un ticket non li sposta.
-ANAGRAFICA_DELLA_PERSONA = ("codice_fiscale",)
+# Codice fiscale, cognome e nome sono fatti della persona (ADR 0012, ticket #61); la sede resta sul rapporto.
+# Il rapporto non li porta più: nessuna seconda via di lettura.
+ANAGRAFICA_DELLA_PERSONA = ("codice_fiscale", "cognome", "nome")
 INQUADRAMENTO = ("tipo_impiego", "tipo_servizio", "contratto", "qualifica", "regime_fine_servizio")
 CODICE_CESSAZIONE = "codice_cessazione"
 
