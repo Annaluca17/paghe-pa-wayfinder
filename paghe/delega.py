@@ -10,11 +10,21 @@ una regola, la delega si ferma nominando il caso.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from .corpus import Corpus
-from .errori import ParametroMancante
-from .tempo import Mese
+from .errori import ErroreCalcolo, ParametroMancante
+from .modello import Importo
+from .proposta import (
+    TIPO_PAGAMENTO_ESEGUITO,
+    DatoMancante,
+    RiferimentoRiga,
+    RigaComposizione,
+    leggi_versione,
+)
+from .registro import Registro
+from .tempo import Mese, in_utc
 
 # Sistema della mappatura esterna dell'istituto: codice tributo o causale F24EP (ADR 0022).
 SISTEMA_F24EP = "codice_tributo_f24ep"
@@ -103,4 +113,160 @@ def calcola_scadenza(corpus: Corpus, mese_pagamento: Mese) -> Scadenza:
         fonte_proroga=proroga.fonte if applicata else None,
         riferimento_proroga=proroga.riferimento if applicata else None,
         avvisi=tuple(avvisi),
+    )
+
+
+# Vista della delega
+
+ORDINE_SEZIONI = "FIRSNQWGP5"  # l'ordine delle sezioni nella delega
+NATURE_A_CREDITO = frozenset({"rimborso_730", "credito_sostituto"})
+TIPI_DATI_ENTE = ("codice_fiscale", "denominazione", "email", "iban_tesoreria")
+
+
+@dataclass(frozen=True)
+class Origine:
+    """Da dove viene una parte di una riga: una riga di composizione (`riferimento`) o un credito riportato (`riporto`)."""
+
+    valore: Decimal
+    riferimento: RiferimentoRiga | None = None
+    riporto: int | None = None
+
+
+@dataclass(frozen=True)
+class RigaDelega:
+    sezione: str
+    tributo: str
+    codice: str
+    estremi: str
+    rif_a: str
+    rif_b: str
+    debito: Decimal
+    credito: Decimal
+    origine: tuple[Origine, ...]
+
+    @property
+    def chiave(self) -> tuple[str, str, str, str, str, str]:
+        return (self.sezione, self.tributo, self.codice, self.estremi, self.rif_a, self.rif_b)
+
+
+@dataclass(frozen=True)
+class DatiEnte:
+    """I fatti sull'ente che la delega legge; None dove il fatto manca."""
+
+    codice_fiscale: str | None = None
+    denominazione: str | None = None
+    email: str | None = None
+    iban_tesoreria: str | None = None
+    sigla_provincia: str | None = None
+
+
+@dataclass(frozen=True)
+class FermoDelega:
+    """Un caso che ferma l'invio della delega, non il calcolo: il motivo lo nomina."""
+
+    caso: str
+    motivo: str
+
+
+@dataclass(frozen=True)
+class Delega:
+    mese_pagamento: Mese
+    scadenza: Scadenza | None
+    data_versamento: date | None
+    righe: tuple[RigaDelega, ...]
+    sorgenti: tuple[RiferimentoRiga, ...]
+    ente: DatiEnte
+    dati_mancanti: tuple[DatoMancante, ...]
+    fermi: tuple[FermoDelega, ...]
+    avvisi: tuple[AvvisoDelega, ...]
+
+    @property
+    def totale_debito(self) -> Decimal:
+        return sum((r.debito for r in self.righe), Decimal(0))
+
+    @property
+    def totale_credito(self) -> Decimal:
+        return sum((r.credito for r in self.righe), Decimal(0))
+
+    @property
+    def saldo(self) -> Decimal:
+        return self.totale_debito - self.totale_credito
+
+    @property
+    def pronta(self) -> bool:
+        """Si può trasmettere: ha righe, nessun fermo e nessun dato mancante."""
+        return bool(self.righe) and not self.fermi and not self.dati_mancanti
+
+
+def _formato(formato: str, importo: Importo, pagamento: date) -> str:
+    if formato == "nessuno":
+        return ""
+    if formato == "mese_pagamento":
+        return f"00{pagamento.month:02d}"
+    if formato == "anno_pagamento":
+        return f"{pagamento.year:04d}"
+    if formato == "anno_imposta":
+        return f"{importo.anno_imposta:04d}"
+    if formato == "periodo_inizio":
+        return f"{importo.periodo.dal.month:02d}{importo.periodo.dal.year:04d}"
+    return f"{importo.periodo.al.month:02d}{importo.periodo.al.year:04d}"  # periodo_fine
+
+
+def _righe_candidate(registro: Registro, mese: Mese, istante: datetime):
+    """(riga di composizione, riferimento, data di pagamento) delle righe F24EP degli esiti pagati del mese."""
+    for evento in registro.eventi(TIPO_PAGAMENTO_ESEGUITO, istante):
+        pagamento = registro.esito(evento.esito_id).data
+        if Mese(pagamento.year, pagamento.month) != mese:
+            continue
+        versione = leggi_versione(registro, evento.versione_id)
+        for rapporto in evento.contenuto["rapporti"]:
+            for riga in versione.righe_del_rapporto(rapporto):
+                if riga.canale == "f24ep":
+                    yield riga, versione.riferimento(riga), pagamento
+
+
+def _dati_ente(registro: Registro, giorno: date, istante: datetime) -> DatiEnte:
+    def valore(tipo: str) -> str | None:
+        fatto = registro.vigente_ente(tipo, giorno, istante)
+        return fatto.valore if fatto is not None else None
+
+    return DatiEnte(*(valore(tipo) for tipo in (*TIPI_DATI_ENTE, "sigla_provincia")))
+
+
+def costruisci_delega(registro: Registro, corpus: Corpus, mese_pagamento: Mese, noto_al: datetime | None = None) -> Delega:
+    """La delega dei pagamenti eseguiti nel mese: funzione pura di registro, corpus e istante; non scrive nulla."""
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    scadenza = calcola_scadenza(corpus, mese_pagamento)
+    data_versamento = registro.data_versamento_scelta(mese_pagamento, istante)
+    ente = _dati_ente(registro, data_versamento or scadenza.data, istante)
+    somme: dict[tuple, list] = {}
+    sorgenti: list[RiferimentoRiga] = []
+    for riga, riferimento, pagamento in _righe_candidate(registro, mese_pagamento, istante):
+        codice = corpus.mappatura(riga.istituto, SISTEMA_F24EP, pagamento, riga.importo.anno_imposta).codice
+        voce = corpus.codice_f24ep(codice, pagamento)
+        valore_codice = ente.sigla_provincia if voce.codice_campo == "provincia" else ""
+        chiave = (
+            voce.sezione,
+            codice,
+            valore_codice or "",
+            "",
+            _formato(voce.rif_a, riga.importo, pagamento),
+            _formato(voce.rif_b, riga.importo, pagamento),
+            riga.natura in NATURE_A_CREDITO,
+        )
+        somme.setdefault(chiave, []).append(Origine(riga.importo.valore, riferimento))
+        sorgenti.append(riferimento)
+    righe = []
+    for (sezione, tributo, codice_campo, estremi, rif_a, rif_b, a_credito), origine in somme.items():
+        totale = sum((o.valore for o in origine), Decimal(0))
+        righe.append(
+            RigaDelega(
+                sezione, tributo, codice_campo, estremi, rif_a, rif_b,
+                Decimal(0) if a_credito else totale, totale if a_credito else Decimal(0), tuple(origine),
+            )
+        )
+    righe.sort(key=lambda r: (ORDINE_SEZIONI.index(r.sezione), r.tributo, r.codice, r.rif_a, r.rif_b))
+    mancanti = []
+    return Delega(
+        mese_pagamento, scadenza, data_versamento, tuple(righe), tuple(sorgenti), ente, tuple(mancanti), (), ()
     )
