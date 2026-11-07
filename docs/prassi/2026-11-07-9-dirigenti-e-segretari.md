@@ -16,9 +16,13 @@ Riferimento: `prassi:immedia:nota:2026-11-07;9`. Fonte: decisioni di Luca del 07
 
 **Prassi-interpretazione.** La posizione concorre alle stesse basi del tabellare: CPDEL e Fondo credito per intero, base TFS per intero (quindi imponibile TFR e riduzione TFR), ulteriori elementi TFR esclusi. **Da verificare:** il glossario cita la retribuzione di posizione come esempio di ulteriore elemento TFR (base propria al 100%, 6,91%); nessun testo letto dice se per dirigenti e segretari la posizione sia voce comune al TFS o ulteriore elemento.
 
+## Fascia del segretario
+
+**Norma certa:** il tabellare dipende dalla fascia (art. 35 c. 3: A e B 50.005,77, C 40.004,59). **Decisione dell'operatore:** la fascia e' un fatto datato da atto e senza fatto il calcolo si ferma: un fermo con `manca` e condizione `area=segretario`, nessun tabellare di default.
+
 ## Fermi nominati
 
-Dirigente: risultato, interim. Segretario: convenzione di segreteria, scavalco, galleggiamento, risultato, diritti di rogito. I fondi (dirigenti, segretario) non sono modellati.
+Dirigente: risultato, interim. Segretario: convenzione di segreteria, scavalco, galleggiamento, risultato, diritti di rogito. I fondi (dirigenti, segretario) non sono modellati. Per i diritti di rogito il fermo cita solo questa nota: il riferimento normativo (art. 10 c. 2-bis d.l. 90/2014) non e' stato riletto.
 
 ## Quando rivedere
 

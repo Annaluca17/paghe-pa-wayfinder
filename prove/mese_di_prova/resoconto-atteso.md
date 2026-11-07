@@ -8,9 +8,9 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 
 | Voce | Corpus reale | Aggiunta fittizia | Unione usata |
 |---|---:|---:|---:|
-| istituti con regola | 24 | 2 | 26 |
+| istituti con regola | 28 | 2 | 30 |
 | basi imponibili | 4 | 0 | 4 |
-| fermi dichiarati | 5 | 0 | 5 |
+| fermi dichiarati | 10 | 0 | 10 |
 | categorie di reddito | 0 | 1 | 1 |
 | regole di ritenuta | 0 | 1 | 1 |
 | regole di conguaglio | 0 | 1 | 1 |

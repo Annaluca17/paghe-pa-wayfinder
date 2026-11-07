@@ -75,6 +75,38 @@ caso = "interim del dirigente, a carico del fondo dirigenti non modellato"
 ambito = "calcolo"
 riferimento = "ccnl:S105:2024-07-16~art64 + prassi:immedia:nota:2026-11-07;9"
 
+[[fermo]]
+fatto = "fascia_segretario"
+caso = "segretario senza fascia, il tabellare non ha un valore di default"
+ambito = "calcolo"
+se = "area=segretario"
+manca = true
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "convenzione_segreteria"
+caso = "convenzione di segreteria, riparto e proposta di accertamento non modellati"
+ambito = "calcolo"
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art98-com3 + ccnl:S105:2026-02-23~art63 + prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "scavalco"
+caso = "scavalco o incarico del segretario, non modellato nel rapporto di titolarita'"
+ambito = "calcolo"
+riferimento = "ccnl:S105:2024-07-16~art62 + prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "galleggiamento"
+caso = "galleggiamento della posizione del segretario, non modellato"
+ambito = "calcolo"
+riferimento = "ccnl:S105:2026-02-23~art38-com5 + prassi:immedia:nota:2026-11-07;9"
+
+[[fermo]]
+fatto = "diritti_rogito"
+caso = "diritti di rogito del segretario, non modellati"
+ambito = "calcolo"
+riferimento = "prassi:immedia:nota:2026-11-07;9"
+
 # Basi imponibili (ADR 0005)
 
 [[base]]
@@ -470,6 +502,57 @@ conteggio = "lun_sab"
 divisore = "divisore_giornaliero"
 decimali = 2
 
+[[regola]]
+istituto = "tabellare_segretario_a"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+formula = "arrotonda(parametro.tabellare_annuo_segretario_a / 13, 2)"
+maturazione = "giorni"
+applica_se = "fascia_segretario=A"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "tabellare_segretario_b"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+formula = "arrotonda(parametro.tabellare_annuo_segretario_b / 13, 2)"
+maturazione = "giorni"
+applica_se = "fascia_segretario=B"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+[[regola]]
+istituto = "tabellare_segretario_c"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+formula = "arrotonda(parametro.tabellare_annuo_segretario_c / 13, 2)"
+maturazione = "giorni"
+applica_se = "fascia_segretario=C"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
+# Posizione del segretario: input da atto, a carico del bilancio (fonte di finanziamento non dichiarabile: lo schema
+# del corpus non ha il campo e il fondo del segretario non e' modellato, nota di prassi 9).
+
+[[regola]]
+istituto = "posizione_segretario"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2026-02-23~art38-com1 + prassi:immedia:nota:2026-11-07;9"
+formula = "arrotonda(fatto.posizione_annua_segretario / 13, 2)"
+maturazione = "giorni"
+applica_se = "posizione_annua_segretario"
+conteggio = "lun_sab"
+divisore = "divisore_giornaliero"
+decimali = 2
+
 # Contributi. Totale e quota del lavoratore arrotondati, quota dell'ente per differenza
 # (ricerca #15, proposta B3; nota di prassi 3).
 
@@ -552,7 +635,7 @@ istituto = "riduzione_tfr"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + prassi:immedia:nota:2026-11-06;5"
-formula = "-arrotonda(arrotonda((importo.posizione_dirigenti + importo.tabellare_dirigenti + importo.tabellare_funzionari + importo.tabellare_istruttori + importo.tabellare_operatori_esperti + importo.tabellare_operatori) * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
+formula = "-arrotonda(arrotonda((importo.posizione_dirigenti + importo.tabellare_dirigenti + importo.posizione_segretario + importo.tabellare_segretario_a + importo.tabellare_segretario_b + importo.tabellare_segretario_c + importo.tabellare_funzionari + importo.tabellare_istruttori + importo.tabellare_operatori_esperti + importo.tabellare_operatori) * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
 maturazione = "periodo"
 applica_se = "regime_fine_servizio=1"
 
@@ -818,6 +901,90 @@ riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:20
 
 [[concorso]]
 istituto = "posizione_dirigenti"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tabellare_segretario_a"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tabellare_segretario_a"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-07;9"
+
+[[concorso]]
+istituto = "tabellare_segretario_a"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tabellare_segretario_b"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tabellare_segretario_b"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-07;9"
+
+[[concorso]]
+istituto = "tabellare_segretario_b"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tabellare_segretario_c"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tabellare_segretario_c"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-07;9"
+
+[[concorso]]
+istituto = "tabellare_segretario_c"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "posizione_segretario"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "posizione_segretario"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-07;9"
+
+[[concorso]]
+istituto = "posizione_segretario"
 basi = ["tfr_ulteriori"]
 misura = "escluso"
 dal = 2026-01-01

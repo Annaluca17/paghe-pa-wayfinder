@@ -174,6 +174,10 @@ _Avoid_: Dipendente LSU, rapporto di lavoro socialmente utile
 Rapporto con titolo incarico in un ente diverso da quello di titolarità, che paga solo ciò che eroga direttamente. Non è lavoro dipendente con quell'ente e non ha organico. Un fatto ne dice l'origine: scavalco, cioè reggenza o supplenza disposta dal Ministero, con la durata del provvedimento; oppure convenzione, per la quota che un ente non capofila paga direttamente. La base viene dal rapporto di titolarità, che quell'ente non conosce: è un input da atto esterno; la percentuale la applica una regola. Il regime si fonda su una nota di prassi.
 _Avoid_: Scavalco come variazione del rapporto di titolarità, rimborso di scavalco, rapporto in quota
 
+**Fascia del segretario**:
+Fatto categoriale datato (A, B, C) sul rapporto del segretario, da atto: sceglie il tabellare annuo dell'art. 35 CCNL 23/02/2026 e cambia con l'inquadramento. Se cambia a metà mese apre una frazione. Senza fatto il calcolo si ferma e nomina il caso: nessuna fascia di default.
+_Avoid_: Classe dell'ente (che decide il campo della posizione, non il tabellare), qualifica
+
 **Quota riconosciuta da altri enti**:
 Input da atto, o atto esterno trascritto, in importo o percentuale, che riduce quanto il capofila paga al segretario in convenzione, con l'importo pieno visibile. Il riparto non la comprende. Se la somma delle quote supera il dovuto il calcolo si ferma.
 _Avoid_: Detrazione, conguaglio tra enti
@@ -311,7 +315,7 @@ Fatto che interrompe il servizio di un rapporto che prosegue, con inizio e, quan
 _Avoid_: Cessazione temporanea, aspettativa (che è una delle possibili cause)
 
 **Fermo**:
-Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato. Con un codice, scatta solo per quel valore del fatto.
+Dichiarazione del corpus: se un fatto è presente nel mese, il calcolo o la denuncia si ferma e nomina il caso non modellato. Con un codice, scatta solo per quel valore del fatto. Con `manca` e una condizione su un altro fatto, scatta al contrario quando il fatto non c'è.
 _Avoid_: Blocco, errore generico
 
 **Regime di fine servizio**:

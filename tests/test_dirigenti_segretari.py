@@ -102,3 +102,95 @@ def test_risultato_e_interim_del_dirigente_fermano_il_calcolo_e_nominano_il_caso
     registro.registra_fatto(R, fatto, "1000.00", date(2026, 11, 1), atto=ATTO)
     with pytest.raises(CasoNonModellato, match=fatto):
         calcola(registro, reale, R, Mese(2026, 11))
+
+
+def test_la_tredicesima_del_dirigente_non_e_un_importo_a_parte_come_nel_comparto(registro, reale):
+    """Il tabellare e' gia' annuo / 13 e la tredicesima non e' modellata nel comparto (ADR 0004): dicembre non porta altro."""
+    titolare(registro, "dirigente")
+    posizione_dirigente(registro, "20000.00")
+    novembre, dicembre = importi(registro, reale, Mese(2026, 11)), importi(registro, reale, Mese(2026, 12))
+    assert dicembre == novembre
+    assert not [istituto for istituto in dicembre if "tredicesima" in istituto]
+
+
+def segretario(registro, fascia, dal=date(2026, 1, 1), dal_fascia=None):
+    titolare(registro, "segretario", dal)
+    registro.registra_codice(R, "fascia_segretario", fascia, dal_fascia or dal, atto=ATTO)
+
+
+@pytest.mark.parametrize(("fascia", "atteso"), [("A", "3846.60"), ("B", "3846.60"), ("C", "3077.28")])
+def test_il_tabellare_del_segretario_dipende_dalla_fascia(registro, reale, fascia, atteso):
+    segretario(registro, fascia)
+    (tabellare,) = [v for i, v in importi(registro, reale, Mese(2026, 11)).items() if i.startswith("tabellare_segretario")]
+    assert tabellare == Decimal(atteso)  # 50.005,77 / 13 per A e B; 40.004,59 / 13 per C
+
+
+def test_il_cambio_di_fascia_a_meta_mese_divide_il_tabellare_tra_le_due_fasce(registro, reale):
+    titolare(registro, "segretario")
+    registro.registra_codice(R, "fascia_segretario", "B", date(2026, 1, 1), date(2026, 11, 15), atto=ATTO)
+    registro.registra_codice(R, "fascia_segretario", "C", date(2026, 11, 16), atto=ATTO)
+    valori = importi(registro, reale, Mese(2026, 11))
+    # Giorni lun-sab su 26: 12 dal 1 al 15 novembre, 13 dal 16 al 30.
+    assert valori["tabellare_segretario_b"] == Decimal("1775.35")  # 3.846,60 x 12/26
+    assert valori["tabellare_segretario_c"] == Decimal("1538.64")  # 3.077,28 x 13/26
+    assert "tabellare_segretario_a" not in valori
+
+
+def test_segretario_senza_fascia_ferma_il_calcolo_invece_di_scegliere_un_tabellare(registro, reale):
+    titolare(registro, "segretario")
+    with pytest.raises(CasoNonModellato, match="fascia_segretario"):
+        calcola(registro, reale, R, Mese(2026, 11))
+
+
+def test_segretario_senza_fascia_in_un_solo_giorno_del_mese_ferma_il_calcolo(registro, reale):
+    segretario(registro, "B", dal_fascia=date(2026, 11, 10))
+    with pytest.raises(CasoNonModellato, match="fascia_segretario"):
+        calcola(registro, reale, R, Mese(2026, 11))
+
+
+FERMO_MANCA = """
+[[fermo]]
+fatto = "fascia"
+caso = "senza fascia"
+ambito = "calcolo"
+riferimento = "fittizio:fermo-fascia"
+{altro}
+"""
+
+
+def test_un_fermo_manca_chiede_la_condizione_e_non_si_combina_con_il_codice():
+    from paghe.errori import ErroreCorpus
+
+    with pytest.raises(ErroreCorpus, match="`manca` e `se`"):
+        Corpus.da_toml(FERMO_MANCA.format(altro="manca = true"))
+    with pytest.raises(ErroreCorpus, match="`manca` e `se`"):
+        Corpus.da_toml(FERMO_MANCA.format(altro='se = "area=x"'))
+    with pytest.raises(ErroreCorpus, match="non si combina"):
+        Corpus.da_toml(FERMO_MANCA.format(altro='manca = true\nse = "area=x"\ncodice = "A"'))
+
+
+def posizione_segretario(registro, annua, dal=date(2026, 1, 1)):
+    return registro.registra_fatto(R, "posizione_annua_segretario", annua, dal, atto=ATTO)
+
+
+def test_la_posizione_del_segretario_e_l_annuo_deliberato_su_13_mensilita(registro, reale):
+    segretario(registro, "B")
+    posizione_segretario(registro, "12000.00")
+    valori = importi(registro, reale, Mese(2026, 11))
+    assert valori["tabellare_segretario_b"] == Decimal("3846.60")
+    assert valori["posizione_segretario"] == Decimal("923.08")  # 12.000 / 13
+
+
+def test_la_convenzione_di_segreteria_ferma_il_calcolo(registro, reale):
+    segretario(registro, "B")
+    registro.registra_fatto(R, "convenzione_segreteria", "1", date(2026, 11, 1), atto=ATTO)
+    with pytest.raises(CasoNonModellato, match="convenzione_segreteria"):
+        calcola(registro, reale, R, Mese(2026, 11))
+
+
+@pytest.mark.parametrize("fatto", ["scavalco", "galleggiamento", "retribuzione_risultato", "diritti_rogito"])
+def test_gli_altri_casi_del_segretario_fermano_il_calcolo_e_nominano_il_fatto(registro, reale, fatto):
+    segretario(registro, "B")
+    registro.registra_fatto(R, fatto, "1000.00", date(2026, 11, 1), atto=ATTO)
+    with pytest.raises(CasoNonModellato, match=fatto):
+        calcola(registro, reale, R, Mese(2026, 11))

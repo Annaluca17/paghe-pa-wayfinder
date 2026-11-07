@@ -216,6 +216,8 @@ class Fermo:
     `calcolo` ferma anche gli importi per competenza; `denuncia` solo basi e contributi; `vista`
     lascia calcolare la denuncia e rende la ListaPosPA una bozza non trasmissibile (ADR 0008).
     Con `codice` il fermo scatta solo se il fatto categoriale ha quel valore (ADR 0009).
+    Con `manca` scatta al contrario quando il fatto non c'è: serve `se`, la condizione `tipo` o `tipo=codice` su un altro
+    fatto che dice per chi quel fatto è obbligatorio (ticket #73, fascia del segretario). Nessun titolo è nominato nel motore.
     """
 
     fatto: str
@@ -223,6 +225,8 @@ class Fermo:
     ambito: str
     riferimento: str
     codice: str | None = None
+    se: str | None = None
+    manca: bool = False
 
     def __post_init__(self) -> None:
         soggetto = f"Fermo {self.fatto}"
@@ -232,6 +236,15 @@ class Fermo:
             raise ErroreCorpus(f"{soggetto}: codice non valido, {self.codice!r}")
         if not self.caso.strip():
             raise ErroreCorpus(f"{soggetto}: il caso va nominato")
+        if self.manca != (self.se is not None):
+            raise ErroreCorpus(f"{soggetto}: `manca` e `se` vanno indicati insieme")
+        if self.manca and self.codice is not None:
+            raise ErroreCorpus(f"{soggetto}: `manca` non si combina con `codice`")
+        if self.manca and self.ambito == "vista":
+            raise ErroreCorpus(f"{soggetto}: `manca` vale per l'ambito calcolo o denuncia, non per la vista")
+        if self.se is not None and (not isinstance(self.se, str) or not self.se.strip() or self.se != self.se.strip()
+                                    or self.se.startswith("=") or self.se.endswith("=")):
+            raise ErroreCorpus(f"{soggetto}: condizione `se` non valida, {self.se!r}")
         if self.ambito not in AMBITI_FERMO:
             raise ErroreCorpus(f"{soggetto}: ambito obbligatorio, uno di {sorted(AMBITI_FERMO)}")
 
@@ -1013,7 +1026,8 @@ class Corpus:
         }
         if self.fermi:
             contenuto["fermi"] = sorted(
-                [f.fatto, f.caso, f.ambito, f.riferimento, *([f.codice] if f.codice is not None else [])]
+                [f.fatto, f.caso, f.ambito, f.riferimento, *([f.codice] if f.codice is not None else []),
+                 *(["manca", f.se] if f.manca else [])]
                 for f in self.fermi
             )
         if self.denuncia != RegoleDenuncia():
@@ -1231,7 +1245,8 @@ class Corpus:
             basi = tuple(Base(voce["nome"], voce["riferimento"]) for voce in dati.get("base", []))
             concorsi = tuple(concorso for voce in dati.get("concorso", []) for concorso in _concorsi_da_toml(voce))
             fermi = tuple(
-                Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"], voce.get("codice"))
+                Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"], voce.get("codice"),
+                      voce.get("se"), voce.get("manca", False))
                 for voce in dati.get("fermo", [])
             )
             denuncia = _denuncia_da_toml(dati.get("denuncia", {}))

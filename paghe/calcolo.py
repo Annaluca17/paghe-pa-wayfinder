@@ -90,6 +90,9 @@ class _Lettore:
         for fermo in self.corpus.fermi:
             if fermo.ambito not in ambiti:
                 continue
+            if fermo.manca:
+                self._controlla_fatto_obbligatorio(fermo, periodo)
+                continue
             presenti = [
                 f
                 for f in self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al)
@@ -100,6 +103,18 @@ class _Lettore:
                 raise CasoNonModellato(
                     f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
                     f"(fatto {fermo.fatto}{valore} dal {presenti[0].valido_dal}; {fermo.riferimento})"
+                )
+
+    def _controlla_fatto_obbligatorio(self, fermo, periodo: Mese | Periodo) -> None:
+        """Un fermo `manca`: dove vale la condizione `se`, il fatto deve esserci ogni giorno, senza scegliere un valore."""
+        tipo, _, codice = fermo.se.partition("=")
+        condizioni = self.registro.vigenti_per_giorno(self.rapporto, tipo, periodo, self.noto_al)
+        presenti = self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al)
+        for giorno, condizione, presente in zip(periodo.giorni(), condizioni, presenti):
+            if condizione and (not codice or str(condizione.valore) == codice) and not presente:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
+                    f"(manca il fatto {fermo.fatto} il {giorno} con {fermo.se}; {fermo.riferimento})"
                 )
 
     def parametro(self, nome: str, periodo: Periodo) -> ParametroLetto:
