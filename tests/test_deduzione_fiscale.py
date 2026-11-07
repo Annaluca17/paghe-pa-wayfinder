@@ -45,3 +45,8 @@ def test_l_istituto_dichiara_che_l_importo_riduce_l_imponibile_fiscale_con_date_
     )
     assert corpus.deduzione_fiscale("contributo_lavoratore", date(2027, 1, 1)) is None
     assert corpus.deduzione_fiscale("stipendio", date(2026, 6, 1)) is None
+
+
+def test_la_deduzione_di_un_istituto_ignoto_e_rifiutata():
+    with pytest.raises(ErroreCorpus, match="istituto ignoto"):
+        Corpus.da_toml(TESTO + CONTRIBUTO + DEDUZIONE.replace('"contributo_lavoratore"', '"contributo_inesistente"'))
