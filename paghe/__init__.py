@@ -28,6 +28,24 @@ from .fisco import (
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
+from .proposta import (
+    Escluso,
+    RigaComposizione,
+    StatoDelega,
+    StatoVersione,
+    VersioneProposta,
+    conferma_versione,
+    controlla_superata,
+    emetti_versione,
+    leggi_versione,
+    registra_pagamento_eseguito,
+    registra_ricevuta_delega,
+    registra_versamento_eseguito,
+    respingi_versione,
+    segnala_scostamento_contributi,
+    stato_delega,
+    stato_versione,
+)
 from .registro import Registro
 from .tempo import Mese, Periodo
 
@@ -50,6 +68,7 @@ __all__ = [
     "DichiarazioneComposizione",
     "Derivazione",
     "Differenza",
+    "Escluso",
     "Esito",
     "Fermo",
     "Fatto",
@@ -65,14 +84,29 @@ __all__ = [
     "Recupero",
     "Registro",
     "Regola",
+    "RigaComposizione",
     "RegoleDenuncia",
+    "StatoDelega",
+    "StatoVersione",
     "TipoEsito",
+    "VersioneProposta",
     "VigenzaParametro",
     "calcola",
     "calcola_annuale",
+    "conferma_versione",
+    "controlla_superata",
     "calcola_denuncia",
     "differenze",
     "emetti_esito",
+    "emetti_versione",
+    "leggi_versione",
+    "registra_pagamento_eseguito",
+    "registra_ricevuta_delega",
+    "registra_versamento_eseguito",
+    "respingi_versione",
+    "segnala_scostamento_contributi",
+    "stato_delega",
+    "stato_versione",
     "lista_pos_pa",
     "spiega",
 ]
