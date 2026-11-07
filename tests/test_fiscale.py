@@ -9,8 +9,10 @@ Con la detrazione, 1200 * (40000 - 1500 * 12) / 40000 / 12 = 55,00; ritenuta 161
 Su dodici pagamenti di 1500 il reddito è 18000: imposta annua 2600, detrazione annua 660, dovuto 1940,00.
 """
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -18,6 +20,7 @@ from paghe import (
     Atto,
     Corpus,
     Mese,
+    Periodo,
     TipoEsito,
     attribuisci_reddito,
     calcola,
@@ -39,6 +42,7 @@ from paghe.errori import (
     RedditoMancante,
 )
 
+CORPUS_REALE = Path(__file__).resolve().parent.parent / "corpus" / "funzioni-locali-cpdel.toml"
 CF = "RSSMRA80A01H501U"
 P = "PERSONA-1"
 R = "RAPPORTO-1"
@@ -659,3 +663,141 @@ def test_due_categorie_con_lo_stesso_nome_sono_rifiutate():
         '[[categoria_reddito.cassa_allargata]]\ndal = 2020-01-01\nvale = true\nriferimento = "fittizio:x"\n')
     with pytest.raises(ErroreCorpus, match="stesso nome"):
         Corpus.da_toml(doppio)
+
+
+# Pagamento fisiologico (ticket #61, CONTEXT.md, ADR 0018)
+
+FISIOLOGICO = """
+[[pagamento_fisiologico]]
+istituto = "stipendio"
+dal = 2020-01-01
+riferimento = "fittizio:fisiologico-stipendio"
+"""
+
+
+def test_l_istituto_dichiara_il_pagamento_fisiologico_con_date_e_riferimento():
+    corpus = Corpus.da_toml(TESTO + FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2026-12-31"))
+    dichiarazione = corpus.pagamento_fisiologico("stipendio", date(2026, 6, 1))
+    assert (dichiarazione.istituto, dichiarazione.riferimento) == ("stipendio", "fittizio:fisiologico-stipendio")
+    assert corpus.pagamento_fisiologico("stipendio", date(2027, 1, 13)) is None
+    assert corpus.pagamento_fisiologico("gettone", date(2026, 6, 1)) is None
+
+
+def test_il_pagamento_fisiologico_di_un_istituto_ignoto_e_rifiutato():
+    with pytest.raises(ErroreCorpus, match="istituto ignoto"):
+        Corpus.da_toml(TESTO + FISIOLOGICO.replace('"stipendio"', '"premio_inesistente"'))
+
+
+def test_due_dichiarazioni_fisiologiche_dello_stesso_istituto_non_si_sovrappongono():
+    seconda = FISIOLOGICO.replace("2020-01-01", "2026-01-01").replace("fisiologico-stipendio", "fisiologico-bis")
+    with pytest.raises(ErroreCorpus, match="sovrappost"):
+        Corpus.da_toml(TESTO + FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2026-06-30") + seconda)
+    adiacenti = FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2025-12-31") + seconda
+    assert Corpus.da_toml(TESTO + adiacenti).pagamento_fisiologico("stipendio", date(2026, 1, 1)).riferimento == "fittizio:fisiologico-bis"
+
+
+def test_il_pagamento_fisiologico_senza_riferimento_e_rifiutato():
+    senza = FISIOLOGICO.replace('riferimento = "fittizio:fisiologico-stipendio"', 'riferimento = ""')
+    with pytest.raises(ErroreCorpus, match="riferimento normativo obbligatorio"):
+        Corpus.da_toml(TESTO + senza)
+
+
+def test_il_corpus_reale_rifiuta_il_riferimento_fittizio_del_pagamento_fisiologico():
+    """Anche con tutto il resto reale: l'unico riferimento fittizio è quello della dichiarazione."""
+    reale = Corpus.carica(CORPUS_REALE, reale=True)
+    assert reale.versione
+    testo = CORPUS_REALE.read_text(encoding="utf-8") + FISIOLOGICO.replace('"stipendio"', f'"{reale.istituti()[0]}"')
+    with pytest.raises(ErroreCorpus, match="Pagamento fisiologico.*fittizio"):
+        Corpus.da_toml(testo, reale=True)
+
+
+def test_la_versione_del_corpus_cambia_con_la_dichiarazione_fisiologica():
+    senza = Corpus.da_toml(TESTO)
+    con = Corpus.da_toml(TESTO + FISIOLOGICO)
+    altra = Corpus.da_toml(TESTO + FISIOLOGICO.replace("fisiologico-stipendio", "fisiologico-altro"))
+    assert len({senza.versione, con.versione, altra.versione}) == 3
+
+
+def test_la_versione_dei_corpus_senza_dichiarazione_fisiologica_non_cambia():
+    """Valori letti prima della modifica: l'impronta tiene conto della dichiarazione solo se c'è."""
+    assert Corpus.da_toml(TESTO).versione == "e41b25349377cf4c"
+    assert Corpus.carica(CORPUS_REALE, reale=True).versione == "6fc5c8ad64937294"
+
+
+@pytest.fixture
+def fisiologico():
+    return Corpus.da_toml(TESTO + FISIOLOGICO)
+
+
+def test_il_pagamento_fisiologico_dell_anno_prima_e_attribuito_all_anno_d_imposta_del_pagamento(registro, fisiologico):
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2026, 12))
+    (riga,) = attribuisci_reddito(fisiologico, righe, date(2027, 1, 13))
+    assert (riga.categoria_reddito, riga.anno_imposta) == ("lavoro_dipendente", 2027)
+    assert riga.periodo == Periodo(date(2026, 12, 1), date(2026, 12, 31))
+
+
+def test_senza_dichiarazione_dell_istituto_il_fermo_nomina_il_caso(registro, fisco):
+    assumi(registro)
+    righe = stipendio(registro, fisco, Mese(2026, 12))
+    with pytest.raises(CasoNonModellato, match="non dichiara il pagamento fisiologico") as errore:
+        attribuisci_reddito(fisco, righe, date(2027, 1, 13))
+    assert "causa del pagamento tardivo" in str(errore.value)
+
+
+def test_una_dichiarazione_scaduta_prima_della_data_di_pagamento_non_vale(registro):
+    corpus = Corpus.da_toml(TESTO + FISIOLOGICO.replace("dal = 2020-01-01", "dal = 2020-01-01\nal = 2027-01-12"))
+    assumi(registro)
+    righe = stipendio(registro, corpus, Mese(2026, 12))
+    with pytest.raises(CasoNonModellato, match="non dichiara il pagamento fisiologico"):
+        attribuisci_reddito(corpus, righe, date(2027, 1, 13))
+    (riga,) = attribuisci_reddito(corpus, righe, date(2027, 1, 12))
+    assert riga.anno_imposta == 2026  # dentro la cassa allargata: già dell'anno di competenza
+
+
+def test_una_competenza_di_due_anni_prima_ferma_anche_con_la_dichiarazione(registro, fisiologico):
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2025, 12))
+    with pytest.raises(CasoNonModellato, match="due o più anni prima"):
+        attribuisci_reddito(fisiologico, righe, date(2027, 1, 13))
+
+
+def test_una_competenza_a_cavallo_di_due_anni_ferma_anche_con_la_dichiarazione(registro, fisiologico):
+    assumi(registro)
+    (riga,) = stipendio(registro, fisiologico, Mese(2026, 12))
+    cavallo = replace(riga, periodo=Periodo(date(2026, 12, 15), date(2027, 1, 14)))
+    with pytest.raises(CasoNonModellato, match="a cavallo di due anni"):
+        attribuisci_reddito(fisiologico, [cavallo], date(2027, 1, 20))
+
+
+def test_il_pagamento_fisiologico_entra_nell_imponibile_nella_ritenuta_e_nel_conguaglio_dell_anno_del_pagamento(
+    registro, orologio, fisiologico
+):
+    """Stipendio di dicembre 2026 di 1500 pagato il 13/01/2027: è reddito 2027, non 2026."""
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2026, 12))
+    esito, fiscale = paga(registro, orologio, fisiologico, righe, date(2027, 1, 13), ultimo=True)
+    assert imponibile_fiscale(registro, P, 2027).valore == Decimal("1500")
+    assert imponibile_fiscale(registro, P, 2026).valore == Decimal(0)
+    assert fiscale.ritenuta.valore == Decimal("216.67")  # 0,10 * 833,33 + 0,20 * (1500 - 833,33)
+    assert fiscale.ritenuta.anno_imposta == 2027
+    assert fiscale.conguaglio.valore == Decimal("-66.67")  # imposta annua 0,10 * 1500 = 150, meno 216,67 operati
+    assert fiscale.conguaglio.anno_imposta == 2027
+
+
+def test_la_performance_di_dicembre_pagata_il_10_gennaio_con_la_cassa_allargata_e_gia_dell_anno_di_competenza(
+    registro, fisco, fisiologico
+):
+    """Non serve nessuna dichiarazione: l'anno d'imposta è il 2026, quello della competenza."""
+    assumi(registro)
+    for corpus in (fisco, fisiologico):
+        righe = stipendio(registro, corpus, Mese(2026, 12))
+        (riga,) = attribuisci_reddito(corpus, righe, date(2027, 1, 10))
+        assert riga.anno_imposta == 2026
+
+
+def test_una_competenza_posteriore_all_anno_d_imposta_ferma_il_calcolo(registro, fisiologico):
+    assumi(registro)
+    righe = stipendio(registro, fisiologico, Mese(2027, 1))
+    with pytest.raises(CasoNonModellato, match="posteriore all'anno d'imposta"):
+        attribuisci_reddito(fisiologico, righe, date(2026, 12, 20))

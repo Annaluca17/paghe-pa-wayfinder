@@ -47,11 +47,8 @@ def reale():
 
 
 def assumi(registro, area="istruttori", dal=date(2026, 1, 1), al=None, regime="3", senza=()):
-    """Rapporto completo per la ListaPosPA; `senza` toglie i fatti indicati."""
+    """Rapporto completo per la ListaPosPA; `senza` toglie i fatti indicati. Codice fiscale, cognome e nome sono della persona."""
     fatti = {
-        "codice_fiscale": (CF, None),
-        "cognome": ("ROSSI", None),
-        "nome": ("MARIO", None),
         "comune_sede_lavoro": ("H501", None),
         "cap_sede_lavoro": ("00100", None),
         "tipo_impiego": ("1", al),
@@ -62,13 +59,14 @@ def assumi(registro, area="istruttori", dal=date(2026, 1, 1), al=None, regime="3
     }
     if regime is not None:
         fatti["regime_fine_servizio"] = (regime, al)
-    if "codice_fiscale" in fatti and "codice_fiscale" not in senza:
-        registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1980, 1, 1))
+    for tipo, valore in {"codice_fiscale": CF, "cognome": "ROSSI", "nome": "MARIO"}.items():
+        if tipo not in senza:
+            registro.registra_codice_persona("PERSONA-1", tipo, valore, date(1980, 1, 1))
     registro.collega_rapporto(R, "PERSONA-1", dal)
     return {
         tipo: registro.registra_codice(R, tipo, valore, dal, fine)
         for tipo, (valore, fine) in fatti.items()
-        if tipo not in senza and tipo != "codice_fiscale"
+        if tipo not in senza
     }
 
 
@@ -182,7 +180,7 @@ def test_i_quadri_portano_gli_importi_da_cui_derivano(registro, reale, orologio)
 
 @pytest.mark.parametrize(
     "fatto",
-    ["tipo_servizio", "contratto", "qualifica", "regime_fine_servizio", "cognome", "comune_sede_lavoro"],
+    ["tipo_servizio", "contratto", "qualifica", "regime_fine_servizio", "cognome", "nome", "comune_sede_lavoro"],
 )
 def test_un_dato_obbligatorio_mancante_viene_chiesto(registro, reale, orologio, fatto):
     assumi(registro, senza=(fatto,), regime=None if fatto == "regime_fine_servizio" else "3")
@@ -551,3 +549,89 @@ def test_un_fermo_con_ambito_vista_rende_ancora_la_lista_una_bozza(registro, oro
     with pytest.raises(VistaFerma, match="bozza"):
         in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11))
     assert "<!-- BOZZA NON TRASMISSIBILE" in in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True)
+
+
+# --- Cognome e nome sono fatti della persona (ticket #61, ADR 0012) -------------------------------
+
+
+def test_cognome_e_nome_si_leggono_dalla_persona_del_rapporto(registro, reale, orologio):
+    assumi(registro, senza=("cognome", "nome"))
+    registro.registra_codice_persona("PERSONA-1", "cognome", "ROSSI", date(1980, 1, 1))
+    registro.registra_codice_persona("PERSONA-1", "nome", "MARIO", date(1980, 1, 1))
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    assert (vista.lavoratore.cognome, vista.lavoratore.nome) == ("ROSSI", "MARIO")
+    assert vista.mancanti == ()
+
+
+def test_cognome_e_nome_scritti_sul_rapporto_non_si_leggono_piu(registro, reale, orologio):
+    """Nessuna doppia via: sul rapporto non sono fatti del modello, e la vista li chiede alla persona."""
+    assumi(registro, senza=("cognome", "nome"))
+    registro.registra_codice(R, "cognome", "ROSSI", date(2026, 1, 1))
+    registro.registra_codice(R, "nome", "MARIO", date(2026, 1, 1))
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 11)), date(2026, 11, 27))
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    assert (vista.lavoratore.cognome, vista.lavoratore.nome) == (None, None)
+    assert {"cognome", "nome"} <= {dato.fatto for dato in vista.mancanti}
+    assert not vista.trasmissibile
+
+
+ALTRI_FATTI = {
+    "tipo_impiego": "1", "tipo_servizio": "4", "contratto": "RALN", "qualifica": "0IR000", "area": "istruttori",
+    "regime_fine_servizio": "3", "comune_sede_lavoro": "H501", "cap_sede_lavoro": "00100",
+}
+
+
+def _senza_cumuli_per_persona():
+    """Il corpus reale senza `[denuncia].persona`: due rapporti nello stesso anno non fermano la denuncia."""
+    testo = CORPUS.read_text(encoding="utf-8").replace('persona = "codice_fiscale"' + chr(10), "", 1)
+    return Corpus.da_toml(testo, reale=True)
+
+
+def test_una_persona_con_due_rapporti_e_un_solo_nome_lo_porta_su_entrambe_le_viste(registro, orologio):
+    """Con il corpus reale due rapporti in servizio nello stesso anno fermano la denuncia (cumuli per persona)."""
+    corpus = _senza_cumuli_per_persona()
+    assumi(registro)
+    altro = "RAPPORTO-2"
+    registro.collega_rapporto(altro, "PERSONA-1", date(2026, 1, 1))
+    for tipo, valore in ALTRI_FATTI.items():
+        registro.registra_codice(altro, tipo, valore, date(2026, 1, 1))
+    registro.registra_fatto(altro, "mensile", "1500", date(2026, 11, 1), date(2026, 11, 30))
+    paga(registro, orologio, stipendi(registro, corpus, Mese(2026, 11)), date(2026, 11, 27))
+    esito = emetti_esito(registro, TipoEsito.PAGATO, date(2026, 11, 27), calcola(registro, corpus, altro, Mese(2026, 11)))
+    registro.registra_pagamento(altro, esito.id, date(2026, 11, 27))
+    primo = lista_pos_pa(registro, corpus, R, Mese(2026, 11))
+    secondo = lista_pos_pa(registro, corpus, altro, Mese(2026, 11))
+    assert (primo.lavoratore.cognome, primo.lavoratore.nome) == ("ROSSI", "MARIO")
+    assert (secondo.lavoratore.cognome, secondo.lavoratore.nome) == ("ROSSI", "MARIO")
+    assert not [dato for dato in secondo.mancanti if dato.fatto in {"cognome", "nome", "codice_fiscale"}]
+
+
+def _rapporto_scollegato(registro, reale, orologio, corpus):
+    scollegato = "RAPPORTO-9"
+    for tipo, valore in ALTRI_FATTI.items():
+        registro.registra_codice(scollegato, tipo, valore, date(2026, 1, 1))
+    registro.registra_fatto(scollegato, "mensile", "1500", date(2026, 11, 1), date(2026, 11, 30))
+    righe = calcola(registro, corpus, scollegato, Mese(2026, 11))
+    orologio.vai(11, 27, 2026)
+    esito = emetti_esito(registro, TipoEsito.PAGATO, date(2026, 11, 27), righe)
+    registro.registra_pagamento(scollegato, esito.id, date(2026, 11, 27))
+    return scollegato
+
+
+def test_un_rapporto_senza_persona_collegata_ferma_la_denuncia_come_prima(registro, reale, orologio):
+    """Con il corpus reale la denuncia chiede il legame per i cumuli per persona: la vista non nasce."""
+    scollegato = _rapporto_scollegato(registro, reale, orologio, reale)
+    with pytest.raises(ErrorePaghe, match="legame con la persona"):
+        lista_pos_pa(registro, reale, scollegato, Mese(2026, 11))
+
+
+def test_un_rapporto_senza_persona_collegata_chiede_codice_fiscale_cognome_e_nome(registro, orologio):
+    """Senza i cumuli per persona la vista nasce, e i dati della persona sono dati mancanti, mai stimati."""
+    testo = CORPUS.read_text(encoding="utf-8").replace('persona = "codice_fiscale"' + chr(10), "", 1)
+    senza_cumuli = Corpus.da_toml(testo, reale=True)
+    scollegato = _rapporto_scollegato(registro, senza_cumuli, orologio, senza_cumuli)
+    vista = lista_pos_pa(registro, senza_cumuli, scollegato, Mese(2026, 11))
+    assert (vista.lavoratore.codice_fiscale, vista.lavoratore.cognome, vista.lavoratore.nome) == (None, None, None)
+    assert {"codice_fiscale", "cognome", "nome"} <= {dato.fatto for dato in vista.mancanti}
+    assert not vista.trasmissibile

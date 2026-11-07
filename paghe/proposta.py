@@ -22,7 +22,7 @@ from .calcolo import _somma_righe
 from .corpus import Corpus
 from .denuncia import MATURAZIONI_DERIVATE, calcola_denuncia
 from .errori import CasoNonModellato, ComposizioneMancante, ErroreCalcolo, ErroreRegistro, RedditoMancante
-from .fisco import Avviso, anno_imposta, attribuisci_reddito, calcola_fiscale
+from .fisco import Avviso, _controlla_competenza, anno_imposta, attribuisci_reddito, calcola_fiscale
 from .modello import Esito, Evento, Importo, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, Registro
 from .tempo import Mese, in_utc
@@ -31,6 +31,7 @@ MOTIVO_GIA_PAGATO = "già in un esito pagato"
 AVVISO_PERSONA_ASSENTE = "persona_assente_dall_ultimo_pagamento"
 AVVISO_ALTRO_MESE = "pagamento_in_altro_mese"
 AVVISO_ANNO_DIVERSO = "anno_imposta_diverso_dal_previsto"
+AVVISO_COMPETENZA_AL_PAGAMENTO = "competenza_non_ammessa_al_pagamento"
 
 TIPO_PAGAMENTO_ESEGUITO = "pagamento_eseguito"
 TIPO_RICEVUTA_DELEGA = "ricevuta_delega"
@@ -574,6 +575,7 @@ def _effetti_della_valuta(
     for rapporto in rapporti:
         persona = registro.persona_del_rapporto(rapporto, istante)
         anno_diverso = False
+        competenza_ko: str | None = None
         for riga in versione.righe_del_rapporto(rapporto):
             importo = riga.importo
             if not _e_reddito(importo):
@@ -583,7 +585,23 @@ def _effetti_della_valuta(
             except RedditoMancante:
                 reale = None
             anno_diverso = anno_diverso or reale != importo.anno_imposta
-        if anno_diverso:
+            if not anno_diverso and competenza_ko is None:
+                try:  # ADR 0018: il controllo della competenza si ripete al pagamento eseguito
+                    _controlla_competenza(corpus, importo, reale, valuta)
+                except CasoNonModellato as errore:
+                    competenza_ko = str(errore)
+        if competenza_ko is not None and not anno_diverso:
+            if persona is not None:
+                ferme.add(persona)
+            avvisi.append(
+                Avviso(
+                    AVVISO_COMPETENZA_AL_PAGAMENTO,
+                    f"Rapporto {rapporto}: alla valuta reale {valuta} la competenza non è più ammessa ({competenza_ko}): "
+                    "il calcolo fiscale della persona si ferma",
+                    persona or rapporto,
+                )
+            )
+        elif anno_diverso:
             if persona is not None:
                 ferme.add(persona)
             avvisi.append(

@@ -314,6 +314,21 @@ class DichiarazioneReddito:
             raise ErroreCorpus(f"Reddito {self.istituto}: vigenza invertita")
 
 
+@dataclass(frozen=True)
+class DichiarazionePagamentoFisiologico:
+    """L'istituto dichiara che il suo pagamento oltre l'anno di competenza è fisiologico (ADR 0018), con date e fonte."""
+
+    istituto: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, f"Pagamento fisiologico {self.istituto}")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"Pagamento fisiologico {self.istituto}: vigenza invertita")
+
+
 PERIODI_FISCALI = frozenset({"imponibile", "periodi"})
 
 
@@ -386,9 +401,10 @@ class RegoleFiscali:
     redditi: tuple[DichiarazioneReddito, ...] = ()
     ritenute: tuple[RegolaRitenuta, ...] = ()
     conguagli: tuple[RegolaConguaglio, ...] = ()
+    fisiologici: tuple[DichiarazionePagamentoFisiologico, ...] = ()
 
     def __bool__(self) -> bool:
-        return bool(self.categorie or self.redditi or self.ritenute or self.conguagli)
+        return bool(self.categorie or self.redditi or self.ritenute or self.conguagli or self.fisiologici)
 
 
 @dataclass(frozen=True)
@@ -634,6 +650,7 @@ class Corpus:
         fiscale = self.fiscale
         elenco += [(f"Categoria {c.nome}", v.riferimento) for c in fiscale.categorie for v in c.cassa_allargata]
         elenco += [(f"Reddito {r.istituto}", r.riferimento) for r in fiscale.redditi]
+        elenco += [(f"Pagamento fisiologico {f.istituto}", f.riferimento) for f in fiscale.fisiologici]
         elenco += [(f"Ritenuta {r.istituto}", r.riferimento) for r in fiscale.ritenute]
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
@@ -708,6 +725,13 @@ class Corpus:
             if dichiarazione.categoria not in nomi:
                 raise ErroreCorpus(f"{soggetto}: categoria ignota {dichiarazione.categoria}")
             for altra in fiscale.redditi[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], soggetto)
+        for indice, dichiarazione in enumerate(fiscale.fisiologici):
+            soggetto = f"Pagamento fisiologico {dichiarazione.istituto}"
+            if dichiarazione.istituto not in self._regole:
+                raise ErroreCorpus(f"{soggetto}: istituto ignoto")
+            for altra in fiscale.fisiologici[indice + 1 :]:
                 if altra.istituto == dichiarazione.istituto:
                     _vigenze_sovrapposte([dichiarazione, altra], soggetto)
         for gruppo, soggetto in ((fiscale.ritenute, "Ritenuta"), (fiscale.conguagli, "Conguaglio")):
@@ -906,6 +930,11 @@ class Corpus:
                     for c in fiscale.conguagli
                 ),
             }
+            if fiscale.fisiologici:
+                contenuto["fiscale"]["fisiologici"] = sorted(
+                    [f.istituto, f.dal.isoformat(), f.al.isoformat() if f.al else "", f.riferimento]
+                    for f in fiscale.fisiologici
+                )
         if self._composizioni:
             contenuto["composizioni"] = sorted(
                 [c.istituto, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.natura or "", c.effetto or "",
@@ -962,6 +991,10 @@ class Corpus:
     def reddito(self, istituto: str, giorno: date) -> DichiarazioneReddito | None:
         """Categoria dichiarata dall'istituto alla data; None se non ne dichiara."""
         return _vigente([r for r in self.fiscale.redditi if r.istituto == istituto], giorno)
+
+    def pagamento_fisiologico(self, istituto: str, giorno: date) -> DichiarazionePagamentoFisiologico | None:
+        """Dichiarazione vigente alla data di pagamento; None se l'istituto non dichiara il pagamento fisiologico."""
+        return _vigente([f for f in self.fiscale.fisiologici if f.istituto == istituto], giorno)
 
     def regola_ritenuta(self, giorno: date) -> RegolaRitenuta | None:
         return _vigente(self.fiscale.ritenute, giorno)
@@ -1233,7 +1266,16 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
         )
         for voce in dati.get("conguaglio", [])
     )
-    return RegoleFiscali(categorie, redditi, ritenute, conguagli)
+    fisiologici = tuple(
+        DichiarazionePagamentoFisiologico(
+            voce["istituto"],
+            _data(voce["dal"], "dal"),
+            voce["riferimento"],
+            _data(voce["al"], "al") if "al" in voce else None,
+        )
+        for voce in dati.get("pagamento_fisiologico", [])
+    )
+    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici)
 
 
 def _concorsi_da_toml(voce: dict) -> list[Concorso]:
