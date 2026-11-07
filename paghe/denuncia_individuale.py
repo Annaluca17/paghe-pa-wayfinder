@@ -8,8 +8,9 @@ mai un valore di ripiego.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 from .corpus import Corpus
@@ -39,8 +40,27 @@ SISTEMA = "uniemens.denuncia_individuale"  # il sistema delle mappature del corp
 # TipoContribuzione 71: «solo contributo DS» per le amministrazioni non soggette a CUAF (Allegato tecnico 4.33.1, p. 111).
 TIPO_CONTRIBUZIONE = "71"
 QUALIFICA2_TEMPO_PIENO = "F"  # Allegato tecnico 4.33.1, p. 110
-ORARIO_SETTIMANALE = "orario_settimanale_tempo_pieno"  # parametro del corpus, in ore
+ORARIO_SETTIMANALE = "orario_settimanale_tempo_pieno"  # parametri del corpus: ore e giorni della settimana a tempo pieno
+GIORNI_SETTIMANA = "giorni_settimana_tempo_pieno"
+PART_TIME_CON_PERCENTUALE_DEL_MESE = {"V", "M"}  # PercPartTimeMese: obbligatoria solo per verticale e misto (DT p. 45)
+TIPO_LAV_STAT_MESE_NON_LAVORATO = "DR00"
 ALIQUOTE_NASPI = ("aliquota_naspi_ordinaria", "aliquota_naspi_integrativa")
+
+
+@dataclass(frozen=True)
+class Settimana:
+    """Settimana (domenica-sabato) di rapporto del mese: `id` progressivo nell'anno, `copertura` X o D (DT p. 74)."""
+
+    id: int
+    copertura: str
+
+
+@dataclass(frozen=True)
+class Giorno:
+    """Giorno di rapporto: `lavorato` S con prestazione, N senza, qualunque sia la durata (DT p. 75; circ. INPS 74/2021 § 3)."""
+
+    giorno: date
+    lavorato: str
 
 
 @dataclass(frozen=True)
@@ -66,6 +86,9 @@ class DenunciaIndividuale:
     perc_part_time_mese: int | None = None
     ore_contribuite: int | None = None
     settimane_utili: int | None = None
+    tipo_lav_stat: str | None = None
+    settimane: tuple[Settimana, ...] = ()
+    giorni: tuple[Giorno, ...] = ()
     fermi: tuple[QuadroFermo, ...] = ()
     mancanti: tuple[DatoMancante, ...] = ()
     bozza: tuple[str, ...] = ()
@@ -79,8 +102,10 @@ class DenunciaIndividuale:
 class _PartTime:
     qualifica2: str | None
     perc: int | None = None
+    perc_mese: int | None = None
     ore_contribuite: int | None = None
     settimane_utili: int | None = None
+    ore: Mapping[date, Decimal] | None = None  # la programmazione dei giorni di rapporto, se completa
 
 
 class _Vista:
@@ -147,24 +172,102 @@ class _Vista:
                 f"Part-time al {percentuale.valore}%: PercPartTime deve essere un numero intero di centesimi "
                 "maggiore di 0 e minore di 10000"
             )
-        ore = self.ore_programmate()
-        if ore is None:
+        programmate = self.ore_programmate()
+        if programmate is None:
             return _PartTime(qualifica2, perc)
+        ore = sum(programmate.values(), Decimal(0))
         orario = self.parametro(ORARIO_SETTIMANALE)
         return _PartTime(
             qualifica2,
             perc,
+            self.perc_del_mese(ore) if qualifica2 in PART_TIME_CON_PERCENTUALE_DEL_MESE else None,
             ore_contribuite=int((ore * 100).to_integral_value(ROUND_HALF_UP)),
             settimane_utili=int((ore / orario * 100).to_integral_value(ROUND_DOWN)),
+            ore=programmate,
         )
 
-    def ore_programmate(self) -> Decimal | None:
+    def perc_del_mese(self, ore: Decimal) -> int | None:
+        """Ore programmate del mese su ore lavorabili del tempo pieno nello stesso mese, in centesimi (ADR 0027)."""
+        lavorabili = self.ore_lavorabili_tempo_pieno()
+        if lavorabili is None:
+            return None
+        if lavorabili == 0:
+            self._motivo_bozza("Nessuna ora lavorabile del tempo pieno nel periodo di rapporto del mese: PercPartTimeMese indeterminata")
+            return None
+        return int((ore / lavorabili * 10000).to_integral_value(ROUND_HALF_UP))
+
+    def ore_lavorabili_tempo_pieno(self) -> Decimal | None:
+        """Giorni lavorativi (lun-ven non festivi) del periodo di rapporto per l'orario giornaliero del tempo pieno."""
+        lavorativi = self.giorni_lavorativi()
+        if lavorativi is None:
+            return None
+        return len(lavorativi) * self.parametro(ORARIO_SETTIMANALE) / self.parametro(GIORNI_SETTIMANA)
+
+    def giorni_lavorativi(self) -> list[date] | None:
+        """Giorni di rapporto da lunedì a venerdì non festivi, dal calendario del corpus; senza calendario si chiede."""
+        calendario = self.corpus.calendario_festivi(self.mese.anno)
+        if calendario is None:
+            self._chiedi(f"calendario_festivi {self.mese.anno}")
+            return None
+        return [giorno for giorno in self.giorni if giorno.weekday() < 5 and giorno not in calendario.giorni]
+
+    def lavorati(self, part_time: _PartTime) -> tuple[Giorno, ...]:
+        """S se il giorno ha ore programmate (a tempo pieno: è lavorativo), altrimenti N."""
+        if part_time.qualifica2 is None:
+            return ()
+        if part_time.qualifica2 == QUALIFICA2_TEMPO_PIENO:
+            lavorativi = self.giorni_lavorativi()
+            if lavorativi is None:
+                return ()
+            con_prestazione = set(lavorativi)
+        elif part_time.ore is None:
+            return ()  # la programmazione manca: già chiesta
+        else:
+            con_prestazione = {giorno for giorno, ore in part_time.ore.items() if ore > 0}
+        return tuple(Giorno(giorno, "S" if giorno in con_prestazione else "N") for giorno in self.giorni)
+
+    def settimane(self, part_time: _PartTime) -> tuple[Settimana, ...]:
+        """Le settimane di rapporto del mese; a cavallo di mese solo per i giorni di rapporto (DT p. 74)."""
+        per_settimana: dict[date, list[date]] = {}
+        for giorno in self.giorni:
+            per_settimana.setdefault(_domenica(giorno), []).append(giorno)
+        senza_ore = part_time.qualifica2 in PART_TIME_CON_PERCENTUALE_DEL_MESE
+        if senza_ore and part_time.ore is None:
+            return ()  # la programmazione manca: già chiesta
+        return tuple(
+            Settimana(
+                _id_settimana(domenica, self.mese.anno),
+                "D" if senza_ore and all(part_time.ore[g] == 0 for g in giorni) else "X",
+            )
+            for domenica, giorni in per_settimana.items()
+        )
+
+    def ore_programmate(self) -> Mapping[date, Decimal] | None:
         """Ore programmate nei giorni di rapporto del mese; se un giorno non è programmato, il dato si chiede."""
         programmazione = programmazione_del_mese(self.registro, self.rapporto, self.mese, self.istante)
         if any(giorno not in programmazione.ore for giorno in self.giorni):
             self._chiedi(TIPO_PROGRAMMAZIONE)
             return None
-        return sum((programmazione.ore[giorno] for giorno in self.giorni), Decimal(0))
+        return {giorno: programmazione.ore[giorno] for giorno in self.giorni}
+
+
+def _tipo_lav_stat(part_time: _PartTime) -> str | None:
+    """DR00: part-time verticale o misto senza alcuna ora programmata nel mese (Allegato tecnico 4.33.1, p. 133)."""
+    if part_time.qualifica2 in PART_TIME_CON_PERCENTUALE_DEL_MESE and part_time.ore is not None:
+        if all(ore == 0 for ore in part_time.ore.values()):
+            return TIPO_LAV_STAT_MESE_NON_LAVORATO
+    return None
+
+
+def _domenica(giorno: date) -> date:
+    """La domenica che apre la settimana (domenica-sabato) del giorno."""
+    return giorno - timedelta(days=(giorno.weekday() + 1) % 7)
+
+
+def _id_settimana(domenica: date, anno: int) -> int:
+    """Progressivo nell'anno: la prima settimana è quella che contiene il 1° gennaio (DT p. 74)."""
+    prima = _domenica(date(anno, 1, 1))
+    return (domenica - prima).days // 7 + 1
 
 
 def denuncia_individuale(
@@ -214,8 +317,12 @@ def denuncia_individuale(
         codice_contratto=codice_contratto,
         tipo_codice_contratto=tipo_codice_contratto,
         perc_part_time=part_time.perc,
+        perc_part_time_mese=part_time.perc_mese,
         ore_contribuite=part_time.ore_contribuite,
         settimane_utili=part_time.settimane_utili,
+        tipo_lav_stat=_tipo_lav_stat(part_time),
+        settimane=vista.settimane(part_time),
+        giorni=vista.lavorati(part_time),
         mancanti=tuple(vista.mancanti),
         bozza=tuple(vista.motivi_bozza),
     )

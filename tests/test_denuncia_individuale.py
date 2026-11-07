@@ -269,3 +269,121 @@ def test_un_mese_in_servizio_senza_importi_pagati_ha_la_vista_senza_imponibile_n
     vista = denuncia_individuale(registro, corpus, R, MARZO)
     assert vista is not None
     assert (vista.tipo_contribuzione, vista.imponibile, vista.contributo) == ("71", None, None)
+
+
+FESTIVI_2026 = """
+[[calendario_festivi]]
+anno = 2026
+giorni = [2026-01-01, 2026-01-06, 2026-04-06, 2026-04-25, 2026-05-01, 2026-06-02, 2026-08-15, 2026-11-01, 2026-12-08, 2026-12-25, 2026-12-26]
+riferimento = "fittizio:festivi-prova"
+"""
+
+
+@pytest.fixture(scope="module")
+def corpus_con_festivi():
+    """Corpus reale più un calendario dei festivi di prova: il corpus reale non ne dichiara."""
+    return Corpus.da_toml(CORPUS.read_text(encoding="utf-8") + FESTIVI_2026)
+
+
+# Marzo 2026 ha 22 giorni lavorativi (158,4 ore a tempo pieno). Programmazione di prova: tre giorni lun-mer nelle
+# settimane del 2-8, 9-15 e 23-29, il solo lunedì 30; la settimana del 15-21 resta interamente senza ore.
+GIORNI_DEL_VERTICALE = {date(2026, 3, g) for g in (2, 3, 4, 9, 10, 11, 23, 24, 25, 30)}
+
+
+def verticale(giorno):
+    return Decimal("7.2") if giorno in GIORNI_DEL_VERTICALE else Decimal(0)
+
+
+def test_il_verticale_ha_la_percentuale_del_mese_dalle_ore_programmate_sulle_ore_lavorabili_del_tempo_pieno(
+    registro, orologio, corpus_con_festivi
+):
+    td_part_time(registro, orologio, corpus_con_festivi, "verticale", "50", verticale)
+    vista = denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
+    # 10 giorni x 7,2 = 72 ore su 22 x 7,2 = 158,4: 45,4545% -> 4545 centesimi; la percentuale del contratto è 50%.
+    assert (vista.qualifica2, vista.perc_part_time, vista.perc_part_time_mese) == ("V", 5000, 4545)
+    assert (vista.ore_contribuite, vista.settimane_utili) == (7200, 200)
+
+
+def test_il_misto_con_giorni_a_orario_diverso_si_distingue_solo_dalle_ore(registro, orologio, corpus_con_festivi):
+    cinque_ore = {date(2026, 3, g) for g in (2, 3, 4, 5, 6, 9, 10, 11)}
+    sette_ore_e_due = {date(2026, 3, g) for g in (12, 13, 16, 17, 18, 19)}
+    ore = lambda giorno: Decimal(5) if giorno in cinque_ore else Decimal("7.2") if giorno in sette_ore_e_due else Decimal(0)
+    td_part_time(registro, orologio, corpus_con_festivi, "misto", "60", ore)
+    vista = denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
+    # 83,2 ore su 158,4 = 52,52% -> 5253 (a giorni sarebbero 14 su 22 = 6364).
+    assert (vista.qualifica2, vista.perc_part_time, vista.perc_part_time_mese) == ("M", 6000, 5253)
+    assert (vista.ore_contribuite, vista.settimane_utili) == (8320, 231)
+
+
+def test_senza_calendario_dei_festivi_il_verticale_chiede_il_dato_invece_di_stimare_le_ore_lavorabili(
+    registro, orologio, corpus
+):
+    td_part_time(registro, orologio, corpus, "verticale", "50", verticale)  # il corpus reale non ha festivi
+    vista = denuncia_individuale(registro, corpus, R, MARZO)
+    assert "calendario_festivi 2026" in [d.fatto for d in vista.mancanti]
+    assert vista.perc_part_time_mese is None and not vista.trasmissibile
+
+
+def test_nel_verticale_la_settimana_interamente_senza_ore_programmate_e_d_le_altre_x(
+    registro, orologio, corpus_con_festivi
+):
+    td_part_time(registro, orologio, corpus_con_festivi, "verticale", "50", verticale)
+    vista = denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
+    # Settimane domenica-sabato; il 1° marzo è domenica: 1-7 (id 10), 8-14, 15-21 (tutta senza ore), 22-28, 29-31.
+    assert [(s.id, s.copertura) for s in vista.settimane] == [(10, "X"), (11, "X"), (12, "D"), (13, "X"), (14, "X")]
+
+
+def ids_settimane(registro, corpus, mese):
+    return [s.id for s in denuncia_individuale(registro, corpus, R, mese).settimane]
+
+
+def test_la_settimana_a_cavallo_di_mese_si_dichiara_in_entrambi_i_mesi(registro, corpus):
+    in_servizio_con(registro, "17")
+    # La settimana 29 marzo - 4 aprile (id 14) è in marzo per i giorni 29-31 e in aprile per i giorni 1-4.
+    assert ids_settimane(registro, corpus, MARZO)[-1] == 14
+    assert ids_settimane(registro, corpus, Mese(2026, 4))[0] == 14
+
+
+def test_l_id_settimana_parte_da_uno_nella_settimana_che_contiene_il_primo_gennaio(registro, corpus):
+    in_servizio_con(registro, "17")
+    # 1/1/2026 è giovedì: la settimana 28/12-3/1 è la prima. Dicembre 2026 arriva a 53; il 1/1/2027 (venerdì) apre
+    # la settimana 27/12-2/1, che è la prima del 2027 e l'ultima del 2026.
+    assert ids_settimane(registro, corpus, Mese(2026, 1)) == [1, 2, 3, 4, 5]
+    assert ids_settimane(registro, corpus, Mese(2026, 12)) == [49, 50, 51, 52, 53]
+    # Il corpus reale non copre il 2027: la prova usa il corpus piccolo.
+    assert ids_settimane(registro, Corpus.da_toml(CORPUS_PICCOLO), Mese(2027, 1)) == [1, 2, 3, 4, 5, 6]
+
+
+def test_nel_verticale_lavorato_e_s_nei_giorni_con_ore_programmate_e_n_negli_altri(
+    registro, orologio, corpus_con_festivi
+):
+    td_part_time(registro, orologio, corpus_con_festivi, "verticale", "50", verticale)
+    vista = denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
+    assert [g.giorno for g in vista.giorni] == MARZO.giorni()
+    assert {g.giorno for g in vista.giorni if g.lavorato == "S"} == GIORNI_DEL_VERTICALE
+    assert {g.lavorato for g in vista.giorni if g.giorno not in GIORNI_DEL_VERTICALE} == {"N"}
+
+
+def test_a_tempo_pieno_lavorato_e_s_nei_giorni_lavorativi_non_festivi_del_calendario_del_corpus(
+    registro, corpus_con_festivi
+):
+    in_servizio_con(registro, "17")
+    vista = denuncia_individuale(registro, corpus_con_festivi, R, Mese(2026, 4))
+    lavorati = {g.giorno for g in vista.giorni if g.lavorato == "S"}
+    assert len(lavorati) == 21  # 22 giorni da lunedì a venerdì, meno il lunedì dell'Angelo (6 aprile)
+    assert date(2026, 4, 6) not in lavorati and date(2026, 4, 3) in lavorati and date(2026, 4, 4) not in lavorati
+
+
+def test_il_verticale_con_il_mese_interamente_non_lavorato_e_dr00_con_tutte_le_settimane_d_e_i_giorni_n(
+    registro, orologio, corpus_con_festivi
+):
+    td_part_time(registro, orologio, corpus_con_festivi, "verticale", "50", lambda giorno: Decimal(0))
+    vista = denuncia_individuale(registro, corpus_con_festivi, R, MARZO)
+    assert vista.tipo_lav_stat == "DR00"
+    assert {s.copertura for s in vista.settimane} == {"D"} and {g.lavorato for g in vista.giorni} == {"N"}
+    assert vista.perc_part_time_mese == 0 and (vista.ore_contribuite, vista.settimane_utili) == (0, 0)
+
+
+def test_dr00_non_si_usa_nei_mesi_con_ore_programmate_ne_a_tempo_pieno(registro, orologio, corpus_con_festivi):
+    td_part_time(registro, orologio, corpus_con_festivi, "verticale", "50", verticale)
+    assert denuncia_individuale(registro, corpus_con_festivi, R, MARZO).tipo_lav_stat is None

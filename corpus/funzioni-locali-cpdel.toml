@@ -201,6 +201,16 @@ dal = 2026-01-01
 valore = "36"
 riferimento = "ccnl:S105:2018-05-21~art22"
 
+# Giorni lavorativi della settimana a tempo pieno: cinque (lunedi'-venerdi'); l'orario giornaliero e' 36 / 5 = 7,2 ore.
+# CCNL 21/05/2018 art. 22, stessa fonte e stesso DA VERIFICARE.
+
+[[parametro]]
+nome = "giorni_settimana_tempo_pieno"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "5"
+riferimento = "ccnl:S105:2018-05-21~art22"
+
 # Mese parziale (nota di prassi 1)
 
 [[parametro]]
