@@ -6,11 +6,19 @@
 # Tutti i riferimenti qui sono `fittizio:`. I valori fiscali (franchigia, aliquota, detrazione) sono dichiaratamente
 # finti e non corrispondono a nessuna norma. Questo file da' valori ai parametri e alle dichiarazioni che mancano
 # al corpus reale (categorie di reddito, ritenuta, conguaglio, composizione, mappatura, catalogo dei codici F24EP,
-# scadenza, festivi) e dichiara due istituti che leggono un fatto (performance, rimborso 730): nessuna regola di
+# scadenza, festivi) e dichiara gli istituti performance e rimborso 730-4: nessuna regola di
 # calcolo nuova, solo l'input da atto letto cosi' com'e'. I codici tributo sono quelli di
 # docs/research/versamenti-f24ep.md.
 
 # --- Parametri fiscali: valori finti ---
+
+# Il primo mese utile per operare il rimborso del 730-4 (dell'anno dopo i redditi dichiarati): luglio.
+[[parametro]]
+nome = "rimborso_730_primo_mese"
+[[parametro.vigenza]]
+dal = 2025-01-01
+valore = "7"
+riferimento = "fittizio:rimborso-730-primo-mese"
 
 [[parametro]]
 nome = "ritenuta_franchigia_annua"
@@ -79,7 +87,9 @@ riferimento = "fittizio:deduzione-tfs-lavoratore"
 # --- Due istituti che leggono un fatto (input da atto), senza regola di calcolo ---
 # La performance e' di competenza 2025 e pagata nel 2026: pagamento fisiologico dichiarato qui sotto.
 # Il rimborso da 730-4 ha maturazione `periodo`: e' l'unica maturazione che non produce reddito imponibile ne' entra
-# nelle basi (non e' retribuzione). Il nucleo non ha il tipo di fatto "esito 730-4": l'importo e' un fatto generico.
+# nelle basi (non e' retribuzione). Il suo importo non nasce da questa regola ma dall'esito 730-4 della persona
+# (`paghe.esito_730_4.rimborso_730_4`, ticket #71): la regola c'e' perche' il corpus vuole una regola per ogni istituto
+# con una composizione, e non scatta mai (nessun rapporto ha il fatto che legge).
 
 [[regola]]
 istituto = "performance"
@@ -91,13 +101,13 @@ maturazione = "evento"
 applica_se = "performance"
 
 [[regola]]
-istituto = "rimborso_irpef_730"
+istituto = "rimborso_730_4"
 versione = 1
 dal = 2026-01-01
-riferimento = "fittizio:rimborso-irpef-730"
-formula = "fatto.rimborso_irpef_730"
+riferimento = "fittizio:rimborso-730-4"
+formula = "fatto.rimborso_730_4_del_rapporto"
 maturazione = "periodo"
-applica_se = "rimborso_irpef_730"
+applica_se = "rimborso_730_4_del_rapporto"
 
 [[pagamento_fisiologico]]
 istituto = "performance"
@@ -191,7 +201,7 @@ dal = 2025-01-01
 riferimento = "fittizio:concorso-performance-tfr-ulteriori"
 
 [[concorso]]
-istituto = "rimborso_irpef_730"
+istituto = "rimborso_730_4"
 basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori"]
 misura = "escluso"
 dal = 2026-01-01
@@ -290,14 +300,16 @@ effetto = "piu"
 destinatario = "beneficiario"
 canale = "accredito"
 
+# Il rimborso al lavoratore e' una riga sola: sul netto, verso il beneficiario, con accredito. La delega la legge dalla
+# natura (rimborso_730) come credito del sostituto (ticket #71).
 [[composizione]]
-istituto = "rimborso_irpef_730"
+istituto = "rimborso_730_4"
 dal = 2025-01-01
-riferimento = "fittizio:comp-rimborso-irpef-730"
+riferimento = "fittizio:comp-rimborso-730-4"
 natura = "rimborso_730"
-effetto = "nessuno"
-destinatario = "terzo"
-canale = "f24ep"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
 
 [[composizione]]
 istituto = "ritenuta_irpef"
@@ -476,11 +488,11 @@ dal = 2025-01-01
 riferimento = "fittizio:mappatura-contributo-tfr-ulteriori"
 
 [[mappatura]]
-istituto = "rimborso_irpef_730"
+istituto = "rimborso_730_4"
 sistema = "codice_tributo_f24ep"
 codice = "150E"
 dal = 2025-01-01
-riferimento = "fittizio:mappatura-rimborso-irpef-730"
+riferimento = "fittizio:mappatura-rimborso-730-4"
 
 # --- Catalogo dei codici F24EP ---
 # 100E, P201 e 150E con la forma confermata dalla ricerca. P607, P608, P632 e P909 esistono (ricerca, tema 5) ma la

@@ -43,13 +43,13 @@ Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fi
 
 | Rapporto | Marzo 2026 | Dicembre 2026 |
 |---|---|---|
-| R01 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: anno_imposta_mancante: il codice 150E vuole l'anno d'imposta e l'importo non lo porta |
-| R02 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: anno_imposta_mancante: il codice 150E vuole l'anno d'imposta e l'importo non lo porta |
-| R03 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: anno_imposta_mancante: il codice 150E vuole l'anno d'imposta e l'importo non lo porta |
+| R01 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R02 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R03 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
 | R04 | si ferma al passo «Calcolo»: part-time, riproporzionamento non modellato | si ferma al passo «Calcolo»: part-time, riproporzionamento non modellato |
 | R05 | completo, fino all'esito versato | fuori servizio |
-| R06 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: anno_imposta_mancante: il codice 150E vuole l'anno d'imposta e l'importo non lo porta |
-| R07 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: anno_imposta_mancante: il codice 150E vuole l'anno d'imposta e l'importo non lo porta |
+| R06 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R07 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
 | R08 | si ferma al passo «Calcolo»: regime del titolo assente nel corpus | si ferma al passo «Calcolo»: regime del titolo assente nel corpus |
 | R09 | si ferma al passo «Calcolo»: regime del titolo assente nel corpus | si ferma al passo «Calcolo»: regime del titolo assente nel corpus |
 | R10 | si ferma al passo «Calcolo»: regime del titolo assente nel corpus | si ferma al passo «Calcolo»: regime del titolo assente nel corpus |
@@ -59,7 +59,7 @@ Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fi
 
 I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccano e poi per quanti passi del percorso (calcolo, versione, conferma, pagamento, denuncia, ListaPosPA, delega, file, ricevute, esito versato) restano chiusi, sommati su marzo e dicembre.
 
-1. **anno_imposta_mancante: il codice 150E vuole l'anno d'imposta e l'importo non lo porta**: 5 rapporti bloccati, 20 passi, al passo «Delega F24EP», in dicembre. Casi: R07 (rimborso_irpef_730).
+1. **debito_negativo: Il totale a debito del codice 100E e' negativo**: 5 rapporti bloccati, 20 passi, al passo «Delega F24EP», in dicembre. Casi: R01, R02, R03, R06, R07.
 2. **regime del titolo assente nel corpus**: 4 rapporti bloccati, 80 passi, al passo «Calcolo», in marzo e dicembre. Casi: R08 (dirigente), R09 (segretario), R10 (sindaco), R11 (co.co.co.).
 3. **part-time, riproporzionamento non modellato**: 1 rapporto bloccato, 20 passi, al passo «Calcolo», in marzo e dicembre. Casi: R04.
 
@@ -112,7 +112,7 @@ Dettaglio di Marzo, escluso l'avvio:
 
 Dettaglio di Dicembre, escluso l'avvio:
 
-- [ricorrente] 1 x rapporto R07: rimborso_irpef_730
+- [ricorrente] 1 x persona P07: esito 730-4
 - [conferma] 1 x conferma della versione 3
 - [scelta] 1 x ente: data di versamento dei pagamenti di 2026-12
 - [scelta] 1 x ente: ultimo pagamento dell'anno 2026
@@ -266,6 +266,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R03: 2 importi, lordo 1824.12
   - R06: 3 importi, lordo 1824.12
   - R07: 3 importi, lordo 2051.69
+  - R07: rimborso del 730-4: 150.00, anno dei redditi dichiarati 2025
 - Fermi:
   - R04: caso non modellato, part-time, riproporzionamento non modellato (fatto part_time dal 2026-01-01; prassi:immedia:nota:2026-11-06;3)
   - R08 (dirigente): nessun importo; il fatto compenso_mensile registrato dall'Ufficio personale non e' letto da nessuna regola del corpus
@@ -273,7 +274,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R10 (sindaco): nessun importo; il fatto compenso_mensile registrato dall'Ufficio personale non e' letto da nessuna regola del corpus
   - R11 (co.co.co.): nessun importo; il fatto compenso_mensile registrato dall'Ufficio personale non e' letto da nessuna regola del corpus
 - Su dati fittizi:
-  - tabelle e parametri del corpus reale; regole del corpus fittizio per: rimborso_irpef_730
+  - tabelle e parametri del corpus reale
 - Note:
   - R05: non in servizio nel mese, nessun importo
 
@@ -285,7 +286,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - netto R02: 2046.51
   - netto R03: 1674.31
   - netto R06: 1626.83
-  - netto R07: 1838.79
+  - netto R07: 1988.79
   - conguaglio fiscale sull'ultimo pagamento: R01 -67.02, R02 -100.52, R03 -53.93, R06 -96.99, R07 -32.48
 - Fermi: nessuno
 - Su dati fittizi:
@@ -324,11 +325,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Riuscito:
   - scadenza 2027-01-18, data di versamento scelta 2027-01-18
 - Fermi:
-  - R07 (rimborso_irpef_730): Istituto rimborso_irpef_730: il codice 150E vuole l'anno d'imposta e l'importo non lo porta
+  - R01, R02, R03, R06, R07: Il totale a debito del codice 100E e' negativo (-177.14; sezione F, riferimenti 0012/2026): i conguagli a credito superano le ritenute della delega. Il recupero dell'eccedenza non ha ancora una fonte, la delega non si trasmette
 - Su dati fittizi:
   - mappatura dei codici, catalogo dei codici F24EP, scadenza e festivi del corpus fittizio
 - Note:
-  - righe costruite ma non trasmissibili: 100E -177.14, P201 3316.16, P607 400.17, P608 87.67, P909 35.54
+  - righe costruite ma non trasmissibili: 100E -177.14, 150E -150.00, P201 3316.16, P607 400.17, P608 87.67, P909 35.54
 
 **File telematico**
 
@@ -353,8 +354,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 ## Difetti del nucleo trovati
 
-1. **Il rimborso 730 non puo' essere insieme nel netto e a credito nella delega.** R07, 2026-12-18: il rimborso 150.00 e' una riga con un solo effetto. Dichiarato a credito F24EP (effetto nessuno sul netto), il netto resta 1838.79 e il lavoratore non lo riceve; dichiarato sul netto, il sostituto non avrebbe il credito da compensare. Servirebbero due righe dallo stesso importo, e la struttura ne ammette una.
-2. **Una delega con un debito negativo risulta pronta.** 2026-12: la riga F 100E ha debito -177.14. I conguagli a credito dei lavoratori (ritenuta con segno meno nella composizione) superano le ritenute del mese e la somma per codice va sotto zero; `costruisci_delega` non lo segnala e il serializzatore la rifiuta (File F24EP: modello 1, modulo 1, riga 1: importo a debito: importo non ammesso, Decimal('-177.14')). L'esempio nasce dall'anno fittizio con soli due pagamenti, ma il caso e' raggiungibile.
+Nessuno trovato.
 
 ## Non esercitato dal mese
 

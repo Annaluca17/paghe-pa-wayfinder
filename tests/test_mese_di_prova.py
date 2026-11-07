@@ -66,9 +66,19 @@ def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
     per_causa = {g["causa"]: g for g in cause_ordinate(esecuzione)}
     assert per_causa["regime del titolo assente nel corpus"]["bloccati"] == {"R08", "R09", "R10", "R11"}
     assert per_causa["part-time, riproporzionamento non modellato"]["bloccati"] == {"R04"}
-    (stop_730,) = [g for causa, g in per_causa.items() if "150E" in causa]
-    assert stop_730["casi"] == {"R07": "rimborso_irpef_730"}
-    assert stop_730["bloccati"] == {"R01", "R02", "R03", "R06", "R07"}
+    # Il rimborso 730 di R07 non ferma piu' la delega di dicembre: il fermo e' il debito negativo del 100E, nominato.
+    assert not [causa for causa in per_causa if "150E" in causa]
+    (stop_debito,) = [g for causa, g in per_causa.items() if causa.startswith("debito_negativo")]
+    assert "100E" in stop_debito["causa"] and stop_debito["bloccati"] == {"R01", "R02", "R03", "R06", "R07"}
+
+
+def test_il_rimborso_730_di_r07_e_sul_netto_e_credito_nella_delega_di_dicembre(esecuzione, resoconto):
+    """Un esito 730-4 vero, la dichiarazione sul netto verso il beneficiario: nessun difetto del rimborso o del debito negativo."""
+    assert esecuzione.difetti == []
+    assert "netto R07: 1988.79" in resoconto  # 1838.79 prima del rimborso, piu' 150.00
+    assert "R07: rimborso del 730-4: 150.00, anno dei redditi dichiarati 2025" in resoconto
+    assert "150E -150.00" in resoconto  # la riga a credito e' nella delega costruita, anche se non trasmissibile
+    assert "esito 730-4" in resoconto and "rimborso_irpef_730" not in resoconto
 
 
 def test_l_elenco_delle_cause_e_ordinato_per_rapporti_e_poi_per_passi(esecuzione):
