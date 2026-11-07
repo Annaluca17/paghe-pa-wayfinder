@@ -9,6 +9,7 @@ una regola, la delega si ferma nominando il caso.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -30,7 +31,7 @@ from .proposta import (
     leggi_versione,
     stato_delega,
 )
-from .registro import Registro
+from .registro import TIPO_CREDITO_RIPORTATO, Fatto, Registro
 from .tempo import Mese, in_utc
 
 # Sistema della mappatura esterna dell'istituto: codice tributo o causale F24EP (ADR 0022).
@@ -212,6 +213,7 @@ class Delega:
     compensazioni: tuple[Compensazione, ...] = ()
     residui: tuple[CreditoResiduo, ...] = ()
     altre_deleghe: tuple[str, ...] = ()
+    riporti_usati: tuple[int, ...] = ()
 
     @property
     def totale_debito(self) -> Decimal:
@@ -282,6 +284,48 @@ def _righe_in_deleghe_attive(registro: Registro, istante: datetime, ignorando: s
         for riga in evento.contenuto["sorgenti"]:
             tenute[_riferimento_da_dizionario(riga)] = delega_id
     return tenute
+
+
+@dataclass(frozen=True)
+class CreditoRiportato:
+    """Credito non assorbito da una delega, passato alla scadenza successiva come fatto sull'ente con la sua origine."""
+
+    fatto_id: int
+    chiave: tuple[str, str, str, str, str, str]
+    importo: Decimal
+    delega: str
+    scadenza: date
+    origine: tuple[Origine, ...]
+    valido_dal: date
+
+
+def _riporto_dal_fatto(fatto: Fatto) -> CreditoRiportato:
+    dati = json.loads(fatto.valore)
+    return CreditoRiportato(
+        fatto.id,
+        tuple(dati["chiave"]),
+        Decimal(dati["importo"]),
+        dati["delega"],
+        date.fromisoformat(dati["scadenza"]),
+        tuple(_origine_da_dizionario(o) for o in dati["origine"]),
+        fatto.valido_dal,
+    )
+
+
+def crediti_riportati(registro: Registro, noto_al: datetime | None = None) -> tuple[CreditoRiportato, ...]:
+    """I crediti riportati dalle deleghe ancora attive: se la delega d'origine è scartata o annullata, il riporto non vale."""
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    riporti = (_riporto_dal_fatto(f) for f in registro.fatti_ente_noti(TIPO_CREDITO_RIPORTATO, istante))
+    return tuple(r for r in riporti if delega_attiva(registro, r.delega, istante))
+
+
+def _riporti_usati_da_deleghe_attive(registro: Registro, istante: datetime, ignorando: str | None) -> set[int]:
+    usati: set[int] = set()
+    for evento in registro.eventi(TIPO_DELEGA_TRASMESSA, istante):
+        delega_id = evento.contenuto["id"]
+        if delega_id != ignorando and delega_attiva(registro, delega_id, istante):
+            usati.update(evento.contenuto["riporti_usati"])
+    return usati
 
 
 def _righe_candidate(registro: Registro, mese: Mese, istante: datetime):
@@ -454,6 +498,14 @@ def costruisci_delega(
         )
         somme.setdefault(chiave, []).append(Origine(importo.valore, riferimento))
         sorgenti.append(riferimento)
+    riporti_usati: list[int] = []
+    if scadenza is not None:
+        usati_da_altre = _riporti_usati_da_deleghe_attive(registro, istante, ignorando_delega)
+        for riporto in crediti_riportati(registro, istante):
+            if riporto.valido_dal > scadenza.data or riporto.fatto_id in usati_da_altre:
+                continue
+            somme.setdefault((*riporto.chiave, True), []).append(Origine(riporto.importo, riporto=riporto.fatto_id))
+            riporti_usati.append(riporto.fatto_id)
     debiti: list[RigaDelega] = []
     crediti: list[RigaDelega] = []
     for (sezione, tributo, codice_campo, estremi, rif_a, rif_b, a_credito), origine in somme.items():
@@ -510,6 +562,7 @@ def costruisci_delega(
     return Delega(
         mese_pagamento, scadenza, data_versamento, tuple(righe), tuple(sorgenti), ente, tuple(mancanti),
         tuple(fermi.values()), tuple(avvisi), tuple(compensazioni), tuple(residui), tuple(altre),
+        tuple(riporti_usati),
     )
 
 
@@ -712,7 +765,7 @@ def trasmetti_delega(
     delega = costruisci_delega(registro, corpus, mese_pagamento, ignorando_delega=delega_id)
     gia = registro.evento(chiave)
     if gia is not None:
-        nuovo = _contenuto_della_delega(delega_id, delega, (), ()) if delega.pronta else None
+        nuovo = _contenuto_della_delega(delega_id, delega, delega.riporti_usati, ()) if delega.pronta else None
         vecchio = {k: v for k, v in gia.contenuto.items() if k != "avvisi"}
         if nuovo is None or {k: v for k, v in nuovo.items() if k != "avvisi"} != vecchio:
             raise ErroreRegistro(f"Evento {chiave}: stesso identificativo con contenuto diverso, rifiutato")
@@ -729,12 +782,27 @@ def trasmetti_delega(
                 "sarà eseguita il secondo giorno lavorativo successivo alla ricezione (Allegato 2, par. 3, lettera c)",
             )
         )
-    contenuto = _contenuto_della_delega(delega_id, delega, (), avvisi)
+    contenuto = _contenuto_della_delega(delega_id, delega, delega.riporti_usati, avvisi)
     with registro.atomico():
         esito = registro.registra_esito(
             TipoEsito.DICHIARATO, istante.date(), [_importo_della_riga(registro, r) for r in delega.sorgenti]
         )
         evento = registro.registra_evento(chiave, TIPO_DELEGA_TRASMESSA, contenuto, adattatore, esito_id=esito.id)
+        for residuo in delega.residui:
+            registro.registra_codice_ente(
+                TIPO_CREDITO_RIPORTATO,
+                json.dumps(
+                    {
+                        "delega": delega_id,
+                        "scadenza": delega.scadenza.data.isoformat(),
+                        "chiave": list(residuo.chiave),
+                        "importo": str(residuo.importo),
+                        "origine": [_origine_in_dizionario(o) for o in residuo.origine],
+                    },
+                    sort_keys=True,
+                ),
+                delega.scadenza.data + timedelta(days=1),
+            )
     return _trasmessa_dal_contenuto(evento.esito_id, evento.contenuto)
 
 
