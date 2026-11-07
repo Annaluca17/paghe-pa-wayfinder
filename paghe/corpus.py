@@ -329,6 +329,21 @@ class DichiarazionePagamentoFisiologico:
             raise ErroreCorpus(f"Pagamento fisiologico {self.istituto}: vigenza invertita")
 
 
+@dataclass(frozen=True)
+class DichiarazioneDeduzione:
+    """L'istituto dichiara che il suo importo riduce l'imponibile fiscale (art. 51 c. 2 lett. a TUIR), con date e fonte."""
+
+    istituto: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, f"Deduzione fiscale {self.istituto}")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"Deduzione fiscale {self.istituto}: vigenza invertita")
+
+
 PERIODI_FISCALI = frozenset({"imponibile", "periodi"})
 
 
@@ -402,9 +417,12 @@ class RegoleFiscali:
     ritenute: tuple[RegolaRitenuta, ...] = ()
     conguagli: tuple[RegolaConguaglio, ...] = ()
     fisiologici: tuple[DichiarazionePagamentoFisiologico, ...] = ()
+    deduzioni: tuple[DichiarazioneDeduzione, ...] = ()
 
     def __bool__(self) -> bool:
-        return bool(self.categorie or self.redditi or self.ritenute or self.conguagli or self.fisiologici)
+        return bool(
+            self.categorie or self.redditi or self.ritenute or self.conguagli or self.fisiologici or self.deduzioni
+        )
 
 
 @dataclass(frozen=True)
@@ -996,6 +1014,10 @@ class Corpus:
         """Dichiarazione vigente alla data di pagamento; None se l'istituto non dichiara il pagamento fisiologico."""
         return _vigente([f for f in self.fiscale.fisiologici if f.istituto == istituto], giorno)
 
+    def deduzione_fiscale(self, istituto: str, giorno: date) -> DichiarazioneDeduzione | None:
+        """Dichiarazione vigente alla data di pagamento; None se l'importo dell'istituto non riduce l'imponibile fiscale."""
+        return _vigente([d for d in self.fiscale.deduzioni if d.istituto == istituto], giorno)
+
     def regola_ritenuta(self, giorno: date) -> RegolaRitenuta | None:
         return _vigente(self.fiscale.ritenute, giorno)
 
@@ -1275,7 +1297,16 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
         )
         for voce in dati.get("pagamento_fisiologico", [])
     )
-    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici)
+    deduzioni = tuple(
+        DichiarazioneDeduzione(
+            voce["istituto"],
+            _data(voce["dal"], "dal"),
+            voce["riferimento"],
+            _data(voce["al"], "al") if "al" in voce else None,
+        )
+        for voce in dati.get("deduzione_fiscale", [])
+    )
+    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici, deduzioni)
 
 
 def _concorsi_da_toml(voce: dict) -> list[Concorso]:
