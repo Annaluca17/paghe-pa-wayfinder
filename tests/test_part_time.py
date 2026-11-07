@@ -115,3 +115,16 @@ def test_l_intero_non_cambia(registro):
     assumi_part_time(registro, "60")
     (stipendio,) = calcola(registro, corpus_con(dichiarazione("intero")), R, NOVEMBRE)
     assert stipendio.valore == Decimal("1000.00")
+
+
+def test_un_istituto_senza_dichiarazione_ferma_il_calcolo_e_si_nomina(registro):
+    assumi_part_time(registro, "60")
+    with pytest.raises(CasoNonModellato, match="stipendio.*trattamento nel part-time"):
+        calcola(registro, Corpus.da_toml(BASE), R, NOVEMBRE)
+
+
+def test_senza_part_time_non_serve_nessuna_dichiarazione(registro):
+    registro.registra_fatto(R, "mensile", "1000.00", date(2026, 1, 1))
+    (stipendio,) = calcola(registro, Corpus.da_toml(BASE), R, NOVEMBRE)
+    assert stipendio.valore == Decimal("1000.00")
+    assert stipendio.derivazione.part_time is None

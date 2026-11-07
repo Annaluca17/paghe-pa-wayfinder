@@ -166,6 +166,11 @@ class _Lettore:
         if percentuale is None:
             return importo
         dichiarazione = self.corpus.trattamento_part_time(regola.istituto, periodo.dal)
+        if dichiarazione is None or not dichiarazione.copre(periodo.al):
+            raise CasoNonModellato(
+                f"Rapporto {self.rapporto}: caso non modellato, l'istituto {regola.istituto} non dichiara il "
+                f"trattamento nel part-time per {periodo} (fatto {FATTO_PART_TIME} dal {percentuale.valido_dal})"
+            )
         fatti = {fatto.id: fatto for fatto in importo.derivazione.fatti}
         fatti[percentuale.id] = percentuale
         valore = importo.valore
