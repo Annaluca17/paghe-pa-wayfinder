@@ -230,6 +230,18 @@ _Avoid_: Voce, riga di cedolino
 Parte del mese in cui fatti, regole e parametri sono uniformi; ogni frazione produce il proprio importo. Il totale del mese è una vista.
 _Avoid_: Rateo (quando si intende la parte di mese)
 
+**Part-time**:
+Fatto datato del rapporto, da atto di trasformazione, con percentuale e tipo (orizzontale, verticale, misto). Il calcolo è lo stesso per i tre tipi: importo pieno per percentuale, mensilizzato anche nel verticale e nel misto. Il tipo decide solo cosa si dichiara.
+_Avoid_: Orario ridotto (senza dire quale tipo), coefficiente
+
+**Trattamento nel part-time**:
+Dichiarazione datata dell'istituto, con riferimento: proporzionale, intero, oppure da integrativo, cioè misura fissata dall'ente con un input da atto. Se manca, il calcolo di un rapporto in part-time si ferma.
+_Avoid_: Flag di riproporzionamento
+
+**Programmazione del part-time**:
+Input da atto del rapporto che fissa per un periodo (mese, trimestre, anno) i giorni lavorativi e le ore di ciascuno. La denuncia dichiara la programmazione, non il lavorato; senza programmazione per il mese è un dato mancante e la ListaPosPA è una bozza non trasmissibile.
+_Avoid_: Turni (quando si intende l'atto), presenze
+
 **Maturazione**:
 Modo, dichiarato dalla regola, in cui un istituto matura: a giorni, a evento, sul periodo dichiarato o annuale.
 _Avoid_: Tipo voce
