@@ -29,6 +29,10 @@ DICEMBRE = Mese(2026, 12)
 ULTIMO_PAGAMENTO_2026 = date(2026, 12, 18)
 
 QUALIFICHE = {"funzionari": "0FZEQF", "istruttori": "0IR000", "operatori_esperti": "0OEESP", "operatori": "0OP000"}
+# Dirigente e segretario: nessun codice di qualifica ne' di contratto e' stato letto sul tracciato (ticket #73): non si inventano,
+# il rapporto non li registra e la ListaPosPA li chiede come dati mancanti.
+CONTRATTO_COMPARTO = "RALN"
+FATTO_POSIZIONE = {"dirigente": "posizione_annua_dirigente", "segretario": "posizione_annua_segretario"}
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,8 @@ class Rapporto:
     al: date | None = None
     detrazioni: bool = True
     impiego: str = "1"  # TipoImpiego della ListaPosPA: 1 tempo pieno indeterminato, 18 tempo determinato part-time
+    posizione: str | None = None  # posizione annua deliberata dall'ente (dirigente e segretario): importo di fantasia, nessuna norma
+    fascia: str | None = None  # fascia del segretario (A, B, C), da atto
 
     @property
     def cognome(self) -> str:
@@ -55,9 +61,17 @@ class Rapporto:
         return codice_fiscale(self.cognome, self.nome, self.nascita.year, self.nascita.month, self.nascita.day)
 
     @property
-    def comparto(self) -> bool:
+    def dipendente(self) -> bool:
+        """Lavoro dipendente con un inquadramento nel registro: comparto, dirigente, segretario."""
         return self.area is not None
 
+    @property
+    def comparto(self) -> bool:
+        return self.titolo == "comparto"
+
+
+POSIZIONE_DIRIGENTE = "20000.00"  # posizione annua di fantasia, non una norma
+POSIZIONE_SEGRETARIO = "12000.00"
 
 RAPPORTI = (
     Rapporto("R01", "P01", "ALFA", "comparto", "funzionario a tempo pieno, mese intero (il caso base)",
@@ -74,10 +88,10 @@ RAPPORTI = (
              date(1996, 5, 8), date(2026, 3, 16), "operatori_esperti", "1", detrazioni=False),
     Rapporto("R07", "P07", "ETA", "comparto", "rimborso 730 a dicembre (730-4 dal primo pagamento utile da luglio)",
              date(1990, 12, 2), date(2019, 1, 1), "istruttori", "3"),
-    Rapporto("R08", "P08", "TETA", "dirigente", "dirigente",
-             date(1970, 4, 14), date(2019, 1, 1)),
-    Rapporto("R09", "P09", "IOTA", "segretario", "segretario comunale",
-             date(1968, 6, 21), date(2019, 1, 1)),
+    Rapporto("R08", "P08", "TETA", "dirigente", "dirigente a tempo pieno, tabellare su 13 mensilita' e posizione da atto",
+             date(1970, 4, 14), date(2019, 1, 1), "dirigente", "1", posizione=POSIZIONE_DIRIGENTE),
+    Rapporto("R09", "P09", "IOTA", "segretario", "segretario comunale in fascia B, posizione da atto",
+             date(1968, 6, 21), date(2019, 1, 1), "segretario", "1", posizione=POSIZIONE_SEGRETARIO, fascia="B"),
     Rapporto("R10", "P10", "KAPPA", "sindaco", "sindaco, mandato di amministratore",
              date(1972, 10, 9), date(2024, 6, 10)),
     Rapporto("R11", "P11", "LAMBDA", "co.co.co.", "collaboratore coordinato e continuativo",
@@ -89,7 +103,7 @@ RAPPORTI = (
 PER_ID = {r.id: r for r in RAPPORTI}
 
 # Importi di fantasia dei fatti che l'Ufficio personale registra: nessuno e' una norma.
-COMPENSI_SENZA_REGIME = {"R08": "5000.00", "R09": "4000.00", "R10": "3000.00", "R11": "1500.00"}
+COMPENSI_SENZA_REGIME = {"R10": "3000.00", "R11": "1500.00"}
 PERFORMANCE_2025 = "600.00"
 RIMBORSO_730 = "150.00"
 ANNO_REDDITI_730 = 2025  # i redditi dichiarati nel 730 il cui esito (730-4) porta il rimborso
@@ -108,19 +122,23 @@ ATTO_PROGRESSIONE = Atto("ente:ente_di_prova:determina:2026-03-05;42", date(2026
 ATTO_RIMBORSO = Atto("ente:ente_di_prova:comunicazione.730:2026-11-30;7304", date(2026, 11, 30))
 ATTO_PROGRAMMAZIONE = Atto("ente:ente_di_prova:determina:2026-01-09;43", date(2026, 1, 9))
 ATTO_PROGRAMMAZIONE_TD = Atto("ente:ente_di_prova:determina:2026-01-09;44", date(2026, 1, 9))
+ATTO_POSIZIONE_DIRIGENTE = Atto("ente:ente_di_prova:determina:2026-01-09;45", date(2026, 1, 9))
+ATTO_POSIZIONE_SEGRETARIO = Atto("ente:ente_di_prova:decreto:2026-01-09;46", date(2026, 1, 9))
+ATTO_FASCIA_SEGRETARIO = Atto("ente:ente_di_prova:decreto:2026-01-09;47", date(2026, 1, 9))
 ATTO_DETRAZIONI = Atto("ente:ente_di_prova:dichiarazione.detrazioni:2026-01-09;1", date(2026, 1, 9))
 
 
 def fatti_inquadramento(r: Rapporto) -> dict[str, str]:
-    """I sei fatti che dicono servizio e inquadramento di un rapporto del comparto."""
-    return {
+    """I fatti che dicono servizio e inquadramento di un rapporto dipendente (sei per il comparto, meno per dirigente e segretario)."""
+    fatti = {
         "tipo_impiego": r.impiego,
         "tipo_servizio": "4",
-        "contratto": "RALN",
-        "qualifica": QUALIFICHE[r.area],
+        "contratto": CONTRATTO_COMPARTO if r.comparto else None,
+        "qualifica": QUALIFICHE.get(r.area),
         "area": r.area,
         "regime_fine_servizio": r.regime,
     }
+    return {tipo: valore for tipo, valore in fatti.items() if valore is not None}
 
 
 def programmazione_part_time_2026() -> dict[date, Decimal]:

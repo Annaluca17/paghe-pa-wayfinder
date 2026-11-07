@@ -84,6 +84,13 @@ istituto = "tfs_lavoratore"
 dal = 2025-01-01
 riferimento = "fittizio:deduzione-tfs-lavoratore"
 
+# Dichiarazione ASSUNTA: anche l'1% aggiuntivo a carico del lavoratore riduce l'imponibile fiscale (ticket #73: dirigente e
+# segretario superano la prima fascia mensile gia' a marzo).
+[[deduzione_fiscale]]
+istituto = "contributo_aggiuntivo"
+dal = 2025-01-01
+riferimento = "fittizio:deduzione-contributo-aggiuntivo"
+
 # --- Due istituti che leggono un fatto (input da atto), senza regola di calcolo ---
 # La performance e' di competenza 2025 e pagata nel 2026: pagamento fisiologico dichiarato qui sotto.
 # Il rimborso da 730-4 ha maturazione `periodo`: e' l'unica maturazione che non produce reddito imponibile ne' entra
@@ -114,7 +121,7 @@ istituto = "performance"
 dal = 2026-01-01
 riferimento = "fittizio:performance-pagamento-fisiologico"
 
-# --- Reddito: gli istituti retributivi sono lavoro dipendente ---
+# --- Reddito: gli istituti retributivi sono lavoro dipendente (anche dirigente e segretario, ticket #73) ---
 
 [[reddito]]
 istituto = "tabellare_funzionari"
@@ -169,6 +176,42 @@ istituto = "performance"
 categoria = "lavoro_dipendente"
 dal = 2025-01-01
 riferimento = "fittizio:reddito-performance"
+
+[[reddito]]
+istituto = "tabellare_dirigenti"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-dirigenti"
+
+[[reddito]]
+istituto = "posizione_dirigenti"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-posizione-dirigenti"
+
+[[reddito]]
+istituto = "tabellare_segretario_a"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-segretario-a"
+
+[[reddito]]
+istituto = "tabellare_segretario_b"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-segretario-b"
+
+[[reddito]]
+istituto = "tabellare_segretario_c"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-tabellare-segretario-c"
+
+[[reddito]]
+istituto = "posizione_segretario"
+categoria = "lavoro_dipendente"
+dal = 2025-01-01
+riferimento = "fittizio:reddito-posizione-segretario"
 
 # --- Concorsi della performance (il corpus reale non li dichiara) e del rimborso 730 ---
 
@@ -290,6 +333,60 @@ effetto = "piu"
 destinatario = "beneficiario"
 canale = "accredito"
 
+[[composizione]]
+istituto = "tabellare_dirigenti"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-dirigenti"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "posizione_dirigenti"
+dal = 2025-01-01
+riferimento = "fittizio:comp-posizione-dirigenti"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tabellare_segretario_a"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-segretario-a"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tabellare_segretario_b"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-segretario-b"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tabellare_segretario_c"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tabellare-segretario-c"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "posizione_segretario"
+dal = 2025-01-01
+riferimento = "fittizio:comp-posizione-segretario"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
 # Dichiarazione ASSUNTA: la riduzione del lordo TFR (valore negativo) entra nel netto come retribuzione con effetto "piu".
 [[composizione]]
 istituto = "riduzione_tfr"
@@ -351,6 +448,17 @@ canale = "f24ep"
 istituto = "tfs_lavoratore"
 dal = 2025-01-01
 riferimento = "fittizio:comp-tfs-lavoratore"
+natura = "contributo_lavoratore"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+# Dichiarazione ASSUNTA: l'1% aggiuntivo oltre la prima fascia e' un contributo a carico del lavoratore, trattenuto e versato
+# con F24EP; il codice tributo e' assunto uguale a quello della CPDEL (nessuna fonte letta).
+[[composizione]]
+istituto = "contributo_aggiuntivo"
+dal = 2025-01-01
+riferimento = "fittizio:comp-contributo-aggiuntivo"
 natura = "contributo_lavoratore"
 effetto = "meno"
 destinatario = "terzo"
@@ -451,6 +559,13 @@ sistema = "codice_tributo_f24ep"
 codice = "P201"
 dal = 2025-01-01
 riferimento = "fittizio:mappatura-cpdel-ente"
+
+[[mappatura]]
+istituto = "contributo_aggiuntivo"
+sistema = "codice_tributo_f24ep"
+codice = "P201"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-contributo-aggiuntivo"
 
 [[mappatura]]
 istituto = "fondo_credito"

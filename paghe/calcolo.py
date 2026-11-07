@@ -90,6 +90,12 @@ class _Lettore:
         for fermo in self.corpus.fermi:
             if fermo.ambito not in ambiti:
                 continue
+            if fermo.manca:
+                self._controlla_fatto_obbligatorio(fermo, periodo)
+                continue
+            if fermo.solo_se is not None:
+                self._controlla_fatto_nel_suo_regime(fermo, periodo)
+                continue
             presenti = [
                 f
                 for f in self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al)
@@ -100,6 +106,42 @@ class _Lettore:
                 raise CasoNonModellato(
                     f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
                     f"(fatto {fermo.fatto}{valore} dal {presenti[0].valido_dal}; {fermo.riferimento})"
+                )
+
+    def _controlla_fatto_obbligatorio(self, fermo, periodo: Mese | Periodo) -> None:
+        """Un fermo `manca`: dove vale la condizione `se`, il fatto deve esserci ogni giorno, senza scegliere un valore."""
+        tipo, _, codice = fermo.se.partition("=")
+        condizioni = self.registro.vigenti_per_giorno(self.rapporto, tipo, periodo, self.noto_al)
+        presenti = self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al)
+        for giorno, condizione, presente in zip(periodo.giorni(), condizioni, presenti):
+            if not condizione or (codice and str(condizione.valore) != codice):
+                continue
+            if not presente:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
+                    f"(manca il fatto {fermo.fatto} il {giorno} con {fermo.se}; {fermo.riferimento})"
+                )
+            if fermo.valori is not None and not (presente.categoriale and str(presente.valore) in fermo.valori):
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
+                    f"(il fatto {fermo.fatto} = {presente.valore} il {giorno} non è uno di {', '.join(fermo.valori)}; "
+                    f"{fermo.riferimento})"
+                )
+
+    def _controlla_fatto_nel_suo_regime(self, fermo, periodo: Mese | Periodo) -> None:
+        """Un fermo `solo_se`: il fatto presente in un giorno in cui la condizione ha un altro valore è fuori dal suo regime.
+
+        I giorni senza il fatto della condizione (fuori servizio, dopo una cessazione) non si guardano: un fatto rimasto
+        aperto oltre la fine del rapporto non è un errore di regime."""
+        tipo, _, codice = fermo.solo_se.partition("=")
+        condizioni = self.registro.vigenti_per_giorno(self.rapporto, tipo, periodo, self.noto_al)
+        presenti = self.registro.vigenti_per_giorno(self.rapporto, fermo.fatto, periodo, self.noto_al)
+        for giorno, condizione, presente in zip(periodo.giorni(), condizioni, presenti):
+            if presente and condizione and codice and str(condizione.valore) != codice:
+                raise CasoNonModellato(
+                    f"Rapporto {self.rapporto}: caso non modellato, {fermo.caso} "
+                    f"(il fatto {fermo.fatto} il {giorno} è fuori dal suo regime, vale solo con {fermo.solo_se}; "
+                    f"{fermo.riferimento})"
                 )
 
     def parametro(self, nome: str, periodo: Periodo) -> ParametroLetto:

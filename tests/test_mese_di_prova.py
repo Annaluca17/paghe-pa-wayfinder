@@ -60,12 +60,17 @@ def test_il_percorso_di_marzo_arriva_all_esito_versato_per_chi_non_si_ferma(esec
     assert [r for r, a in arrivi.items() if a == "completo"] == ["R01", "R02", "R03", "R05", "R06", "R07"]
     # R04, a tempo parziale al 60% (verticale), supera il calcolo e arriva alla ListaPosPA, ma e' una bozza (ticket #72).
     assert arrivi["R04"] == "lista_pos_pa"
-    assert {arrivi[r] for r in ("R08", "R09", "R10", "R11")} == {"calcolo"}
+    # Dirigente e segretario (ticket #73) superano calcolo, denuncia e pagamento: alla ListaPosPA mancano contratto e qualifica,
+    # di cui non si inventano i codici. Sindaco e co.co.co. restano al calcolo.
+    assert {arrivi[r] for r in ("R08", "R09")} == {"lista_pos_pa"}
+    assert {arrivi[r] for r in ("R10", "R11")} == {"calcolo"}
 
 
 def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
     per_causa = {g["causa"]: g for g in cause_ordinate(esecuzione)}
-    assert per_causa["regime del titolo assente nel corpus"]["bloccati"] == {"R08", "R09", "R10", "R11"}
+    assert per_causa["regime del titolo assente nel corpus"]["bloccati"] == {"R10", "R11"}
+    for dato in ("contratto", "qualifica"):
+        assert per_causa[f"dato mancante {dato}"]["bloccati"] == {"R08", "R09"}  # codici del tracciato non letti
     assert "part-time, riproporzionamento non modellato" not in per_causa
     assert per_causa["bozza non trasmissibile"]["bloccati"] == {"R04", "R12"}  # ListaPosPA del part-time verticale
     # Il rimborso 730 di R07 non ferma piu' la delega di dicembre: il fermo e' il debito negativo del 100E, nominato.
@@ -150,7 +155,7 @@ def test_il_resoconto_dichiara_in_testa_il_corpus_non_reale(resoconto):
 
 def test_i_titoli_senza_regime_hanno_il_rapporto_e_si_fermano_nominando_il_caso(esecuzione):
     fermi = [f for f in esecuzione.fermi if f.causa == "regime del titolo assente nel corpus" and f.mese == "2026-03"]
-    assert {f.caso for f in fermi} == {"dirigente", "segretario", "sindaco", "co.co.co."}
+    assert {f.caso for f in fermi} == {"sindaco", "co.co.co."}
     assert all(f.passo == "calcolo" for f in fermi)
 
 
