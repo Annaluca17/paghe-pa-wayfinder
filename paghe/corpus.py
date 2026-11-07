@@ -667,6 +667,9 @@ class Corpus:
         self.denuncia = denuncia or RegoleDenuncia()
         self.fatto_servizio = fatto_servizio
         fatti_periodo = tuple(fatti_periodo_dichiarato)
+        if trattamenti_part_time:
+            # Un corpus che modella il part-time lo dichiara nel periodo: un cambio di percentuale o di tipo lo apre.
+            fatti_periodo += tuple(f for f in (FATTO_PART_TIME, FATTO_TIPO_PART_TIME) if f not in fatti_periodo)
         if fatto_servizio and fatto_servizio not in fatti_periodo:
             fatti_periodo = (fatto_servizio, *fatti_periodo)
         self.fatti_periodo_dichiarato = fatti_periodo
