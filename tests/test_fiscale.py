@@ -677,3 +677,8 @@ def test_l_istituto_dichiara_il_pagamento_fisiologico_con_date_e_riferimento():
     assert (dichiarazione.istituto, dichiarazione.riferimento) == ("stipendio", "fittizio:fisiologico-stipendio")
     assert corpus.pagamento_fisiologico("stipendio", date(2027, 1, 13)) is None
     assert corpus.pagamento_fisiologico("gettone", date(2026, 6, 1)) is None
+
+
+def test_il_pagamento_fisiologico_di_un_istituto_ignoto_e_rifiutato():
+    with pytest.raises(ErroreCorpus, match="istituto ignoto"):
+        Corpus.da_toml(TESTO + FISIOLOGICO.replace('"stipendio"', '"premio_inesistente"'))
