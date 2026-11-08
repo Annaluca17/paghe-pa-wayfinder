@@ -22,7 +22,7 @@ from .calcolo import _somma_righe
 from .corpus import Corpus
 from .denuncia import MATURAZIONI_DERIVATE, calcola_denuncia
 from .errori import CasoNonModellato, ClassificazioneMancante, ComposizioneMancante, ErroreCalcolo, ErroreRegistro, RedditoMancante
-from .impegni import AUTOMATICO, Abbinamento, DisponibilitaImpegni
+from .impegni import AUTOMATICO, Abbinamento, DisponibilitaImpegni, registra_cambio_abbinamento
 from .fisco import Avviso, _controlla_competenza, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
 from .modello import Esito, Evento, Importo, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, Registro
@@ -703,10 +703,52 @@ def _da_inviata(registro: Registro, versione_id: int, azione: str) -> None:
         raise ErroreRegistro(f"Versione {versione_id}: non si {azione} una versione {stato}")
 
 
-def conferma_versione(registro: Registro, versione_id: int) -> None:
-    """La Ragioneria accetta la versione. Non corregge mai un importo: l'importo si corregge solo con un fatto."""
+def conferma_versione(registro: Registro, versione_id: int, abbinamenti=None) -> tuple[Avviso, ...]:
+    """La Ragioneria accetta la versione. Non corregge mai un importo: l'importo si corregge solo con un fatto.
+
+    `abbinamenti` mappa la chiave di una riga di proposta all'impegno (esercizio, numero) scelto dalla Ragioneria:
+    deve essere già noto come fatto contabile e avere la stessa classificazione, altrimenti la conferma è rifiutata
+    e non si registra nulla. Un impegno incapiente non blocca: restituisce un avviso e lo conserva nella traccia.
+    """
     _da_inviata(registro, versione_id, "conferma")
-    registro.registra_stato_versione(versione_id, StatoVersione.CONFERMATA)
+    istante = registro.adesso()
+    cambi = []
+    avvisi: list[Avviso] = []
+    if abbinamenti:
+        versione = leggi_versione(registro, versione_id)
+        righe = {riga.chiave: riga for riga in versione.righe_proposta}
+        disponibilita = DisponibilitaImpegni(registro, istante)
+        for chiave, scelto in sorted(abbinamenti.items(), key=lambda voce: str(voce[0])):
+            riga = righe.get(chiave)
+            if riga is None:
+                raise ErroreRegistro(f"Versione {versione_id}: {chiave} non è una riga di proposta della versione")
+            impegno = disponibilita.noti.get(tuple(scelto))
+            if impegno is None:
+                raise ErroreRegistro(f"Impegno {scelto[0]}/{scelto[1]} non noto: la conferma è rifiutata")
+            if (impegno.piano_dei_conti, impegno.missione, impegno.programma) != chiave[:3]:
+                raise ErroreRegistro(
+                    f"Impegno {scelto[0]}/{scelto[1]}: classificazione diversa da quella della riga, la conferma è rifiutata"
+                )
+            if impegno.chiave == riga.impegno:
+                continue
+            residua = disponibilita.residua(impegno)
+            incapiente = residua < riga.totale
+            if incapiente:
+                avvisi.append(
+                    Avviso(
+                        "impegno_incapiente",
+                        f"Impegno {impegno.esercizio}/{impegno.numero}: disponibilità residua {residua} per una riga di "
+                        f"{riga.totale}, mancano {riga.totale - residua}",
+                        f"versione {versione_id}",
+                        valore=riga.totale - residua,
+                    )
+                )
+            cambi.append((chiave, riga.impegno, impegno.chiave, incapiente))
+    with registro.atomico():
+        for chiave, proposto, scelto, incapiente in cambi:
+            registra_cambio_abbinamento(registro, versione_id, chiave, proposto, scelto, incapiente)
+        registro.registra_stato_versione(versione_id, StatoVersione.CONFERMATA)
+    return tuple(avvisi)
 
 
 def respingi_versione(registro: Registro, versione_id: int, motivo: str) -> None:

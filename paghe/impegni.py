@@ -202,3 +202,42 @@ def disponibilita_residua(registro: Registro, esercizio: int, numero: int, noto_
     if impegno is None:
         raise ErroreRegistro(f"Impegno {esercizio}/{numero} non noto al {istante}")
     return disponibilita.residua(impegno)
+
+
+@dataclass(frozen=True)
+class CambioAbbinamento:
+    """Traccia di una conferma: per la riga, l'impegno proposto dal modello e quello scelto dalla Ragioneria."""
+
+    riga: tuple[str, str, str, tuple[int, int] | None]
+    proposto: tuple[int, int] | None
+    scelto: tuple[int, int]
+    incapiente: bool
+
+
+def registra_cambio_abbinamento(
+    registro: Registro, versione_id: int, riga: tuple, proposto: tuple[int, int] | None, scelto: tuple[int, int], incapiente: bool
+) -> None:
+    contenuto = {
+        "riga": chiave_riga(*riga),
+        "proposto": list(proposto) if proposto else None,
+        "scelto": list(scelto),
+        "incapiente": incapiente,
+    }
+    chiave = f"abbinamento:{versione_id}:{json.dumps(contenuto['riga'])}"
+    registro.registra_evento(chiave, TIPO_ABBINAMENTO, contenuto, "ragioneria", versione_id)
+
+
+def abbinamenti_confermati(registro: Registro, versione_id: int, noto_al: datetime | None = None) -> tuple[CambioAbbinamento, ...]:
+    """I cambi di abbinamento che la Ragioneria ha fatto confermando la versione."""
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    return tuple(
+        CambioAbbinamento(
+            (e.contenuto["riga"][0], e.contenuto["riga"][1], e.contenuto["riga"][2],
+             tuple(e.contenuto["riga"][3]) if e.contenuto["riga"][3] else None),
+            tuple(e.contenuto["proposto"]) if e.contenuto["proposto"] else None,
+            tuple(e.contenuto["scelto"]),
+            e.contenuto["incapiente"],
+        )
+        for e in registro.eventi(TIPO_ABBINAMENTO, istante)
+        if e.versione_id == versione_id
+    )
