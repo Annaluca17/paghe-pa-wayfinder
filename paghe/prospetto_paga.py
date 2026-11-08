@@ -103,9 +103,11 @@ def prospetto_paga(
         tipo: _vigente(registro.fatti_persona_noti(persona, tipo, istante), data) if persona else None for tipo in PERSONA
     }
     ente = {tipo: _vigente(registro.fatti_ente_noti(tipo, istante), data) for tipo in ENTE}
-    posizione = _vigente(registro.fatti_noti(rapporto, regime.posizione, istante), data) if regime.posizione else None
+    # Posizione e fine servizio sono del periodo pagato, non del giorno di pagamento: un rapporto cessato prima conserva la sua.
+    periodo = max((riga.periodo.al for riga in (sul_netto or importi)), default=data)
+    posizione = _vigente(registro.fatti_noti(rapporto, regime.posizione, istante), periodo) if regime.posizione else None
     fine_servizio = (
-        _vigente(registro.fatti_noti(rapporto, regime.fine_servizio, istante), data) if regime.fine_servizio else None
+        _vigente(registro.fatti_noti(rapporto, regime.fine_servizio, istante), periodo) if regime.fine_servizio else None
     )
     # Il contenuto dell'art. 1 L. 4/1953 ferma il prospetto: nome, cognome, codice fiscale, posizione, voci.
     mancanti = tuple(

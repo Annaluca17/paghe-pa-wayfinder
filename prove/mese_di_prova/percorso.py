@@ -30,6 +30,8 @@ from paghe import (
     differenze,
     emetti_versione,
     lista_pos_pa,
+    prospetto_paga,
+    registra_messa_a_disposizione,
     registra_pagamento_eseguito,
     registra_ricevuta_delega,
     rapporti_della_vista,
@@ -60,6 +62,7 @@ PASSI = (
     "versione",
     "conferma",
     "pagamento",
+    "prospetto_paga",
     "denuncia",
     "lista_pos_pa",
     "lista_collaboratori",
@@ -74,6 +77,7 @@ NOMI_PASSI = {
     "versione": "Versione di proposta",
     "conferma": "Conferma della Ragioneria",
     "pagamento": "Pagamento eseguito",
+    "prospetto_paga": "Prospetto paga",
     "denuncia": "Denuncia",
     "lista_pos_pa": "ListaPosPA",
     "lista_collaboratori": "Lista collaboratori",
@@ -568,6 +572,48 @@ def _conferma_e_pagamento(c: _Contesto, tag: str, versione, valuta: date, giorno
     for avviso in risultato.avvisi:
         rapporto = next((r for r, p in persone.items() if p == avviso.persona), avviso.persona)
         passo.note.append(f"avviso {avviso.tipo}: {rapporto}")
+    if tag != PREPARAZIONE:
+        _prospetti(c, tag, esito, valuta, versione.rapporti)
+
+
+def _prospetti(c: _Contesto, tag: str, esito, valuta: date, rapporti) -> None:
+    """Un prospetto per ogni rapporto pagato dell'esito: si mette a disposizione solo se consegnabile, e non ferma altri passi."""
+    passo = c.passo(tag, "prospetto_paga")
+    avvisi: dict[str, list[str]] = {}
+    for rapporto in sorted(rapporti):
+        try:
+            prospetto = prospetto_paga(c.registro, c.corpus, rapporto, esito.id)
+        except ErrorePaghe as errore:
+            passo.fermi.append(Fermo(tag, "prospetto_paga", (rapporto,), f"prospetto paga: {causa_di(str(errore))}", str(errore)))
+            continue
+        for fermo in prospetto.fermi:
+            passo.fermi.append(Fermo(tag, "prospetto_paga", (rapporto,), f"prospetto paga: {causa_di(fermo)}", fermo))
+        for dato in prospetto.mancanti:
+            passo.fermi.append(
+                Fermo(tag, "prospetto_paga", (rapporto,), f"prospetto paga: dato mancante {dato}", f"dato mancante {dato}")
+            )
+        riga = (
+            f"{rapporto}: prospetto del pagamento del {prospetto.data_pagamento} (esito {esito.id}), posizione "
+            f"{prospetto.posizione or '-'}, {len(prospetto.righe_sul_netto)} righe sul netto, netto {_soldi(prospetto.netto)}, "
+            f"{len(prospetto.senza_effetto)} senza effetto sul netto"
+        )
+        if prospetto.consegnabile:
+            c.vai(valuta + timedelta(days=1))
+            messa = registra_messa_a_disposizione(
+                c.registro, c.corpus, rapporto, esito.id, f"prospetto-{tag}-{rapporto}-{esito.id}", valuta + timedelta(days=1),
+                f"area-riservata:{tag}-{rapporto}", ADATTATORE,
+            )
+            c.ufficio.conta("evento", tag, "messa a disposizione del prospetto paga")
+            c.orologio.avanza()
+            riga += f"; consegnato, esito dichiarato {messa.esito.id}"
+        passo.riuscito.append(riga)
+        for dato in prospetto.avvisi:
+            avvisi.setdefault(dato, []).append(rapporto)
+    passo.note.extend(f"avviso {dato}: {', '.join(chi)}" for dato, chi in sorted(avvisi.items()))
+    passo.fittizio.append(
+        "la messa a disposizione e' simulata dal percorso (giorno dopo il pagamento, riferimento di canale di fantasia); "
+        "la posizione di sindaco e collaboratori e la composizione sono dichiarate dal corpus fittizio"
+    )
 
 
 def _ente_e_mittente() -> tuple[Ente, Mittente]:

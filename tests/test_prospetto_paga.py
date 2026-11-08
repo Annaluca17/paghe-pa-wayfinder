@@ -45,12 +45,12 @@ def persona(registro, rapporto, cognome="PROVA", nome="NOME"):
     registro.collega_rapporto(rapporto, f"P-{rapporto}", date(2026, 1, 1))
 
 
-def dipendente(registro, qualifica="0FZEQF"):
+def dipendente(registro, qualifica="0FZEQF", fino_al=None):
     persona(registro, DIP)
-    registro.registra_codice(DIP, "tipo_impiego", "1", date(2026, 1, 1))
-    registro.registra_codice(DIP, "area", "funzionari", date(2026, 1, 1))
+    registro.registra_codice(DIP, "tipo_impiego", "1", date(2026, 1, 1), fino_al)
+    registro.registra_codice(DIP, "area", "funzionari", date(2026, 1, 1), fino_al)
     if qualifica is not None:
-        registro.registra_codice(DIP, "qualifica", qualifica, date(2026, 1, 1))
+        registro.registra_codice(DIP, "qualifica", qualifica, date(2026, 1, 1), fino_al)
 
 
 def paga(registro, orologio, corpus, rapporto, mese=NOVEMBRE, giorno=PAGAMENTO):
@@ -310,3 +310,9 @@ def test_un_fatto_cambiato_dopo_la_consegna_si_segnala_con_l_ultimo_esito_dichia
     # La correzione e' una nuova messa a disposizione: l'ultimo esito dichiarato diventa il confronto.
     consegna(registro, corpus, esito, chiave="consegna-2")
     assert segnala_scostamento_prospetto(registro, corpus, DIP, esito.id) == ()
+
+
+def test_la_posizione_e_quella_del_periodo_pagato_anche_se_il_rapporto_e_cessato_prima_del_pagamento(registro, corpus, orologio):
+    dipendente(registro, fino_al=date(2026, 11, 14))
+    esito = paga(registro, orologio, corpus, DIP)
+    assert prospetto_paga(registro, corpus, DIP, esito.id).posizione == "0FZEQF"
