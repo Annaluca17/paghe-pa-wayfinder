@@ -245,9 +245,15 @@ riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circo
 # IRAP, acconto mensile a carico dell'ente (ticket #81, ADR 0028): base propria, per cassa. Dipendenti: imponibile
 # previdenziale del pagamento, la stessa composizione della base CPDEL (prassi: ris. AdE 29/E/2010). Non coincide con la
 # base CPDEL in tre punti: non ha il massimale annuo, e per co.co.co. e amministratori segue l'importo IRPEF.
+#
+# Esclusione dalla base IRAP: un fatto datato sul rapporto, con il motivo, toglie dalla base i pagamenti fatti mentre vale
+# (art. 11 c. 1 lett. a n. 5 D.Lgs. 446/1997; istruzioni IRAP, rigo IK4: prassi; limiti delle ris. 64/E e 139/E del 2006 da
+# verificare). Per il modello e' un'esclusione dall'acconto, che la dichiarazione tratta come deduzione.
 [[base]]
 nome = "irap"
-riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art11-com1-leta-num5 + prassi:ade:risoluzione:2010-04-15;29-E"
+esclusione = "esclusione_base_irap"
+motivi_esclusione = ["disabile", "apprendista", "cfl"]
 
 # Aliquote, in punti percentuali
 

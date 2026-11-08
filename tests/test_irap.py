@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from paghe import Atto, Corpus, Mese, TipoEsito, calcola, calcola_denuncia, emetti_esito
+from paghe.errori import CasoNonModellato
 
 CORPUS = Path(__file__).resolve().parent.parent / "corpus" / "funzioni-locali-cpdel.toml"
 R = "RAPPORTO-1"
@@ -91,3 +92,33 @@ def test_l_indennita_dimezzata_entra_nella_base_per_l_importo_pagato(registro, r
     v = valori(registro, reale)
     assert v["base.irap"] == D("1500.00")  # 3.000,00 meno il dimezzamento di 1.500,00 (art. 82 c. 1 TUEL)
     assert v["irap_acconto"] == D("127.50")
+
+
+def esclusione(registro, motivo="disabile", dal=date(2026, 11, 1), al=None):
+    registro.registra_codice(R, "esclusione_base_irap", motivo, dal, al, atto=ATTO)
+
+
+@pytest.mark.parametrize("motivo", ["disabile", "apprendista", "cfl"])
+def test_una_persona_esclusa_per_tutto_il_mese_non_ha_ne_base_ne_acconto(registro, reale, orologio, motivo):
+    assumi(registro)
+    esclusione(registro, motivo)
+    paga_il_mese(registro, orologio, reale)
+    v = valori(registro, reale)
+    assert "base.irap" not in v and "irap_acconto" not in v
+    assert v["base.cpdel"] == D("2051.69")  # l'esclusione e' solo dell'IRAP, la previdenza non cambia
+
+
+def test_l_esclusione_vale_per_i_pagamenti_dopo_la_sua_decorrenza(registro, reale, orologio):
+    assumi(registro)
+    esclusione(registro, dal=date(2026, 11, 20))
+    paga(registro, orologio, calcola(registro, reale, R, Mese(2026, 11)), date(2026, 11, 10))
+    (periodo,) = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
+    assert periodo.base("irap").valore == D("2051.69")  # pagato il 10 novembre: la persona non era ancora esclusa
+
+
+def test_un_motivo_di_esclusione_non_ammesso_ferma_il_calcolo_e_lo_nomina(registro, reale, orologio):
+    assumi(registro)
+    esclusione(registro, "motivo_inventato")
+    paga_il_mese(registro, orologio, reale)
+    with pytest.raises(CasoNonModellato, match="motivo_inventato"):
+        calcola_denuncia(registro, reale, R, Mese(2026, 11))
