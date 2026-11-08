@@ -6,7 +6,7 @@ Il **prospetto paga** è una **vista** del modello (ADR 0022). Se ne produce uno
 - in testa ente, persona con codice fiscale, posizione (qualifica, oppure carica o incarico), tipo di fine servizio, data di pagamento;
 - le righe con effetto sul netto (competenze e trattenute), ognuna con il suo periodo, così gli arretrati si vedono;
 - il netto del rapporto in quel pagamento;
-- separate, le righe senza effetto sul netto: contributi a carico dell'ente, imponibili TFS e TFR, IRAP, oneri dell'art. 86.
+- separate, le righe senza effetto sul netto: contributi a carico dell'ente, IRAP, oneri dell'art. 86. Gli istituti che la dichiarazione di composizione dice intermedi, come gli imponibili TFS e TFR, non sono righe dell'esito pagato e non compaiono.
 
 Detrazioni, imponibile fiscale, progressivi annui, ferie residue e TFR maturato **non** entrano finché non sono importi di un esito: sarebbero calcoli nuovi.
 
@@ -32,4 +32,5 @@ Scelto da Luca l'08/11/2026 nel grilling del ticket #86, domande 1–7.
 
 - Un rapporto senza esito pagato nel pagamento non ha prospetto; un rapporto fermo nella versione non lo ha.
 - La consegna elettronica richiede un adattatore per canale, fuori dal nucleo.
+- L'esito dichiarato del prospetto è dello stesso tipo di quelli della delega e della DenunciaIndividuale: un confronto con «l'ultimo dichiarato» di un rapporto deve dire di quale vista, oggi nessuno lo fa nel codice di produzione.
 - Quando detrazioni o saldo ferie diventeranno importi di un esito, entrano nel prospetto senza cambiare la vista.
