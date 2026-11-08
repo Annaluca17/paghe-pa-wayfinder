@@ -3,14 +3,15 @@
 # Si carica DOPO corpus/funzioni-locali-cpdel.toml, unita al testo del corpus reale, e il corpus che ne risulta e
 # NON reale (Corpus.da_toml(..., reale=False)): il corpus reale rifiuta i riferimenti `fittizio:` (ADR 0003).
 #
-# Tutti i riferimenti qui sono `fittizio:`. I valori fiscali (franchigia, aliquota, detrazione) sono dichiaratamente
-# finti e non corrispondono a nessuna norma. Questo file da' valori ai parametri e alle dichiarazioni che mancano
-# al corpus reale (categorie di reddito, ritenuta, conguaglio, composizione, mappatura, catalogo dei codici F24EP,
-# scadenza, festivi) e dichiara gli istituti performance e rimborso 730-4: nessuna regola di
-# calcolo nuova, solo l'input da atto letto cosi' com'e'. I codici tributo sono quelli di
+# Tutti i riferimenti qui sono `fittizio:`. Il fisco nazionale (scaglioni IRPEF, detrazioni, categorie di reddito, ritenuta,
+# conguaglio, deduzioni, parametri e regola delle addizionali, dichiarazioni di reddito degli istituti reali) e' passato nel
+# corpus reale con il ticket #93: qui resta solo cio' che non ha una fonte reale. Cioe': il primo mese del rimborso 730-4,
+# la categoria di reddito della performance (istituto fittizio), le aliquote dell'addizionale del comune X001 e della regione 98,
+# la composizione del pagamento, la mappatura, il catalogo dei codici F24EP, la scadenza e i festivi, e gli istituti performance
+# e rimborso 730-4: nessuna regola di calcolo nuova, solo l'input da atto letto cosi' com'e'. I codici tributo sono quelli di
 # docs/research/versamenti-f24ep.md.
 
-# --- Parametri fiscali: valori finti ---
+# --- Parametri: valori finti ---
 
 # Il primo mese utile per operare il rimborso del 730-4 (dell'anno dopo i redditi dichiarati): luglio.
 [[parametro]]
@@ -20,16 +21,6 @@ dal = 2025-01-01
 valore = "7"
 riferimento = "fittizio:rimborso-730-primo-mese"
 
-# --- Categoria di reddito, ritenuta e conguaglio ---
-
-# Categorie del co.co.co. e dell'amministratore (ticket #73, PR B): CU punti 1-2 e punto 4. Valori fiscali finti come il resto.
-# Dichiarazione ASSUNTA: i contributi a carico del lavoratore riducono l'imponibile fiscale (art. 51 c. 2 lett. a TUIR,
-# letto su riproduzione; nel corpus reale il riferimento va riletto su Normattiva).
-
-# Dichiarazione ASSUNTA: la quota a carico del collaboratore della gestione separata riduce l'imponibile fiscale
-# (art. 10 c. 1 lett. e TUIR, non riletto su Normattiva).
-# Dichiarazione ASSUNTA: anche l'1% aggiuntivo a carico del lavoratore riduce l'imponibile fiscale (ticket #73: dirigente e
-# segretario superano la prima fascia mensile gia' a marzo).
 # --- Due istituti che leggono un fatto (input da atto), senza regola di calcolo ---
 # La performance e' di competenza 2025 e pagata nel 2026: pagamento fisiologico dichiarato qui sotto.
 # Il rimborso da 730-4 ha maturazione `periodo`: e' l'unica maturazione che non produce reddito imponibile ne' entra
@@ -60,7 +51,7 @@ istituto = "performance"
 dal = 2026-01-01
 riferimento = "fittizio:performance-pagamento-fisiologico"
 
-# --- Reddito: gli istituti retributivi sono lavoro dipendente (anche dirigente e segretario, ticket #73) ---
+# --- Reddito: la performance e' un istituto fittizio, la sua categoria non ha una fonte reale. Gli istituti reali sono nel corpus reale ---
 
 [[reddito]]
 istituto = "performance"
@@ -748,8 +739,8 @@ dal = 2025-01-01
 riferimento = "fittizio:mappatura-onere-art86"
 
 # --- Addizionali regionale e comunale (ticket #85, ADR 0029) ---
-# Valori finti: comune X001 e regione 98 non esistono, le aliquote sono di fantasia. La regola e i tre parametri datati
-# (percentuale dell'acconto, primo mese dell'acconto, ultimo mese delle rate) sono quelli dell'ADR 0029, con fonte fittizia.
+# Valori finti: comune X001 e regione 98 non esistono, le aliquote sono di fantasia. La regola e i tre parametri nazionali
+# (percentuale dell'acconto, primo mese dell'acconto, ultimo mese delle rate) sono nel corpus reale.
 
 [[aliquota_addizionale]]
 ente = "comune"
