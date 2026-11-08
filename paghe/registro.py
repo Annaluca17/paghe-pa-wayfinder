@@ -84,6 +84,10 @@ TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
 TIPO_IBAN = "iban"
 # Esito 730-4 minimo: fatto della persona, valore JSON con il rimborso e l'anno dei redditi dichiarati.
 TIPO_ESITO_730_4 = "esito_730_4"
+# Addizionali (ticket #85, ADR 0029): domicilio fiscale della persona (valore JSON con comune e regione) e reddito
+# dell'anno prima preso dalla CU, per l'acconto quando il modello non ha il conguaglio di quell'anno.
+TIPO_DOMICILIO_FISCALE = "domicilio_fiscale"
+TIPO_REDDITO_ANNO_PRECEDENTE = "reddito_anno_precedente"
 # Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
 # Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
 TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
@@ -337,6 +341,43 @@ class Registro:
             raise ErroreRegistro(f"Esito 730-4: l'anno dei redditi dichiarati e' un numero intero, {anno_redditi!r}")
         valore = json.dumps({"anno_redditi": anno_redditi, "rimborso": str(rimborso)}, sort_keys=True)
         return self.registra_codice_persona(persona, TIPO_ESITO_730_4, valore, valido_dal, None, atto)
+
+    def registra_domicilio_fiscale(
+        self,
+        persona: str,
+        comune: str,
+        regione: str,
+        valido_dal: date,
+        valido_al: date | None = None,
+        atto: Atto | None = None,
+    ) -> Fatto:
+        """Domicilio fiscale della persona (ADR 0029): codice catastale del comune e codice della regione, datati.
+
+        Per le addizionali conta quello vigente al 1° gennaio dell'anno d'imposta.
+        """
+        for nome, valore in (("comune", comune), ("regione", regione)):
+            if not isinstance(valore, str) or not valore.strip():
+                raise ErroreRegistro(f"Domicilio fiscale: il codice {nome} è obbligatorio, {valore!r}")
+        valore = json.dumps({"comune": comune.strip(), "regione": regione.strip()}, sort_keys=True)
+        return self.registra_codice_persona(persona, TIPO_DOMICILIO_FISCALE, valore, valido_dal, valido_al, atto)
+
+    def registra_reddito_anno_precedente(
+        self, persona: str, anno_del_reddito: int, reddito: Decimal | int | str, atto: Atto | None
+    ) -> Fatto:
+        """Reddito imponibile dell'anno prima, dalla CU: vale per tutto l'anno dopo `anno_del_reddito` (ADR 0029).
+
+        Lo legge l'acconto dell'addizionale comunale quando il modello non ha il conguaglio di quell'anno. Zero è un valore.
+        """
+        if atto is None:
+            raise ErroreRegistro("Il reddito dell'anno precedente vuole il documento di origine (la CU)")
+        if not isinstance(anno_del_reddito, int) or isinstance(anno_del_reddito, bool):
+            raise ErroreRegistro(f"Reddito dell'anno precedente: l'anno è un numero intero, {anno_del_reddito!r}")
+        importo = _in_decimale(reddito)
+        if importo < 0:
+            raise ErroreRegistro(f"Reddito dell'anno precedente: un importo non negativo, {reddito!r}")
+        return self.registra_fatto_persona(
+            persona, TIPO_REDDITO_ANNO_PRECEDENTE, importo, date(anno_del_reddito + 1, 1, 1), date(anno_del_reddito + 1, 12, 31), atto
+        )
 
     def collega_rapporto(
         self, rapporto: str, persona: str, valido_dal: date, valido_al: date | None = None, atto: Atto | None = None
