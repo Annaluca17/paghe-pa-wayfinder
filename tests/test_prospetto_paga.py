@@ -164,3 +164,43 @@ riferimento = "fittizio:prospetto-doppio"
     esito = paga(registro, orologio, doppio, SINDACO)
     with pytest.raises(VistaFerma, match="R-SINDACO.*più regimi"):
         prospetto_paga(registro, doppio, SINDACO, esito.id)
+
+
+def test_senza_posizione_il_prospetto_non_e_consegnabile_e_il_dato_si_nomina(registro, corpus, orologio):
+    dipendente(registro, qualifica=None)
+    esito = paga(registro, orologio, corpus, DIP)
+    prospetto = prospetto_paga(registro, corpus, DIP, esito.id)
+    assert prospetto.mancanti == ("posizione",)
+    assert not prospetto.consegnabile
+
+
+def test_senza_cognome_nome_o_codice_fiscale_il_prospetto_non_e_consegnabile(registro, corpus, orologio):
+    dipendente(registro)
+    registro.annulla_fatto(registro.fatti_persona_noti("P-R-DIP", "cognome", registro.adesso())[0].id, "prova")
+    registro.annulla_fatto(registro.fatti_persona_noti("P-R-DIP", "codice_fiscale", registro.adesso())[0].id, "prova")
+    esito = paga(registro, orologio, corpus, DIP)
+    prospetto = prospetto_paga(registro, corpus, DIP, esito.id)
+    assert prospetto.mancanti == ("codice_fiscale", "cognome")
+    assert not prospetto.consegnabile
+
+
+def test_senza_voci_sul_netto_il_prospetto_non_e_consegnabile(registro, orologio):
+    corpus = Corpus.da_toml(
+        REALE + FITTIZIO + """
+[[output]]
+vista = "prospetto_paga"
+regime = "solo_oneri"
+istituti = ["onere_art86"]
+posizione = "carica"
+dal = 2025-01-01
+riferimento = "fittizio:prospetto-solo-oneri"
+""",
+        reale=False,
+    )
+    sindaco(registro)
+    orologio.vai(11, 27)
+    solo_onere = [i for i in calcola(registro, corpus, SINDACO, NOVEMBRE) if i.istituto == "onere_art86"]
+    esito = emetti_esito(registro, TipoEsito.PAGATO, PAGAMENTO, solo_onere)
+    registro.registra_pagamento(SINDACO, esito.id, PAGAMENTO)
+    prospetto = prospetto_paga(registro, corpus, SINDACO, esito.id)
+    assert prospetto.mancanti == ("voci",)

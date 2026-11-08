@@ -38,6 +38,7 @@ class ProspettoPaga:
     senza_effetto: tuple[RigaProspetto, ...]
     data_pagamento: date
     fermi: tuple[str, ...] = ()
+    mancanti: tuple[str, ...] = ()
     ente_codice_fiscale: str | None = None
     ente_denominazione: str | None = None
     codice_fiscale: str | None = None
@@ -52,7 +53,7 @@ class ProspettoPaga:
 
     @property
     def consegnabile(self) -> bool:
-        return not self.fermi
+        return not (self.fermi or self.mancanti)
 
 
 def _vigente(fatti: list[Fatto], giorno: date) -> str | None:
@@ -99,6 +100,22 @@ def prospetto_paga(
         tipo: _vigente(registro.fatti_persona_noti(persona, tipo, istante), data) if persona else None for tipo in PERSONA
     }
     ente = {tipo: _vigente(registro.fatti_ente_noti(tipo, istante), data) for tipo in ENTE}
+    posizione = _vigente(registro.fatti_noti(rapporto, regime.posizione, istante), data) if regime.posizione else None
+    fine_servizio = (
+        _vigente(registro.fatti_noti(rapporto, regime.fine_servizio, istante), data) if regime.fine_servizio else None
+    )
+    # Il contenuto dell'art. 1 L. 4/1953 ferma il prospetto: nome, cognome, codice fiscale, posizione, voci.
+    mancanti = tuple(
+        dato
+        for dato, presente in (
+            ("codice_fiscale", anagrafica["codice_fiscale"]),
+            ("cognome", anagrafica["cognome"]),
+            ("nome", anagrafica["nome"]),
+            ("posizione", posizione),
+            ("voci", sul_netto),
+        )
+        if not presente
+    )
     return ProspettoPaga(
         rapporto,
         esito_id,
@@ -106,11 +123,12 @@ def prospetto_paga(
         senza_effetto,
         data,
         tuple(fermi),
+        mancanti,
         ente["codice_fiscale"],
         ente["denominazione"],
         anagrafica["codice_fiscale"],
         anagrafica["cognome"],
         anagrafica["nome"],
-        _vigente(registro.fatti_noti(rapporto, regime.posizione, istante), data) if regime.posizione else None,
-        _vigente(registro.fatti_noti(rapporto, regime.fine_servizio, istante), data) if regime.fine_servizio else None,
+        posizione,
+        fine_servizio,
     )
