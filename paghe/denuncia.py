@@ -192,7 +192,9 @@ def _recuperi(
     righe: list[Importo] = []
     for base in periodo.basi:
         for riga in base.derivazione.importi:
-            if riga.valore < 0 and riga not in righe:
+            # Una riga negativa calcolata su un altro importo, come il dimezzamento dell'indennita' di funzione, e' una
+            # riduzione dello stesso pagamento: non recupera nulla (ticket #81).
+            if riga.valore < 0 and not riga.derivazione.importi and riga not in righe:
                 righe.append(riga)
     if not righe:
         return ()
@@ -209,13 +211,18 @@ def _recuperi(
 
 
 def _base_del_periodo(
-    base: Base, righe: list[_RigaPagata], periodo: Periodo, corpus: Corpus, istante: datetime
+    base: Base, righe: list[_RigaPagata], periodo: Periodo, corpus: Corpus, istante: datetime, esclusione=lambda giorno: None
 ) -> Importo | None:
-    """Una dichiarazione assente o parziale ferma il calcolo; un istituto escluso resta tracciato."""
+    """Una dichiarazione assente o parziale ferma il calcolo; un istituto escluso resta tracciato.
+
+    `esclusione(giorno)` e' il fatto che toglie la persona dalla base alla data di pagamento, se la base lo dichiara.
+    """
     entrano: list[_RigaPagata] = []
     letti: list[ConcorsoLetto] = []
     for riga in righe:
         importo = riga.importo
+        if esclusione(importo.data_pagamento) is not None:
+            continue
         concorso = corpus.concorso(importo.istituto, base.nome, importo.data_pagamento)
         if concorso is None:
             raise ConcorsoMancante(
@@ -254,6 +261,24 @@ def _base_del_periodo(
             concorsi=tuple(letti),
         ),
     )
+
+
+def _esclusione(lettore: _Lettore, base: Base):
+    """Il fatto di esclusione della base valido alla data di pagamento; un motivo non ammesso ferma il calcolo."""
+    if base.esclusione is None:
+        return lambda giorno: None
+    noti = lettore.registro.fatti_noti(lettore.rapporto, base.esclusione, lettore.noto_al)
+
+    def alla_data(giorno: date) -> Fatto | None:
+        fatto = next((f for f in reversed(noti) if f.copre(giorno)), None)
+        if fatto is not None and str(fatto.valore) not in base.motivi_esclusione:
+            raise CasoNonModellato(
+                f"Rapporto {lettore.rapporto}: caso non modellato, il motivo {fatto.valore} del fatto {base.esclusione} "
+                f"non e' uno di {', '.join(base.motivi_esclusione)}"
+            )
+        return fatto
+
+    return alla_data
 
 
 def _base_dei_mesi_prima(registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, base: Base, istante: datetime) -> Decimal:
@@ -450,7 +475,8 @@ def _denuncia(
             importo
             for importo in (
                 _con_massimale(
-                    _base_del_periodo(base, gruppi[periodo], periodo, corpus, istante), base, cumulato, corpus, mese, dei_mesi_prima
+                    _base_del_periodo(base, gruppi[periodo], periodo, corpus, istante, _esclusione(lettore, base)),
+                    base, cumulato, corpus, mese, dei_mesi_prima
                 )
                 for base in corpus.basi()
             )

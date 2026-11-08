@@ -83,7 +83,9 @@ def test_l_indennita_non_entra_in_nessuna_base_previdenziale(registro, reale, or
     misura(registro)
     paga(registro, orologio, calcola(registro, reale, R, Mese(2026, 11)), date(2026, 11, 27))
     (periodo,) = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
-    assert (periodo.basi, periodo.contributi) == ((), ())  # nessuna base e quindi nessun contributo, nemmeno in gestione separata
+    # nessuna base previdenziale e quindi nessun contributo, nemmeno in gestione separata: resta solo la base IRAP (ticket #81)
+    assert {base.istituto for base in periodo.basi} == {"base.irap"}
+    assert {contributo.istituto for contributo in periodo.contributi} == {"irap_acconto"}
 
 
 def test_senza_la_condizione_lavorativa_l_indennita_non_si_paga_piena_in_silenzio(registro, reale):
@@ -155,4 +157,6 @@ def test_la_quota_e_un_onere_dell_ente_non_e_reddito_ne_base(registro, reale, or
     assert {r.derivazione.maturazione for r in righe if r.istituto == "onere_art86"} == {"onere"}
     paga(registro, orologio, righe, date(2026, 11, 27))
     (periodo,) = calcola_denuncia(registro, reale, R, Mese(2026, 11)).periodi
-    assert (periodo.basi, periodo.contributi) == ((), ())
+    assert {base.istituto for base in periodo.basi} == {"base.irap"}  # l'onere non e' nella base, nemmeno in quella IRAP
+    assert {base.istituto: base.valore for base in periodo.basi}["base.irap"] == Decimal("3000.00")
+    assert {contributo.istituto for contributo in periodo.contributi} == {"irap_acconto"}

@@ -199,14 +199,21 @@ class Base:
 
     Con `massimale`, il nome di un parametro annuo, la base di ogni mese si limita a cio' che resta sotto il massimale,
     sommando i mesi dell'anno nello stesso ente (ticket #73, gestione separata). Un altro committente ferma con un fermo.
+
+    Con `esclusione`, il tipo di un fatto categoriale del rapporto, i pagamenti fatti mentre il fatto vale non entrano
+    nella base; il codice del fatto e' il motivo e deve essere uno di `motivi_esclusione` (ticket #81, IRAP).
     """
 
     nome: str
     riferimento: str
     massimale: str | None = None
+    esclusione: str | None = None
+    motivi_esclusione: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         _riferimento_obbligatorio(self.riferimento, f"Base {self.nome}")
+        if self.esclusione is not None and not self.motivi_esclusione:
+            raise ErroreCorpus(f"Base {self.nome}: l'esclusione vuole l'elenco dei motivi ammessi")
         if self.massimale is not None and (not isinstance(self.massimale, str) or not self.massimale.strip()):
             raise ErroreCorpus(f"Base {self.nome}: il massimale e' il nome di un parametro")
 
@@ -1130,7 +1137,8 @@ class Corpus:
             "fatti_periodo_dichiarato": sorted(self.fatti_periodo_dichiarato),
             "servizio": self.fatto_servizio,
             "basi": [
-                [base.nome, base.riferimento, *([base.massimale] if base.massimale else [])]
+                [base.nome, base.riferimento, *([base.massimale] if base.massimale else []),
+                 *(["esclusione", base.esclusione, sorted(base.motivi_esclusione)] if base.esclusione else [])]
                 for _, base in sorted(self._basi.items())
             ],
             "concorsi": sorted(
@@ -1397,7 +1405,13 @@ class Corpus:
             dati = tomllib.loads(testo)
             parametri = tuple(_parametro_da_toml(voce) for voce in dati.get("parametro", []))
             regole = tuple(_regola_da_toml(voce) for voce in dati.get("regola", []))
-            basi = tuple(Base(voce["nome"], voce["riferimento"], voce.get("massimale")) for voce in dati.get("base", []))
+            basi = tuple(
+                Base(
+                    voce["nome"], voce["riferimento"], voce.get("massimale"), voce.get("esclusione"),
+                    tuple(voce.get("motivi_esclusione", ())),
+                )
+                for voce in dati.get("base", [])
+            )
             concorsi = tuple(concorso for voce in dati.get("concorso", []) for concorso in _concorsi_da_toml(voce))
             fermi = tuple(
                 Fermo(voce["fatto"], voce["caso"], voce["ambito"], voce["riferimento"], voce.get("codice"),

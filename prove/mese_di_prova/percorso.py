@@ -337,6 +337,7 @@ def _registra_ente(c: _Contesto) -> None:
         ("email", S.EMAIL_ENTE),
         ("iban_tesoreria", S.IBAN_TESORERIA),
         ("sigla_provincia", S.SIGLA_PROVINCIA),
+        ("regione", S.REGIONE_ENTE),
     ):
         c.ufficio.codice_ente(tipo, valore, date(2026, 1, 1))
 

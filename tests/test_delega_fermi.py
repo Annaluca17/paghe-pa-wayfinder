@@ -74,12 +74,11 @@ def test_un_codice_fuori_dal_catalogo_ferma_l_invio_e_nomina_istituto_e_codice(r
     assert [r.tributo for r in d.righe] == ["104E"]
 
 
-def test_le_righe_irap_fermano_l_invio_nominando_scadenza_e_riparto_per_regione(registro, corpus, orologio, ente):
+def test_una_riga_irap_non_ferma_piu_l_invio_ed_entra_come_380E(registro, corpus, orologio, ente):
+    """Il fermo blanket `irap` dell'ADR 0023 non c'e' piu': scadenza e riparto per regione sono modellati (ADR 0028)."""
     d = delega_di(registro, corpus, orologio, ritenuta_arretrati="50", irap_acconto="40")
-    (fermo,) = d.fermi
-    assert fermo.caso == "irap" and "irap_acconto" in fermo.motivo
-    assert "scadenza" in fermo.motivo and "riparto per regione" in fermo.motivo
-    assert [r.tributo for r in d.righe] == ["104E"]  # il resto della delega non cambia
+    assert d.fermi == ()
+    assert [r.tributo for r in d.righe] == ["104E", "380E"]
 
 
 def test_un_codice_che_vuole_il_comune_o_la_regione_ferma_l_invio_nominando_il_caso(registro, corpus, orologio, ente):
@@ -109,8 +108,8 @@ def test_un_credito_per_anno_d_imposta_senza_l_anno_ferma_l_invio(registro, corp
 
 
 def test_piu_fermi_diversi_sono_tutti_nominati(registro, corpus, orologio, ente):
-    d = delega_di(registro, corpus, orologio, ritenuta_arretrati="50", debito_senza_codice="1", irap_acconto="2")
-    assert {f.caso for f in d.fermi} == {"mappatura_mancante", "irap"}
+    d = delega_di(registro, corpus, orologio, ritenuta_arretrati="50", debito_senza_codice="1", addizionale_comunale="2")
+    assert {f.caso for f in d.fermi} == {"mappatura_mancante", "codice_non_modellato"}
 
 
 def test_lo_stesso_istituto_in_piu_righe_e_nominato_una_volta(registro, corpus, orologio, ente):

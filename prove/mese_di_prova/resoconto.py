@@ -219,8 +219,8 @@ def _non_esercitato(esecuzione: Esecuzione) -> list[str]:
     if not any("addizional" in i for i in istituti):
         voci.append(
             "Le addizionali regionale e comunale non si calcolano: nessuna regola le produce e il registro non ha il "
-            "domicilio fiscale. Se un istituto le portasse con 384E o 380E, la delega si fermerebbe per il codice catastale "
-            "o della regione, che nessun fatto porta (`codice_non_modellato`)."
+            "domicilio fiscale. Se un istituto le portasse con 384E o con un codice che vuole la regione di residenza, "
+            "la delega si fermerebbe per il codice catastale o della regione, che nessun fatto porta (`codice_non_modellato`)."
         )
     if esecuzione.uno_per_cento:
         voci.append("Il contributo aggiuntivo dell'1% scatta in almeno un quadro, e non ha una causale nel catalogo.")
@@ -230,10 +230,11 @@ def _non_esercitato(esecuzione: Esecuzione) -> list[str]:
             "fascia) e non ha una causale nel catalogo: se scattasse, la delega si fermerebbe per mappatura mancante "
             "(la ricerca non trova una causale dedicata)."
         )
-    voci.append("L'IRAP non e' calcolata; una riga IRAP nella delega la ferma (`irap`: scadenza e riparto non modellati).")
     voci.append(
-        "L'ente e' in una sola regione, ma il nucleo non ha un fatto per la regione: l'unico dato territoriale e' la sigla "
-        "di provincia, che entra nella causale P201."
+        "L'acconto IRAP e' calcolato all'8,5% sulla base di ogni pagamento e versato col 380E, una riga per regione. Nessun "
+        "rapporto del mese ha una sede di lavoro: vale la regione dell'ente, un fatto dell'ente. Il codice regione e' del corpus "
+        "reale, da riscontrare sulla tabella AdE. Comando e convenzione non sono modellati (la convenzione di segreteria "
+        "ferma gia' il calcolo del rapporto)."
     )
     return [f"- {v}" for v in voci]
 
