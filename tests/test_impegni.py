@@ -6,17 +6,9 @@ from decimal import Decimal
 import pytest
 
 from paghe.errori import ErroreRegistro
-from paghe.impegni import AttoPresupposto, impegni_noti, registra_impegno
+from paghe.impegni import AttoPresupposto, impegni_noti
 
-PIANO = "U.1.01.01.01.002"
-
-
-def impegno(registro, chiave="IMP-1", numero=1, esercizio=2026, disponibilita="10000", data=date(2026, 1, 1), atto=None,
-            piano=PIANO, missione="01", programma="02"):
-    return registra_impegno(
-        registro, chiave, "adattatore-prova", numero, esercizio, piano, missione, programma, disponibilita, data, atto
-    )
-
+from materiale_impegni import PIANO, impegno
 
 # Fatto contabile
 
