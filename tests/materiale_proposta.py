@@ -11,6 +11,7 @@ from datetime import date
 import pytest
 
 from paghe import Corpus, Mese, calcola
+from materiale_impegni import impegni_capienti
 from paghe.proposta import conferma_versione, emetti_versione, registra_pagamento_eseguito
 
 CF = "RSSMRA80A01H501U"
@@ -236,7 +237,7 @@ def corpus_p():
     return corpus_proposta()
 
 
-def assumi(registro, rapporto=R, persona=P, iban=True, dal=date(2026, 1, 1), programma="01.02"):
+def assumi(registro, rapporto=R, persona=P, iban=True, dal=date(2026, 1, 1), programma="01.02", impegni=True):
     if not registro.fatti_persona_noti(persona, "codice_fiscale", registro.adesso()):
         registro.registra_codice_persona(persona, "codice_fiscale", CF, date(1980, 1, 1))
         if iban:
@@ -245,6 +246,14 @@ def assumi(registro, rapporto=R, persona=P, iban=True, dal=date(2026, 1, 1), pro
     registro.registra_codice(rapporto, "tipo_impiego", "1", dal)
     if programma:
         registro.registra_programma_rapporto(rapporto, programma, dal)
+        # Impegni automatici capienti a 01.02, per il 2026 e il 2027: stesso identificativo e stesso contenuto, nessun effetto.
+        for esercizio in (2026, 2027) if impegni else ():
+            impegni_capienti(registro, esercizio, 1, data=date(esercizio, 1, 1))
+
+
+def assumi_senza_impegni(registro, *args, **kwargs):
+    """Come `assumi`, ma senza gli impegni automatici: i test dell'abbinamento li registrano a modo loro."""
+    return assumi(registro, *args, impegni=False, **kwargs)
 
 
 def stipendio(registro, corpus, mese, importo="1500", rapporto=R):

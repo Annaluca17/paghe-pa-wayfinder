@@ -14,14 +14,14 @@ from paghe.impegni import disponibilita_residua
 from paghe.proposta import conferma_versione, emetti_versione, respingi_versione
 
 from materiale_impegni import PIANO_ENTE, impegno
-from materiale_proposta import R, R2, P2, assumi, corpus_p, stipendio
+from materiale_proposta import R, R2, P2, assumi_senza_impegni, corpus_p, stipendio
 
 VALUTA = date(2026, 2, 27)
 FEB = Mese(2026, 2)
 
 
 def prepara(registro, corpus, disponibilita="10000"):
-    assumi(registro)
+    assumi_senza_impegni(registro)
     impegno(registro, "I-S", 1, 2026, disponibilita=disponibilita)
     impegno(registro, "I-E", 2, 2026, disponibilita="100000", piano=PIANO_ENTE)
     return stipendio(registro, corpus, FEB)
@@ -71,7 +71,7 @@ def test_una_versione_superata_libera_la_disponibilita(registro, corpus_p, orolo
 
 def test_due_versioni_vive_consumano_insieme(registro, corpus_p, orologio):
     importi = prepara(registro, corpus_p)
-    assumi(registro, R2, P2)
+    assumi_senza_impegni(registro, R2, P2)
     importi2 = stipendio(registro, corpus_p, FEB, "500", R2)
     orologio.vai(2, 20)
     emetti_versione(registro, corpus_p, VALUTA, importi)
@@ -113,7 +113,7 @@ def test_un_impegno_non_noto_e_un_errore(registro):
 
 def test_la_seconda_versione_trova_la_disponibilita_gia_consumata_dalla_prima(registro, corpus_p, orologio):
     importi = prepara(registro, corpus_p, disponibilita="2000")
-    assumi(registro, R2, P2)
+    assumi_senza_impegni(registro, R2, P2)
     importi2 = stipendio(registro, corpus_p, FEB, "500", R2)
     orologio.vai(2, 20)
     emetti_versione(registro, corpus_p, VALUTA, importi)  # 1500 su 2000: restano 500
@@ -121,7 +121,7 @@ def test_la_seconda_versione_trova_la_disponibilita_gia_consumata_dalla_prima(re
     seconda = emetti_versione(registro, corpus_p, VALUTA, importi2)  # 500: ci sta
     assert {r.impegno for r in seconda.righe_proposta if r.piano_dei_conti != PIANO_ENTE} == {(2026, 1)}
     orologio.avanza()
-    assumi(registro, "RAPPORTO-3", "PERSONA-3")
+    assumi_senza_impegni(registro, "RAPPORTO-3", "PERSONA-3")
     terzo = stipendio(registro, corpus_p, FEB, "100", "RAPPORTO-3")
     with pytest.raises(ErroreRegistro, match="Nessun rapporto"):
         emetti_versione(registro, corpus_p, VALUTA, terzo)  # 100 su 0 residui

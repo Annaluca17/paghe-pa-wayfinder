@@ -14,7 +14,7 @@ from paghe.impegni import abbinamenti_confermati, disponibilita_residua
 from paghe.proposta import StatoVersione, conferma_versione, emetti_versione, stato_versione
 
 from materiale_impegni import PIANO, PIANO_ENTE, impegno
-from materiale_proposta import assumi, corpus_p, stipendio
+from materiale_proposta import assumi_senza_impegni, corpus_p, stipendio
 
 VALUTA = date(2026, 2, 27)
 FEB = Mese(2026, 2)
@@ -23,7 +23,7 @@ FEB = Mese(2026, 2)
 @pytest.fixture
 def versione(registro, corpus_p, orologio):
     """Una versione inviata, abbinata all'impegno 2026/1 (il numero piu' basso); il 2026/2 e' un'alternativa."""
-    assumi(registro)
+    assumi_senza_impegni(registro)
     impegno(registro, "I-1", 1, 2026, disponibilita="10000")
     impegno(registro, "I-2", 2, 2026, disponibilita="10000")
     impegno(registro, "I-E", 3, 2026, disponibilita="100000", piano=PIANO_ENTE)
@@ -79,7 +79,7 @@ def test_una_riga_che_non_e_della_versione_rifiuta_la_conferma(registro, version
 
 
 def test_un_impegno_incapiente_conferma_con_un_avviso_e_lo_registra(registro, corpus_p, orologio):
-    assumi(registro)
+    assumi_senza_impegni(registro)
     impegno(registro, "I-1", 1, 2026)
     impegno(registro, "I-2", 2, 2026, disponibilita="1000")
     impegno(registro, "I-E", 3, 2026, disponibilita="100000", piano=PIANO_ENTE)
