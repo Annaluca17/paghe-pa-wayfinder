@@ -183,6 +183,7 @@ def test_recupero_su_cessato_per_cessazione_retroattiva(registro, reale, orologi
         registro.annulla_fatto(fatto.id, "cessazione comunicata in ritardo")
     registro.registra_codice(R, "tipo_impiego", "1", date(2026, 1, 1), date(2026, 10, 15))
     registro.registra_codice(R, "area", "istruttori", date(2026, 1, 1), date(2026, 10, 15))
+    registro.registra_codice(R, "cessazione", "1", date(2026, 10, 16))  # dal giorno dopo l'ultimo di servizio
     recupero = [voce.importo() for voce in differenze(registro, reale, R, Mese(2026, 10), TipoEsito.PAGATO)]
     assert sorted(riga.valore for riga in recupero) == [Decimal("-1009.81"), Decimal("-16.03")]
     paga(registro, orologio, recupero, date(2026, 11, 20))

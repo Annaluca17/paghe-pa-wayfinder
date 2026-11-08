@@ -318,6 +318,15 @@ _Avoid_: Contributo mensile (quando si intende un contributo per periodo)
 Importo negativo pagato che entra in una base. Modellati i casi in servizio, detratto dal periodo fino a capienza con riporto ai mesi successivi; su sospeso, rinviato al rientro in servizio; e su cessato, in un periodo fuori servizio. Gli altri fermano il calcolo, compreso un riporto ancora aperto alla cessazione.
 _Avoid_: Trattenuta (la trattenuta è un istituto)
 
+**Riporto del recupero**:
+Parte di un recupero che non trova capienza nella base di un periodo e passa, calcolata, al periodo in servizio successivo per la stessa base. Non è un fatto: ogni denuncia la ricava dalla precedente.
+
+**Cessazione**:
+Fatto del rapporto, valido dal giorno dopo l'ultimo giorno di servizio, che dice che il servizio è finito. Diverso dal codice cessazione della ListaPosPA, che è un dato della vista.
+
+**Sospensione**:
+Fatto del rapporto, valido dal giorno dopo l'ultimo giorno di servizio, che dice che il servizio è interrotto e riprende con un nuovo fatto di servizio. Recuperi e riporti attendono il rientro.
+
 **Indebito**:
 Fatto che dichiara una somma pagata senza titolo, con atto, modalità di restituzione (netto o lordo), importo tassato, ritenute riferibili e data di definitività. Ne leggono CU e 770; il movimento nelle basi è il recupero.
 _Avoid_: Recupero (che è il movimento), somma a debito

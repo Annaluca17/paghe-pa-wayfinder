@@ -368,6 +368,7 @@ def test_recupero_su_cessato_indica_il_v1_causale_7_codice_motivo_7(registro, re
     for tipo in ("tipo_impiego", "tipo_servizio", "contratto", "qualifica", "area", "regime_fine_servizio"):
         registro.annulla_fatto(fatti[tipo].id, "cessazione comunicata in ritardo")
         registro.registra_codice(R, tipo, fatti[tipo].valore, date(2026, 1, 1), date(2026, 10, 15))
+    registro.registra_codice(R, "cessazione", "1", date(2026, 10, 16))  # dal giorno dopo l'ultimo di servizio
     recupero = [voce.importo() for voce in differenze(registro, reale, R, Mese(2026, 10), TipoEsito.PAGATO)]
     paga(registro, orologio, recupero, date(2026, 11, 20))
 
@@ -379,6 +380,23 @@ def test_recupero_su_cessato_indica_il_v1_causale_7_codice_motivo_7(registro, re
     assert not vista.trasmissibile
     with pytest.raises(VistaFerma, match="causale 7"):
         in_xml([vista], ENTE, MITTENTE, mese=Mese(2026, 11), bozza=True)
+
+
+def test_recupero_da_sospeso_non_indica_piu_il_v1_causale_7(registro, reale, orologio):
+    fatti = assumi(registro)
+    paga(registro, orologio, stipendi(registro, reale, Mese(2026, 10)), date(2026, 10, 27))
+
+    orologio.vai(11, 3)
+    for tipo in ("tipo_impiego", "tipo_servizio", "contratto", "qualifica", "area", "regime_fine_servizio"):
+        registro.annulla_fatto(fatti[tipo].id, "sospensione comunicata in ritardo")
+        registro.registra_codice(R, tipo, fatti[tipo].valore, date(2026, 1, 1), date(2026, 10, 15))
+    registro.registra_codice(R, "sospensione", "1", date(2026, 10, 16))
+    recupero = [voce.importo() for voce in differenze(registro, reale, R, Mese(2026, 10), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero, date(2026, 11, 20))
+
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 11))
+    assert vista.quadri == ()
+    assert vista.fermi == ()
 
 
 # --- Serializzazione e validazione --------------------------------------------------------------
