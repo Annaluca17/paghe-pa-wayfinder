@@ -632,3 +632,22 @@ def test_senza_recuperi_nessun_caso(registro, casi, orologio):
     assumi(registro)
     paga(registro, orologio, stipendi(registro, casi, Mese(2026, 11)), date(2026, 11, 27))
     assert calcola_denuncia(registro, casi, R, Mese(2026, 11)).periodi[0].recuperi == ()
+
+
+def test_recupero_pari_alla_capienza_azzera_la_base_senza_riporto_e_il_mese_dopo_resta_intero(registro, casi, orologio):
+    """Rilettura #43: un recupero che consuma esattamente la base non lascia un residuo da 0, ne' tocca il mese dopo."""
+    assumi(registro)
+    registro.registra_fatto(R, "una_tantum", "1000", date(2026, 7, 5), date(2026, 7, 5))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 7)), date(2026, 7, 27))
+    orologio.vai(8, 2)
+    registro.registra_fatto(R, "una_tantum", "0", date(2026, 7, 5), date(2026, 7, 5))
+    recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 7), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero + stipendi(registro, casi, Mese(2026, 8)), date(2026, 8, 27))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 9)), date(2026, 9, 18))
+
+    agosto = calcola_denuncia(registro, casi, R, Mese(2026, 8))
+    assert agosto.periodi[0].base("pens").valore == Decimal("0")
+    assert agosto.riporti == ()
+    settembre = calcola_denuncia(registro, casi, R, Mese(2026, 9))
+    assert settembre.periodi[0].base("pens").valore == Decimal("1000.00")
+    assert not [riga for riga in settembre.periodi[0].base("pens").derivazione.importi if riga.istituto.startswith("riporto.")]
