@@ -492,6 +492,40 @@ def test_recupero_oltre_capienza_in_servizio_ferma_la_base_a_zero_e_mostra_il_re
     assert residuo.valore == Decimal("-300")
 
 
+def test_il_residuo_si_detrae_dal_mese_dopo_con_la_derivazione_fino_al_recupero_d_origine(registro, casi, orologio):
+    recupero_oltre_capienza(registro, casi, orologio)
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 12)), date(2026, 12, 18))
+    denuncia = calcola_denuncia(registro, casi, R, Mese(2026, 12))
+    periodo, = denuncia.periodi
+    assert periodo.base("pens").valore == Decimal("700.00")
+    assert denuncia.riporti == ()
+    detratto, = [riga for riga in periodo.base("pens").derivazione.importi if riga.istituto == "riporto.pens"]
+    assert detratto.valore == Decimal("-300")
+    entrante, = detratto.derivazione.importi
+    origine, = entrante.derivazione.importi
+    assert (origine.istituto, origine.valore, origine.data_pagamento) == ("una_tantum", Decimal("-300"), date(2026, 11, 10))
+
+
+def test_il_residuo_che_non_entra_nemmeno_nel_mese_dopo_continua(registro, casi, orologio):
+    assumi(registro)
+    registro.registra_fatto(R, "una_tantum", "1500", date(2026, 8, 5), date(2026, 8, 5))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 8)), date(2026, 8, 27))
+    orologio.vai(9, 2)
+    registro.registra_fatto(R, "una_tantum", "0", date(2026, 8, 5), date(2026, 8, 5))
+    recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 8), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero, date(2026, 9, 10))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 10)), date(2026, 10, 27))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 11)), date(2026, 11, 27))
+
+    ottobre = calcola_denuncia(registro, casi, R, Mese(2026, 10))
+    assert ottobre.periodi[0].base("pens").valore == Decimal("0")
+    residuo, = ottobre.riporti
+    assert residuo.valore == Decimal("-500.00")
+    novembre = calcola_denuncia(registro, casi, R, Mese(2026, 11))
+    assert novembre.periodi[0].base("pens").valore == Decimal("500.00")
+    assert novembre.riporti == ()
+
+
 def test_recupero_fuori_servizio_senza_servizio_precedente_ferma(registro, casi, orologio):
     assumi(registro, dal=date(2026, 12, 1))
     registro.registra_fatto(R, "una_tantum", "-50", date(2026, 12, 1), date(2026, 12, 1))
