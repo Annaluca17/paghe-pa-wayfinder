@@ -107,6 +107,17 @@ RAPPORTI = (
 
 PER_ID = {r.id: r for r in RAPPORTI}
 
+# Programma dove lavora la persona (fatto datato scritto dall'ente), di fantasia: missione 01, programma 01 (organi
+# istituzionali) per chi ha una carica o un incarico di vertice, programma 02 (segreteria generale) per gli altri.
+PROGRAMMA_PER_TITOLO = {"comparto": "01.02", "dirigente": "01.01", "segretario": "01.01", "sindaco": "01.01", "co.co.co.": "01.02"}
+PROGRAMMI_IN_USO = tuple(sorted(set(PROGRAMMA_PER_TITOLO.values())))
+# Codici di V livello delle spese di personale del corpus, per gli impegni automatici che la Ragioneria comunica all'avvio.
+PIANI_DI_SPESA = (
+    "U.1.01.01.01.002", "U.1.01.01.01.004", "U.1.01.02.01.001", "U.1.01.02.01.003", "U.1.02.01.01.001",
+    "U.1.03.02.01.001", "U.1.03.02.12.003",
+)
+DISPONIBILITA_IMPEGNO = "10000000.00"  # impegni automatici capienti: nessun fermo per capienza nel mese di prova
+
 # Importi di fantasia dei fatti che l'Ufficio personale registra: nessuno e' una norma.
 MISURA_INDENNITA_SINDACO = "3000.00"  # misura mensile piena dell'indennita' di funzione, deliberata dall'ente
 RATA_COCOCO = "1500.00"  # rata del piano di collaborazione
