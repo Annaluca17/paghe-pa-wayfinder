@@ -7,6 +7,7 @@ Il tempo di registrazione viene dall'orologio del registro, mai dal chiamante.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from contextlib import contextmanager, nullcontext
 from datetime import UTC, date, datetime
@@ -91,6 +92,8 @@ TIPO_REDDITO_ANNO_PRECEDENTE = "reddito_anno_precedente"
 # Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
 # Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
 TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
+# Programma del rapporto (ADR 0031): fatto datato dell'ente, missione e programma dove la persona lavora, come "01.02".
+TIPO_PROGRAMMA = "programma"
 SOGGETTO_RAPPORTO = "rapporto"
 SOGGETTO_PERSONA = "persona"
 SOGGETTO_ENTE = "ente"
@@ -408,6 +411,20 @@ class Registro:
         if not isinstance(codice, str) or not codice.strip():
             raise ErroreRegistro(f"Codice non valido: {codice!r}")
         return self._inserisci_fatto(rapporto, tipo, codice, True, valido_dal, valido_al, atto)
+
+    def registra_programma_rapporto(
+        self, rapporto: str, programma: str, valido_dal: date, valido_al: date | None = None, atto: Atto | None = None
+    ) -> Fatto:
+        """Missione e programma del rapporto, come "MM.PP": ai quali si imputa la sua spesa (ADR 0031)."""
+        if not isinstance(programma, str) or not re.fullmatch(r"\d{2}\.\d{2}", programma):
+            raise ErroreRegistro(f"Programma non valido: {programma!r}; serve missione e programma come 01.02")
+        return self.registra_codice(rapporto, TIPO_PROGRAMMA, programma, valido_dal, valido_al, atto)
+
+    def programma_del_rapporto(self, rapporto: str, giorno: date, noto_al: datetime) -> str | None:
+        """Il programma vigente al giorno, nell'ultimo fatto registrato che lo copre; None se manca."""
+        noti = self.fatti_noti(rapporto, TIPO_PROGRAMMA, noto_al)
+        fatto = next((f for f in reversed(noti) if f.copre(giorno)), None)
+        return str(fatto.valore) if fatto else None
 
     def registra_pagamento(self, rapporto: str, esito_id: int, data: date, atto: Atto | None = None) -> Fatto:
         """Valuta dell'accredito di un esito pagato (ADR 0006). Un nuovo fatto corregge il precedente."""

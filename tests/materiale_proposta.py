@@ -174,6 +174,27 @@ effetto = "nessuno"
 destinatario = "terzo"
 canale = "f24ep"
 
+[[classificazione]]
+istituto = "stipendio"
+dal = 2020-01-01
+riferimento = "fittizio:class-stipendio"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "gettone"
+dal = 2020-01-01
+riferimento = "fittizio:class-gettone"
+piano_dei_conti = "U.1.03.02.01.001"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "contributo_ente"
+dal = 2020-01-01
+riferimento = "fittizio:class-contributo-ente"
+piano_dei_conti = "U.1.01.02.01.001"
+origine_impegno = "automatico"
+
 [[composizione]]
 istituto = "ritenuta_irpef"
 dal = 2020-01-01
@@ -215,13 +236,15 @@ def corpus_p():
     return corpus_proposta()
 
 
-def assumi(registro, rapporto=R, persona=P, iban=True, dal=date(2026, 1, 1)):
+def assumi(registro, rapporto=R, persona=P, iban=True, dal=date(2026, 1, 1), programma="01.02"):
     if not registro.fatti_persona_noti(persona, "codice_fiscale", registro.adesso()):
         registro.registra_codice_persona(persona, "codice_fiscale", CF, date(1980, 1, 1))
         if iban:
             registro.registra_iban_persona(persona, IBAN, date(2026, 1, 1))
     registro.collega_rapporto(rapporto, persona, dal)
     registro.registra_codice(rapporto, "tipo_impiego", "1", dal)
+    if programma:
+        registro.registra_programma_rapporto(rapporto, programma, dal)
 
 
 def stipendio(registro, corpus, mese, importo="1500", rapporto=R):

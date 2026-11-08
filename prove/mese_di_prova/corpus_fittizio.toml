@@ -1160,3 +1160,13 @@ rif_b = "anno_imposta"
 modalita = "debito_credito"
 dal = 2025-01-01
 riferimento = "fittizio:codice-161e"
+
+# --- Classificazione contabile (ticket #62): solo gli istituti che il corpus reale non dichiara ---
+# La performance (accessorio del fondo) e' automatica nel mese di prova: nessun atto di sottoscrizione dell'integrativo.
+
+[[classificazione]]
+istituto = "performance"
+dal = 2025-01-01
+riferimento = "fittizio:class-performance"
+piano_dei_conti = "U.1.01.01.01.004"
+origine_impegno = "automatico"

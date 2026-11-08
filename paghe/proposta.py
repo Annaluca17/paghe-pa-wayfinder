@@ -13,7 +13,7 @@ una sola volta per versamento, l'esito versato. Il modello segnala, e non correg
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -21,11 +21,14 @@ from enum import StrEnum
 from .calcolo import _somma_righe
 from .corpus import Corpus
 from .denuncia import MATURAZIONI_DERIVATE, calcola_denuncia
-from .errori import CasoNonModellato, ComposizioneMancante, ErroreCalcolo, ErroreRegistro, RedditoMancante
+from .errori import CasoNonModellato, ClassificazioneMancante, ComposizioneMancante, ErroreCalcolo, ErroreRegistro, RedditoMancante
 from .fisco import Avviso, _controlla_competenza, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
 from .modello import Esito, Evento, Importo, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, Registro
 from .tempo import Mese, in_utc
+
+# Nature della composizione che diventano spesa del Titolo 1 e quindi righe di proposta (ADR 0031).
+NATURE_DI_SPESA = frozenset({"retribuzione", "contributo_ente", "irap"})
 
 MOTIVO_GIA_PAGATO = "già in un esito pagato"
 AVVISO_PERSONA_ASSENTE = "persona_assente_dall_ultimo_pagamento"
@@ -107,6 +110,25 @@ class DatoMancante:
 
 
 @dataclass(frozen=True)
+class RigaProposta:
+    """Parte della proposta per una classificazione e un impegno: somma le righe di composizione di spesa (ADR 0031).
+
+    Con il programma del rapporto mancante missione e programma restano vuoti, e senza impegno.
+    """
+
+    piano_dei_conti: str
+    missione: str
+    programma: str
+    impegno: tuple[int, int] | None  # (esercizio, numero)
+    riferimenti: tuple["RiferimentoRiga", ...]
+    totale: Decimal
+
+    @property
+    def chiave(self) -> tuple[str, str, str, tuple[int, int] | None]:
+        return (self.piano_dei_conti, self.missione, self.programma, self.impegno)
+
+
+@dataclass(frozen=True)
 class ContenutoVersione:
     valuta_prevista: date
     righe: tuple[RigaComposizione, ...]
@@ -115,6 +137,7 @@ class ContenutoVersione:
     fermi: tuple[RapportoFermo, ...]
     dati_mancanti: tuple[DatoMancante, ...]
     avvisi: tuple[Avviso, ...]
+    righe_proposta: tuple[RigaProposta, ...] = field(default=(), kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -195,6 +218,19 @@ def _in_dizionario(contenuto: ContenutoVersione) -> dict:
         "fermi": [{"rapporto": f.rapporto, "motivo": f.motivo} for f in contenuto.fermi],
         "dati_mancanti": [{"tipo": d.tipo, "soggetto": d.soggetto, "motivo": d.motivo} for d in contenuto.dati_mancanti],
         "avvisi": [_avviso_in_dizionario(a) for a in contenuto.avvisi],
+        "righe_proposta": [
+            {
+                "piano_dei_conti": r.piano_dei_conti,
+                "missione": r.missione,
+                "programma": r.programma,
+                "impegno": list(r.impegno) if r.impegno else None,
+                "riferimenti": [
+                    {k: v for k, v in rif.in_dizionario().items() if k != "versione"} for rif in r.riferimenti
+                ],
+                "totale": str(r.totale),
+            }
+            for r in contenuto.righe_proposta
+        ],
     }
 
 
@@ -217,6 +253,22 @@ def _da_dizionario(versione_id: int, valuta: date, registrato: datetime, dati: d
         fermi=tuple(RapportoFermo(f["rapporto"], f["motivo"]) for f in dati["fermi"]),
         dati_mancanti=tuple(DatoMancante(d["tipo"], d["soggetto"], d["motivo"]) for d in dati["dati_mancanti"]),
         avvisi=tuple(_avviso_da_dizionario(a) for a in dati["avvisi"]),
+        righe_proposta=tuple(
+            RigaProposta(
+                r["piano_dei_conti"],
+                r["missione"],
+                r["programma"],
+                tuple(r["impegno"]) if r["impegno"] else None,
+                tuple(
+                    RiferimentoRiga(
+                        versione_id, rif["rapporto"], rif["istituto"], rif["periodo"], tuple(rif["esiti_confrontati"])
+                    )
+                    for rif in r["riferimenti"]
+                ),
+                Decimal(r["totale"]),
+            )
+            for r in dati.get("righe_proposta", [])
+        ),
         id=versione_id,
         registrato_il=registrato,
     )
@@ -334,6 +386,49 @@ def _righe_di_composizione(corpus: Corpus, importi, valuta: date) -> tuple[RigaC
             )
         )
     return tuple(righe)
+
+
+def _righe_di_proposta(
+    registro: Registro, corpus: Corpus, righe, valuta: date, istante: datetime
+) -> tuple[tuple[RigaProposta, ...], dict[tuple[str, str], DatoMancante]]:
+    """Una riga di proposta per classificazione: somma le righe di composizione di spesa del Titolo 1 (ADR 0031).
+
+    Un istituto di spesa senza classificazione valida alla valuta ferma la proposta nominandolo. Senza il
+    programma del rapporto la riga resta con missione e programma vuoti, e il dato manca.
+    """
+    gruppi: dict[tuple[str, str, str], tuple[list[RiferimentoRiga], Decimal]] = {}
+    mancanti: dict[tuple[str, str], DatoMancante] = {}
+    for riga in righe:
+        if riga.natura not in NATURE_DI_SPESA:
+            continue
+        classificazione = corpus.classificazione(riga.istituto, valuta)
+        if classificazione is None:
+            raise ClassificazioneMancante(
+                f"Istituto {riga.istituto}: nessuna dichiarazione di classificazione per un pagamento del {valuta}"
+            )
+        programma = registro.programma_del_rapporto(riga.rapporto, valuta, istante)
+        missione, _, voce = (programma or "").partition(".")
+        if programma is None:
+            mancanti.setdefault(
+                ("programma_rapporto", riga.rapporto),
+                DatoMancante(
+                    "programma_rapporto",
+                    riga.rapporto,
+                    f"manca il programma del rapporto {riga.rapporto} per un pagamento del {valuta}",
+                ),
+            )
+        riferimenti, totale = gruppi.setdefault((classificazione.piano_dei_conti, missione, voce), ([], Decimal(0)))
+        riferimenti.append(
+            RiferimentoRiga(0, riga.rapporto, riga.istituto, str(riga.importo.periodo), riga.importo.esiti_confrontati)
+        )
+        gruppi[(classificazione.piano_dei_conti, missione, voce)] = (riferimenti, totale + riga.importo.valore)
+    return (
+        tuple(
+            RigaProposta(piano, missione, voce, None, tuple(riferimenti), totale)
+            for (piano, missione, voce), (riferimenti, totale) in sorted(gruppi.items())
+        ),
+        mancanti,
+    )
 
 
 def _rapporto(
@@ -467,6 +562,8 @@ def _costruisci(
             anni_con_ultimo.add(dati.anno)
     for anno in sorted(anni_con_ultimo):
         avvisi.extend(_persone_assenti(registro, anno, {p for p in persone.values() if p is not None}, istante))
+    righe_proposta, mancanti_proposta = _righe_di_proposta(registro, corpus, righe, valuta, istante)
+    mancanti.update(mancanti_proposta)
     return ContenutoVersione(
         valuta_prevista=valuta,
         righe=tuple(righe),
@@ -475,6 +572,7 @@ def _costruisci(
         fermi=tuple(fermi),
         dati_mancanti=tuple(mancanti.values()),
         avvisi=tuple(avvisi),
+        righe_proposta=righe_proposta,
     )
 
 

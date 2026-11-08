@@ -55,3 +55,7 @@ class CasoNonModellato(ErroreCalcolo):
 
 class ComposizioneMancante(ErrorePaghe):
     """L'istituto di un importo non ha una dichiarazione di composizione: la proposta si ferma, non il calcolo (ADR 0025)."""
+
+
+class ClassificazioneMancante(ErrorePaghe):
+    """L'istituto di una spesa non ha una dichiarazione di classificazione valida alla valuta: la proposta si ferma, non il calcolo (ADR 0031)."""
