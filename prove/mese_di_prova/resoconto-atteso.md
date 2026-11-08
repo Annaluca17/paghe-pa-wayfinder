@@ -73,18 +73,18 @@ I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccan
 
 | Categoria | Avvio | Preparazione di febbraio | Marzo | Dicembre |
 |---|---:|---:|---:|---:|
-| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 166 | 0 | 14 | 0 |
+| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 177 | 0 | 15 | 0 |
 | Fatti ricorrenti del mese (atti, variazioni, cessazioni, 730) | 0 | 0 | 17 | 1 |
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
 | Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 14 | 13 |
 | Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 2 |
-| **Totale senza i comandi** | **166** | **3** | **48** | **18** |
+| **Totale senza i comandi** | **177** | **3** | **49** | **18** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
 
-Fatti di avvio per soggetto: R01 16, R02 15, R03 15, R04 17, R05 15, R07 15, R08 14, R09 15, R10 10, R11 9, R12 19, ente 6.
-Assunzione di marzo (avvio di un rapporto nuovo): R06 14.
+Fatti di avvio per soggetto: R01 17, R02 16, R03 16, R04 18, R05 16, R07 16, R08 15, R09 16, R10 11, R11 10, R12 20, ente 6.
+Assunzione di marzo (avvio di un rapporto nuovo): R06 15.
 
 Dettaglio di Marzo, escluso l'avvio:
 
@@ -143,7 +143,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Fatti**
 
 - Riuscito:
-  - 180 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
+  - 192 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
   - 17 fatti del mese: performance, progressione, cessazione
 - Fermi: nessuno
 - Su dati fittizi:
@@ -186,9 +186,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - netto R10: 2243.33
   - netto R11: 1020.13
   - netto R12: 593.44
+  - righe di proposta (11): U.1.01.01.01.002 01.01 imp 2026/1 9951.65; U.1.01.01.01.002 01.02 imp 2026/2 12323.33; U.1.01.01.01.004 01.02 imp 2026/4 600.00; U.1.01.02.01.001 01.01 imp 2026/5 2945.33; U.1.01.02.01.001 01.02 imp 2026/6 3732.56; U.1.01.02.01.003 01.01 imp 2026/7 495.55; U.1.01.02.01.003 01.02 imp 2026/8 89.28; U.1.02.01.01.001 01.01 imp 2026/9 1118.15; U.1.02.01.01.001 01.02 imp 2026/10 1214.20; U.1.03.02.01.001 01.01 imp 2026/11 3000.00; U.1.03.02.12.003 01.02 imp 2026/14 1500.00
   - conguaglio fiscale sull'ultimo pagamento: R05 -30.55
 - Fermi: nessuno
 - Su dati fittizi:
+  - gli impegni automatici sono fatti contabili simulati dal percorso, con disponibilita' molto alta
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
   - avviso acconto_senza_base: R02, R03, R04, R06, R07, R08, R09, R10, R11, R12
@@ -375,12 +377,14 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - netto R07: 2102.50
   - netto R10: 2376.67
   - netto R12: 593.44
+  - righe di proposta (7): U.1.01.01.01.002 01.02 imp 2026/2 12025.05; U.1.01.02.01.001 01.01 imp 2026/5 528.51; U.1.01.02.01.001 01.02 imp 2026/6 3140.61; U.1.01.02.01.003 01.02 imp 2026/8 129.74; U.1.02.01.01.001 01.01 imp 2026/9 255.00; U.1.02.01.01.001 01.02 imp 2026/10 1026.64; U.1.03.02.01.001 01.01 imp 2026/11 3000.00
   - conguaglio fiscale sull'ultimo pagamento: R01 -360.82, R02 -535.82, R03 -382.95, R04 0.01, R06 0.00, R07 -259.90, R10 -133.34, R12 0.00
 - Fermi:
   - R08: caso non modellato, conguaglio annuo di contributo_aggiuntivo in 2026-12 (già esposto nel periodo 2026-03-01/2026-03-31)
   - R09: caso non modellato, conguaglio annuo di contributo_aggiuntivo in 2026-12 (già esposto nel periodo 2026-03-01/2026-03-31)
   - R11: manca il fatto attestazione_prestazione per 2026-12-10/2026-12-10: l'importo resta calcolato ma non entra in una versione di proposta (prassi:immedia:nota:2026-11-07;10)
 - Su dati fittizi:
+  - gli impegni automatici sono fatti contabili simulati dal percorso, con disponibilita' molto alta
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:
   - avviso persona_assente_dall_ultimo_pagamento: R11

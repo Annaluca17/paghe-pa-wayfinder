@@ -1985,6 +1985,189 @@ codice = "21"
 dal = 2008-01-01
 riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
 
+# --- Classificazione contabile delle spese di personale (ticket #62, ADR 0031) ---
+#
+# Codice di V livello del piano dei conti finanziario per ogni istituto di spesa del Titolo 1 (retribuzione, contributo a
+# carico ente, IRAP), con l'origine dell'impegno: automatico col bilancio (allegato 4/2 punto 5.2). I codici sono quelli del
+# testo di partenza dell'allegato 6/1 (docs/research/classificazione-spese-personale.md): DA VERIFICARE sulla versione Arconet
+# vigente. Per l'accessorio e per gli oneri sull'indennita' degli amministratori e sui collaboratori la ricerca non riporta un
+# codice proprio: l'abbinamento a U.1.01.02.01.001 e' una scelta provvisoria.
+
+[[classificazione]]
+istituto = "tabellare_funzionari"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tabellare_istruttori"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tabellare_operatori_esperti"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tabellare_operatori"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "comparto_funzionari"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "comparto_istruttori"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "comparto_operatori_esperti"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "comparto_operatori"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tabellare_dirigenti"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "posizione_dirigenti"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tabellare_segretario_a"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tabellare_segretario_b"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tabellare_segretario_c"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "posizione_segretario"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "riduzione_tfr"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "indennita_funzione"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.03.02.01.001"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "dimezzamento_indennita"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.03.02.01.001"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "compenso_collaborazione"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.03.02.12.003"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "cpdel_ente"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.02.01.001"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tfs_ente"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.02.01.001"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "gs_ente"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.02.01.001"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "onere_art86"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.02.01.001"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "contributo_tfr"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.02.01.003"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "contributo_tfr_ulteriori"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.02.01.003"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "irap_acconto"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.02.01.01.001"
+origine_impegno = "automatico"
+
 # =====================================================================================================================
 # Fisco nazionale del lavoro dipendente e assimilati (ticket #93): scaglioni IRPEF, detrazioni, categorie di reddito,
 # ritenuta, conguaglio, deduzioni e parametri nazionali delle addizionali. Vigenza dal 01/01/2026 (TUIR e L. 207/2024,

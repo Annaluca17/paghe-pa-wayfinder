@@ -451,6 +451,13 @@ effetto = "piu"
 destinatario = "beneficiario"
 canale = "accredito"
 
+[[classificazione]]
+istituto = "compenso"
+dal = 2020-01-01
+riferimento = "fittizio:class-compenso"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
 [[composizione]]
 istituto = "ritenuta_irpef"
 dal = 2020-01-01

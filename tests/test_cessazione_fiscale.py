@@ -16,6 +16,7 @@ import pytest
 from paghe import Mese, calcola
 from paghe.proposta import AVVISO_PERSONA_ASSENTE, emetti_versione
 
+from materiale_impegni import impegni_capienti
 from materiale_proposta import CF, IBAN, P, P2, R, R2, paga, corpus_proposta, per_istituto, stipendio
 
 
@@ -31,6 +32,8 @@ def assumi_fino_al(registro, rapporto, persona, al=None, dal=date(2026, 1, 1)):
         registro.registra_iban_persona(persona, IBAN, date(2026, 1, 1))
     registro.collega_rapporto(rapporto, persona, dal)
     registro.registra_codice(rapporto, "tipo_impiego", "1", dal, al)
+    registro.registra_programma_rapporto(rapporto, "01.02", dal)
+    impegni_capienti(registro, 2026, 1)
 
 
 def stipendio_fino_al(registro, corpus, mese, al, importo="1500", rapporto=R):

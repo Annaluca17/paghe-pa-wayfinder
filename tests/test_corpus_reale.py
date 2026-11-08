@@ -198,3 +198,16 @@ def test_recupero_su_cessato_per_cessazione_retroattiva(registro, reale, orologi
     assert valori["cpdel_ente"] == Decimal("-244.15")
     assert valori["fondo_credito"] == Decimal("-3.59")
     assert valori["contributo_aggiuntivo"] == Decimal("0.00")
+
+
+@pytest.mark.parametrize(
+    ("istituto", "codice"),
+    [
+        ("tabellare_funzionari", "U.1.01.01.01.002"),
+        ("cpdel_ente", "U.1.01.02.01.001"),
+        ("irap_acconto", "U.1.02.01.01.001"),
+    ],
+)
+def test_il_corpus_reale_classifica_le_spese_di_personale_con_l_origine_automatica(reale, istituto, codice):
+    dichiarazione = reale.classificazione(istituto, date(2026, 3, 31))
+    assert (dichiarazione.piano_dei_conti, dichiarazione.origine_impegno) == (codice, "automatico")

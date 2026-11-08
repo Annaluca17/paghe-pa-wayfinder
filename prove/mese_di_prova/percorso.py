@@ -44,6 +44,7 @@ from paghe import (
 )
 from paghe import delega as modulo_delega
 from paghe.errori import ErrorePaghe, VistaFerma
+from paghe.impegni import registra_impegno
 from paghe.part_time import registra_programmazione
 from paghe.uniemens import Ente, Mittente, in_xml
 
@@ -172,6 +173,10 @@ class Ufficio:
     def collega(self, rapporto, persona, dal):
         self._conta_fatto(f"rapporto {rapporto}: legame con la persona")
         return self.registro.collega_rapporto(rapporto, persona, dal)
+
+    def programma(self, rapporto, programma, dal):
+        self._conta_fatto(f"rapporto {rapporto}: programma")
+        return self.registro.registra_programma_rapporto(rapporto, programma, dal)
 
     def codice(self, rapporto, tipo, valore, dal, al=None, atto=None):
         self._conta_fatto(f"rapporto {rapporto}: {tipo}")
@@ -354,6 +359,19 @@ def _registra_ente(c: _Contesto) -> None:
         c.ufficio.codice_ente(tipo, valore, date(2026, 1, 1))
 
 
+def _registra_impegni(c: _Contesto) -> None:
+    """Fatti contabili simulati: un impegno automatico del 2026 per ogni codice di spesa e programma in uso, capiente."""
+    numero = 0
+    for piano in S.PIANI_DI_SPESA:
+        for programma in S.PROGRAMMI_IN_USO:
+            numero += 1
+            missione, _, voce = programma.partition(".")
+            registra_impegno(
+                c.registro, f"impegno-2026-{numero}", ADATTATORE, numero, 2026, piano, missione, voce,
+                S.DISPONIBILITA_IMPEGNO, date(2026, 1, 1),
+            )
+
+
 def _registra_rapporto(c: _Contesto, r: S.Rapporto) -> dict[str, object]:
     """Anagrafica e inquadramento di un rapporto; per sindaco e co.co.co. i fatti del loro regime (`_registra_regime`)."""
     u = c.ufficio
@@ -367,6 +385,7 @@ def _registra_rapporto(c: _Contesto, r: S.Rapporto) -> dict[str, object]:
     if r.dipendente and r.detrazioni:
         u.dichiarazione_sostituito(r.persona, "lavoro_dipendente", date(2026, 1, 1), S.ATTO_DETRAZIONI)
     u.collega(r.id, r.persona, r.dal)
+    u.programma(r.id, S.PROGRAMMA_PER_TITOLO[r.titolo], r.dal)
     fatti: dict[str, object] = {}
     if r.dipendente:
         u.codice(r.id, "comune_sede_lavoro", S.COMUNE_SEDE, r.dal)
@@ -402,6 +421,7 @@ def _fatti_di_avvio(c: _Contesto) -> dict[str, dict[str, object]]:
     fatti = {}
     with c.ufficio.fase("avvio", "avvio"):
         _registra_ente(c)
+        _registra_impegni(c)
         for r in S.RAPPORTI:
             if r.id == "R06":
                 continue  # assunto a marzo
@@ -527,6 +547,15 @@ def _versione(c: _Contesto, tag: str, valuta: date, importi: dict[str, list], ar
     )
     for netto in versione.netti:
         passo.riuscito.append(f"netto {netto.rapporto}: {_soldi(netto.netto)}")
+    if versione.righe_proposta:
+        passo.riuscito.append(
+            f"righe di proposta ({len(versione.righe_proposta)}): "
+            + "; ".join(
+                f"{r.piano_dei_conti} {r.missione}.{r.programma} imp {'/'.join(map(str, r.impegno)) if r.impegno else '-'} "
+                f"{_soldi(r.totale)}"
+                for r in versione.righe_proposta
+            )
+        )
     for fermo in versione.fermi:
         passo.fermi.append(Fermo(tag, "versione", (fermo.rapporto,), causa_di(fermo.motivo), fermo.motivo))
         arrivi[fermo.rapporto] = "versione"
@@ -553,6 +582,7 @@ def _versione(c: _Contesto, tag: str, valuta: date, importi: dict[str, list], ar
         passo.riuscito.append(
             "conguaglio fiscale sull'ultimo pagamento: " + ", ".join(f"{r} {_soldi(v)}" for r, v in sorted(conguagli))
         )
+    passo.fittizio.append("gli impegni automatici sono fatti contabili simulati dal percorso, con disponibilita' molto alta")
     passo.fittizio.append(
         "categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio "
         "(valori fiscali finti)"
