@@ -53,7 +53,7 @@ Impegno, liquidazione o accertamento generati dal modello paghe e soggetti a con
 _Avoid_: Export contabile, flusso contabile, proposta di mandato
 
 **Origine dell'impegno**:
-Dichiarazione dell'istituto, con date e riferimento, accanto alla sua classificazione ufficiale: automatico col bilancio, oppure l'atto che fa nascere l'obbligazione. Il modello propone l'impegno quando quell'atto è registrato, salvo l'automatico. Se manca, il calcolo si ferma.
+Dichiarazione dell'istituto, con date e riferimento, accanto alla sua classificazione ufficiale: automatico col bilancio, oppure l'atto che fa nascere l'obbligazione. Il modello propone l'impegno quando quell'atto è registrato, salvo l'automatico. Se manca, la versione di proposta non si emette.
 _Avoid_: Tipo impegno, flag automatico
 
 **Fatto contabile**:
@@ -291,7 +291,7 @@ Insieme degli importi pagati su cui si calcola una contribuzione (CPDEL, Fondo C
 _Avoid_: Imponibile (senza dire quale)
 
 **Categoria di reddito**:
-Elenco del modello, senza articoli nel nome (lavoro dipendente, carica elettiva, collaborazione, lavori socialmente utili), letto da regole di ritenuta, CU e 770. Ogni istituto la dichiara con date e riferimento, scelti in base all'anno d'imposta a cui il pagamento è attribuito, quindi con la cassa allargata dove vale: quando una norma è abrogata cambia il riferimento, non la categoria. Se manca, il calcolo si ferma.
+Elenco del modello, senza articoli nel nome (lavoro dipendente, carica elettiva, collaborazione, lavori socialmente utili), letto da regole di ritenuta, CU e 770. Ogni istituto la dichiara con date e riferimento, scelti in base all'anno d'imposta a cui il pagamento è attribuito, quindi con la cassa allargata dove vale: quando una norma è abrogata cambia il riferimento, non la categoria. Se manca, la versione di proposta non si emette.
 _Avoid_: Redditi assimilati (senza dire quali), articolo 50
 
 **Concorso**:
@@ -581,7 +581,7 @@ Dichiarazione del corpus su come le destinazioni di un fondo devono ripartirsi, 
 _Avoid_: Regola di ripartizione, percentuale del fondo
 
 **Fonte di finanziamento**:
-Dichiarazione dell'istituto, con date e riferimento, di che cosa lo paga: una destinazione del fondo del suo ambito, il bilancio o un'altra provvista dichiarata. Può essere parziale. Se manca, il calcolo si ferma. Un importo consuma il fondo del suo anno di competenza, non dell'anno di pagamento.
+Dichiarazione dell'istituto, con date e riferimento, di che cosa lo paga: una destinazione del fondo del suo ambito, il bilancio o un'altra provvista dichiarata. Può essere parziale. Se manca, la versione di proposta non si emette. Un importo consuma il fondo del suo anno di competenza, non dell'anno di pagamento.
 _Avoid_: Capitolo dell'istituto, tabella di ripartizione
 
 **Utilizzo**:
