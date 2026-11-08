@@ -230,3 +230,14 @@ def test_il_tipo_di_fine_servizio_e_un_avviso_solo_dove_il_regime_lo_dichiara(re
     sindaco(registro)
     esito = paga(registro, orologio, corpus, SINDACO)
     assert prospetto_paga(registro, corpus, SINDACO, esito.id).avvisi == ("contratto_collettivo",)
+
+
+def test_il_collaboratore_ha_come_posizione_l_incarico_e_senza_si_ferma(registro, corpus, orologio):
+    collaboratore(registro)
+    esito = paga(registro, orologio, corpus, COCO)
+    senza = prospetto_paga(registro, corpus, COCO, esito.id)
+    assert (senza.posizione, senza.mancanti) == (None, ("posizione",))
+    registro.registra_codice(COCO, "incarico", "consulenza", date(2026, 1, 1), atto=ATTO)
+    con = prospetto_paga(registro, corpus, COCO, esito.id)
+    assert (con.posizione, con.mancanti, con.consegnabile) == ("consulenza", (), True)
+    assert [(r.istituto, r.valore) for r in con.righe_sul_netto] == [("compenso_collaborazione", Decimal("1000.00"))]
