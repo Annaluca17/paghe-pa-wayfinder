@@ -232,6 +232,11 @@ Decisioni che servono a Luca, in ordine. Dove c'è una raccomandazione, è la le
 9. **Art. 51 c. 2 e franchigia benefit.** La tabella lettera → lettera (tema 8) entra nel corpus come dato di corrispondenza. La deroga 2025-2027 per beni e servizi (1.000 e 2.000 euro, art. 53 c. 4 TU) ha il suo inizio e la sua fine nel testo: la fonte originaria (L. 207/2024 c. 390) va riletta prima di codificarla. *Raccomandazione:* sì per la tabella; la deroga entra solo con la fonte originaria letta.
 10. **Delega di dicembre 2026 versata a gennaio 2027.** Il versamento segue il D.Lgs. 33/2025 (dal 01/01/2027), il conguaglio il TUIR e l'art. 23. La regola datata per i versamenti si sceglie sulla data di versamento o sul periodo di paga? *Raccomandazione:* sulla data del versamento, con avviso, finché non si legge un testo transitorio.
 
+## Verifica del 08/11/2026 (durante il grilling)
+
+- **Risposte 173 e 186/2026** lette sugli originali del sito AdE ([173](https://www.agenziaentrate.gov.it/portale/documents/20143/10289089/Risposta+n.+173_2026.pdf/063d7333-893b-9a65-02c9-fd4e23206a83?t=1789468908525), [186](https://www.agenziaentrate.gov.it/portale/documents/20143/10360383/Risposta+n.+186_2026.pdf/9e80b661-9ed9-41d7-4208-aa1f59caa96d?t=1792160958511)): confermano il tema 5. La 173 è del 15/09/2026, la 186 del 16/10/2026. Nessuna delle due parla di proiezione in corso d'anno o di recupero a conguaglio.
+- **Disegno di legge di bilancio 2027**: A.C. 3174, presentato il 30/10/2026 ([Camera](https://www.camera.it/leg19/126?idDocumento=3174)); letta solo la relazione illustrativa. Art. 65: proroga della sostitutiva al 2027, con il limite di 50.000 euro sul reddito **2026**. Prevede il **secondo scaglione 2027 al 33% fino a 55.000 euro**: la sintesi 1 («uguali nel 2026 e nel 2027») vale solo finché il disegno non diventa legge. Al 07/11/2026 l'atto risulta stralciato in più progetti: **da verificare** dove sono finiti questi articoli.
+
 ## Cosa resta da verificare (sintesi)
 
 - Legge di bilancio 2027: scaglioni, detrazioni, somma esente, sostitutiva 15% (proroga e condizioni).

@@ -409,7 +409,7 @@ Fatto della persona che chiede di trattenere nei mesi successivi, con interesse,
 _Avoid_: Rateizzazione (che è anche quella del 730-4 o dei recuperi oltre i 60 euro)
 
 **Domicilio fiscale**:
-Fatto datato della persona letto dalle regole delle addizionali, che con esso scelgono le aliquote della regione e del comune.
+Fatto datato della persona letto dalle regole delle addizionali, che con il domicilio al 1° gennaio dell'anno scelgono le aliquote della regione e del comune.
 _Avoid_: Residenza (quando si intende il domicilio fiscale), comune dell'anagrafica
 
 **Esito 730-4**:
@@ -421,8 +421,20 @@ Fatto con il codice della CU che dice perché un conguaglio, da 730-4 o di fine 
 _Avoid_: Conguaglio sospeso, anomalia 730
 
 **Reddito del biennio**:
-Fatto della persona con i redditi dei due anni prima dell'anno di pagamento, preso dalle CU già consegnate, per l'aliquota media della tassazione separata quando quegli anni sono anteriori al modello. Se manca, il calcolo fiscale si ferma.
+Fatto della persona con i redditi corrisposti dall'ente nei due anni prima di quello in cui è sorto il diritto, preso dalle CU già consegnate, per l'aliquota media della tassazione separata quando quegli anni sono anteriori al modello. Un reddito nullo è un valore, non un dato mancante: la regola usa l'aliquota del primo scaglione. Se il fatto manca, il calcolo fiscale si ferma.
 _Avoid_: Aliquota media (che è il risultato della regola), storico redditi
+
+**Reddito annuo stimato**:
+Proiezione sull'anno dei pagamenti dell'ente più i redditi di altri sostituti della dichiarazione del sostituito, usata quando una regola dipende dal reddito dell'anno e il sostituto deve operare prima di conoscerlo (limite della sostitutiva sull'accessorio, fascia della somma esente). Il conguaglio fiscale la sostituisce con il reddito vero.
+_Avoid_: Reddito presunto, proiezione del conguaglio (che è un avviso, non una base)
+
+**Reddito dell'anno precedente**:
+Fatto della persona, preso dalla CU, con il reddito imponibile dell'anno prima quando il modello non ha il suo conguaglio. Lo leggono la base e l'esenzione dell'acconto dell'addizionale comunale; senza, l'acconto non si trattiene e tutto passa al saldo.
+_Avoid_: Reddito del biennio (che è della tassazione separata)
+
+**Corrispondenza di riferimento**:
+Dato datato che porta un riferimento abrogato al suo successore, articolo per articolo, comma per comma e lettera per lettera, come dall'art. 51 c. 2 TUIR all'art. 53 c. 2 del TU dal 01/01/2027. Cambia il riferimento, non la regola né il suo valore.
+_Avoid_: Tabella di conversione, alias della norma
 
 **Trattenuta a terzi**:
 Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, per un pignoramento, una cessione o una delegazione trascritti come atto esterno sul rapporto. È un versamento a terzi nella composizione del pagamento. Un concorso non ancora modellato ferma il calcolo.
@@ -439,7 +451,7 @@ Vista delle liquidazioni verso terzi di una scadenza: righe per sezione, codice 
 _Avoid_: F24 (senza dire quale), modello F24EP mensile, tracciato F24EP (che è solo la forma del file)
 
 **Credito da compensare**:
-Credito del sostituto (rimborso da assistenza fiscale, trattamento integrativo e simili) che una regola ricava dagli esiti pagati, dalla natura della riga di composizione e qualunque sia il suo canale, e porta come riga a credito nella delega della stessa scadenza. Il rimborso resta una sola riga, sul netto del lavoratore. La parte non assorbita passa alla scadenza successiva come fatto con la sua origine.
+Credito del sostituto (rimborso da assistenza fiscale, trattamento integrativo, somme restituite col conguaglio e simili) che una regola ricava dagli esiti pagati, dalla natura della riga di composizione e qualunque sia il suo canale, e porta come riga a credito nella delega della stessa scadenza, mai come debito ridotto. Il rimborso resta una sola riga, sul netto del lavoratore. La parte non assorbita da tutti i debiti della delega passa alla scadenza successiva come fatto con la sua origine, salvo che l'Ufficio personale scelga il rimborso nel 770.
 _Avoid_: Credito residuo (senza dire di quale scadenza), compensazione automatica
 
 **Data di versamento**:
