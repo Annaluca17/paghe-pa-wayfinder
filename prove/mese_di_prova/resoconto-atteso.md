@@ -10,7 +10,7 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 |---|---:|---:|---:|
 | istituti con regola | 39 | 2 | 41 |
 | basi imponibili | 6 | 0 | 6 |
-| fermi dichiarati | 25 | 0 | 25 |
+| fermi dichiarati | 24 | 0 | 24 |
 | categorie di reddito | 0 | 3 | 3 |
 | regole di ritenuta | 0 | 1 | 1 |
 | regole di conguaglio | 0 | 1 | 1 |

@@ -143,11 +143,7 @@ caso = "INAIL su collaboratori e amministratori, non modellata"
 ambito = "calcolo"
 riferimento = "prassi:immedia:nota:2026-11-07;10"
 
-[[fermo]]
-fatto = "irap_dovuta"
-caso = "IRAP sul compenso, scadenza e riparto per regione non modellati"
-ambito = "calcolo"
-riferimento = "prassi:immedia:nota:2026-11-07;10"
+# Il fermo irap_dovuta e' tolto: l'acconto IRAP e' calcolato (ticket #81, ADR 0028).
 
 [[fermo]]
 fatto = "posizione_previdenziale"
@@ -1026,7 +1022,7 @@ istituto = "irap_acconto"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art30-com5 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art16-com2"
-formula = "arrotonda(base.irap * parametro.aliquota_irap / 100, 2)"
+formula = "arrotonda(max(base.irap - importo.gs_lavoratore, 0) * parametro.aliquota_irap / 100, 2)"
 maturazione = "periodo"
 
 # Concorsi: tabellare e comparto entrano per intero in entrambe le basi.
@@ -1565,13 +1561,16 @@ misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 
-# Compenso di collaborazione e indennita' di funzione: per ora fuori dalla base IRAP, finche' la loro regola non e' scritta.
+# Co.co.co.: il compenso concorre alla base IRAP (art. 10-bis c. 1); la quota di gestione separata a carico del collaboratore
+# si toglie nella regola irap_acconto (scelta di Luca, ADR 0028: la fonte non e' leggibile, da verificare).
 [[concorso]]
 istituto = "compenso_collaborazione"
 basi = ["irap"]
-misura = "escluso"
+misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+# Indennita' di funzione: per ora fuori dalla base IRAP, finche' la sua regola non e' scritta.
 
 [[concorso]]
 istituto = "indennita_funzione"

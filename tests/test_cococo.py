@@ -90,8 +90,8 @@ def test_pensionato_o_con_altra_cassa_ha_l_ivs_al_24_piu_le_aggiuntive(registro,
     assert valori["gs_ente"] == Decimal("164.80")
 
 
-@pytest.mark.parametrize("fatto", ["cumulo_altri_committenti", "inail_dovuta", "irap_dovuta"])
-def test_cumulo_inail_e_irap_fermano_il_calcolo_e_nominano_il_caso(registro, reale, fatto):
+@pytest.mark.parametrize("fatto", ["cumulo_altri_committenti", "inail_dovuta"])
+def test_cumulo_e_inail_fermano_il_calcolo_e_nominano_il_caso(registro, reale, fatto):
     collaboratore(registro)
     rata(registro, "1000.00", date(2026, 11, 30))
     registro.registra_fatto(R, fatto, "1", date(2026, 11, 1), atto=ATTO)

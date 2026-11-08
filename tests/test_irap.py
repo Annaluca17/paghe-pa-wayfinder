@@ -52,3 +52,19 @@ def test_un_dipendente_ha_l_acconto_all_8_5_sull_imponibile_previdenziale_del_pa
     v = valori(registro, reale)
     assert v["base.irap"] == D("2051.69")
     assert v["irap_acconto"] == D("174.39")  # 2.051,69 x 8,5% = 174,393..., al centesimo
+
+
+def collabora(registro, orologio, reale, importo="1000.00", posizione="gestione_separata"):
+    registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1980, 1, 1))
+    registro.collega_rapporto(R, "PERSONA-1", date(2026, 1, 1))
+    registro.registra_codice(R, "posizione_previdenziale", posizione, date(2026, 1, 1), atto=ATTO)
+    registro.registra_fatto(R, "rata_collaborazione", importo, date(2026, 11, 30), date(2026, 11, 30), atto=ATTO)
+    paga_il_mese(registro, orologio, reale, giorno=date(2026, 11, 30))
+
+
+def test_un_cococo_ha_la_base_al_netto_della_quota_di_gestione_separata_a_carico_del_collaboratore(registro, reale, orologio):
+    collabora(registro, orologio, reale)
+    v = valori(registro, reale)
+    assert v["gs_lavoratore"] == D("116.77")
+    # (1.000,00 - 116,77) x 8,5% = 75,07455: scelta di Luca, fonte non leggibile, da verificare (ADR 0028)
+    assert v["irap_acconto"] == D("75.07")
