@@ -580,7 +580,18 @@ def calcola_fiscale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
-    return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi))
+    return FiscaleDelPagamento(
+        ritenuta, conguaglio, tuple(avvisi), _rate_delle_addizionali(registro, corpus, rapporto, persona, data_pagamento, istante)
+    )
+
+
+def _rate_delle_addizionali(
+    registro: Registro, corpus: Corpus, rapporto: str, persona: str, data_pagamento: date, istante: datetime
+) -> tuple[Importo, ...]:
+    regola = corpus.regola_addizionali(data_pagamento)
+    if regola is None:
+        return ()
+    return addizionali.rate_del_mese(registro, corpus, regola, rapporto, persona, data_pagamento, istante)
 
 
 def _con_le_addizionali_dovute(
