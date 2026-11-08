@@ -1570,19 +1570,20 @@ misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 
-# Indennita' di funzione: per ora fuori dalla base IRAP, finche' la sua regola non e' scritta.
-
+# Amministratori: l'indennita' di funzione e il suo dimezzamento concorrono per l'importo imponibile IRPEF, a prescindere dalla
+# rilevanza previdenziale (assimilati: ris. AdE 29/E/2010, 274/E/2007 non letta, da verificare). La quota dell'art. 86 TUEL e'
+# un onere dell'ente, non entra (ADR 0016, 0028).
 [[concorso]]
 istituto = "indennita_funzione"
 basi = ["irap"]
-misura = "escluso"
+misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 
 [[concorso]]
 istituto = "dimezzamento_indennita"
 basi = ["irap"]
-misura = "escluso"
+misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 

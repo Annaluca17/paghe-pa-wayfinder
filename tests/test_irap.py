@@ -68,3 +68,26 @@ def test_un_cococo_ha_la_base_al_netto_della_quota_di_gestione_separata_a_carico
     assert v["gs_lavoratore"] == D("116.77")
     # (1.000,00 - 116,77) x 8,5% = 75,07455: scelta di Luca, fonte non leggibile, da verificare (ADR 0028)
     assert v["irap_acconto"] == D("75.07")
+
+
+def mandato(registro, orologio, reale, condizione="non_dipendente", misura="3000.00"):
+    registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1972, 10, 9))
+    registro.collega_rapporto(R, "PERSONA-1", date(2026, 1, 1))
+    for tipo, valore in (("carica", "sindaco"), ("condizione_lavorativa", condizione), ("posizione_previdenziale", "gestione_separata")):
+        registro.registra_codice(R, tipo, valore, date(2026, 1, 1), atto=ATTO)
+    registro.registra_fatto(R, "misura_indennita_funzione", misura, date(2026, 1, 1), atto=ATTO)
+    paga_il_mese(registro, orologio, reale, giorno=date(2026, 11, 30))
+
+
+def test_un_amministratore_ha_la_base_sull_indennita_di_funzione_e_fuori_l_onere_dell_art_86(registro, reale, orologio):
+    mandato(registro, orologio, reale)
+    v = valori(registro, reale)
+    assert v["base.irap"] == D("3000.00")
+    assert v["irap_acconto"] == D("255.00")  # 3.000,00 x 8,5%; la quota art. 86 e' un onere dell'ente, non entra
+
+
+def test_l_indennita_dimezzata_entra_nella_base_per_l_importo_pagato(registro, reale, orologio):
+    mandato(registro, orologio, reale, condizione="dipendente_senza_aspettativa")
+    v = valori(registro, reale)
+    assert v["base.irap"] == D("1500.00")  # 3.000,00 meno il dimezzamento di 1.500,00 (art. 82 c. 1 TUEL)
+    assert v["irap_acconto"] == D("127.50")

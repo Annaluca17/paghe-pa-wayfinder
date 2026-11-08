@@ -192,7 +192,9 @@ def _recuperi(
     righe: list[Importo] = []
     for base in periodo.basi:
         for riga in base.derivazione.importi:
-            if riga.valore < 0 and riga not in righe:
+            # Una riga negativa calcolata su un altro importo, come il dimezzamento dell'indennita' di funzione, e' una
+            # riduzione dello stesso pagamento: non recupera nulla (ticket #81).
+            if riga.valore < 0 and not riga.derivazione.importi and riga not in righe:
                 righe.append(riga)
     if not righe:
         return ()
