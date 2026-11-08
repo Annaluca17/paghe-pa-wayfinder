@@ -214,3 +214,39 @@ def registra_messa_a_disposizione(
         esito = registro.registra_esito(TipoEsito.DICHIARATO, data, righe)
         evento = registro.registra_evento(chiave, TIPO_MESSA_A_DISPOSIZIONE, contenuto, adattatore, esito_id=esito.id)
     return MessaADisposizione(esito, evento)
+
+
+@dataclass(frozen=True)
+class ScostamentoProspetto:
+    """Un elemento del prospetto di oggi che differisce da quello dell'ultima messa a disposizione."""
+
+    campo: str
+    dichiarato: object
+    attuale: object
+
+
+def segnala_scostamento_prospetto(
+    registro: Registro, corpus: Corpus, rapporto: str, esito_id: int, noto_al: datetime | None = None
+) -> tuple[ScostamentoProspetto, ...]:
+    """Differenza tra il prospetto di oggi e l'ultimo dichiarato; vuota se mai messo a disposizione o senza differenze.
+
+    Non corregge nulla: la correzione e' una nuova messa a disposizione, con un'altra chiave.
+    """
+    istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
+    messe = [
+        e
+        for e in registro.eventi(TIPO_MESSA_A_DISPOSIZIONE, istante)
+        if e.contenuto["rapporto"] == rapporto and e.contenuto["esito_pagato"] == esito_id
+    ]
+    if not messe:
+        return ()
+    dichiarato = messe[-1].contenuto["prospetto"]
+    try:
+        attuale = _in_dizionario(prospetto_paga(registro, corpus, rapporto, esito_id, istante))
+    except VistaFerma:
+        attuale = {campo: None for campo in dichiarato}
+    return tuple(
+        ScostamentoProspetto(campo, dichiarato[campo], attuale.get(campo))
+        for campo in dichiarato
+        if dichiarato[campo] != attuale.get(campo)
+    )

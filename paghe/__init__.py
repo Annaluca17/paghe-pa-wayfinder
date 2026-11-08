@@ -61,6 +61,13 @@ from .denuncia_individuale import (
 from .denuncia import Denuncia, PeriodoDenuncia, Recupero, calcola_denuncia, rapporti_della_vista
 from .lista_collaboratori import ListaCollaboratori, lista_collaboratori
 from .lista_pos_pa import ListaPosPA, lista_pos_pa
+from .prospetto_paga import (
+    MessaADisposizione,
+    ProspettoPaga,
+    registra_messa_a_disposizione,
+    segnala_scostamento_prospetto,
+    prospetto_paga,
+)
 from .modello import Atto, ConcorsoLetto, Derivazione, Esito, Fatto, Importo, Quota, TipoEsito
 from .proposta import (
     Escluso,
@@ -175,6 +182,11 @@ __all__ = [
     "segnala_scostamento_invio",
     "lista_collaboratori",
     "lista_pos_pa",
+    "MessaADisposizione",
+    "ProspettoPaga",
+    "prospetto_paga",
+    "registra_messa_a_disposizione",
+    "segnala_scostamento_prospetto",
     "rapporti_della_vista",
     "spiega",
 ]
