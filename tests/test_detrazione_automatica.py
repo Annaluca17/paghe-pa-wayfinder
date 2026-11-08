@@ -182,3 +182,55 @@ def test_senza_fatto_di_servizio_nel_corpus_i_giorni_sono_quelli_dell_anno(regis
     servizio(registro, R, date(2026, 7, 1))
     fiscale, operate = anno_con_servizio(registro, orologio, corpus, range(7, 13))
     assert fiscale.conguaglio.valore == conguaglio_atteso(Decimal(9000), operate, 365, 365)
+
+
+# Avviso: il minimo di 1.380 euro per il tempo determinato non è applicato
+
+def avvisi_td(fiscale):
+    return fiscale.avvisi_di("tempo_determinato_sotto_soglia")
+
+
+def test_avviso_per_il_tempo_determinato_sotto_i_15000_euro(registro, orologio):
+    corpus = corpus_prova()
+    if not registro.fatti_persona_noti(P, "codice_fiscale", registro.adesso()):
+        registro.registra_codice_persona(P, "codice_fiscale", CF, date(1980, 1, 1))
+    registro.collega_rapporto(R, P, date(2026, 7, 1))
+    registro.registra_codice(R, "tipo_impiego", "17", date(2026, 7, 1))
+    fiscale, _ = anno_con_servizio(registro, orologio, corpus, range(7, 13))
+    (avviso,) = avvisi_td(fiscale)
+    assert (avviso.persona, avviso.anno, avviso.valore) == (P, 2026, Decimal(9000))
+
+
+def test_nessun_avviso_per_il_tempo_determinato_da_15000_euro_in_su(registro, orologio):
+    corpus = corpus_prova()
+    if not registro.fatti_persona_noti(P, "codice_fiscale", registro.adesso()):
+        registro.registra_codice_persona(P, "codice_fiscale", CF, date(1980, 1, 1))
+    registro.collega_rapporto(R, P, date(2026, 7, 1))
+    registro.registra_codice(R, "tipo_impiego", "18", date(2026, 7, 1))
+    fiscale, _ = anno_con_servizio(registro, orologio, corpus, range(7, 13), importo="2500")
+    assert avvisi_td(fiscale) == ()
+
+
+def test_nessun_avviso_per_il_tempo_indeterminato_sotto_i_15000_euro(registro, orologio):
+    corpus = corpus_prova()
+    servizio(registro, R, date(2026, 7, 1))
+    fiscale, _ = anno_con_servizio(registro, orologio, corpus, range(7, 13))
+    assert avvisi_td(fiscale) == ()
+
+
+def test_avviso_anche_se_il_tempo_determinato_e_un_altro_rapporto_della_persona(registro, orologio):
+    corpus = corpus_prova()
+    servizio(registro, R, date(2026, 7, 1))
+    registro.collega_rapporto(ALTRO, P, date(2026, 1, 1))
+    registro.registra_codice(ALTRO, "tipo_impiego", "17", date(2026, 1, 1), date(2026, 2, 28))
+    fiscale, _ = anno_con_servizio(registro, orologio, corpus, range(7, 13))
+    assert len(avvisi_td(fiscale)) == 1
+
+
+def test_niente_avviso_nella_proiezione_perche_l_imponibile_dell_anno_non_e_finale(registro, orologio):
+    corpus = corpus_prova()
+    registro.registra_codice_persona(P, "codice_fiscale", CF, date(1980, 1, 1))
+    registro.collega_rapporto(R, P, date(2026, 1, 1))
+    registro.registra_codice(R, "tipo_impiego", "17", date(2026, 1, 1))
+    fiscale, _ = anno_con_servizio(registro, orologio, corpus, [3], ultimo=False)
+    assert avvisi_td(fiscale) == ()

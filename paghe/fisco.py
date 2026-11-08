@@ -25,6 +25,7 @@ from .formula import valuta
 from .modello import MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, Registro
 from .denuncia import MATURAZIONI_DERIVATE
+from .denuncia_individuale import IMPIEGHI_TEMPO_DETERMINATO
 from .tempo import Periodo, in_utc
 
 PERIODI_MENSILI = 12  # periodi di paga in un anno per il mese: struttura del calendario, non un valore normativo
@@ -34,6 +35,10 @@ ULTIMO_GIORNO_CONGUAGLIO = (2, 28)  # entro il 28 febbraio (art. 23 c. 3 DPR 600
 AVVISO_SENZA_DICHIARAZIONE = "senza_dichiarazione_sostituito"
 AVVISO_PROIEZIONE = "proiezione_conguaglio"
 AVVISO_ACCONTO_SENZA_BASE = "acconto_senza_base"
+AVVISO_TEMPO_DETERMINATO = "tempo_determinato_sotto_soglia"
+# Art. 13 c. 1 lett. a TUIR: sotto questo reddito complessivo il tempo determinato ha un minimo di 1.380 euro, che il
+# modello non applica (ADR 0019, ticket #93). È la soglia di un avviso, non entra in nessun calcolo.
+SOGLIA_MINIMO_TEMPO_DETERMINATO = Decimal(15000)
 
 
 @dataclass(frozen=True)
@@ -449,6 +454,18 @@ def _giorni_di_servizio(registro: Registro, corpus: Corpus, persona: str, anno: 
     return sum(in_servizio), giorni_anno
 
 
+def _ha_tempo_determinato(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> bool:
+    """Un rapporto della persona è a tempo determinato (tipo di impiego 17 o 18) in almeno un giorno dell'anno."""
+    if corpus.fatto_servizio is None:
+        return False
+    anno_intero = Periodo(date(anno, 1, 1), date(anno, 12, 31))
+    return any(
+        fatto is not None and fatto.valore in IMPIEGHI_TEMPO_DETERMINATO
+        for rapporto in registro.rapporti_della_persona(persona, istante)
+        for fatto in registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, anno_intero, istante)
+    )
+
+
 def _annuale(
     registro: Registro,
     corpus: Corpus,
@@ -620,6 +637,20 @@ def calcola_fiscale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         conguaglio = _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
+        if annuale.calcolo.imponibile < SOGLIA_MINIMO_TEMPO_DETERMINATO and _ha_tempo_determinato(
+            registro, corpus, persona, anno, istante
+        ):
+            avvisi.append(
+                Avviso(
+                    AVVISO_TEMPO_DETERMINATO,
+                    f"Persona {persona}: rapporto a tempo determinato e imponibile {annuale.calcolo.imponibile} "
+                    f"sotto {SOGLIA_MINIMO_TEMPO_DETERMINATO}: il minimo della detrazione per il tempo determinato "
+                    "non è applicato",
+                    persona,
+                    anno,
+                    annuale.calcolo.imponibile,
+                )
+            )
         finale = corpus.regola_addizionali(riferimento) is not None and pagamento_finale(
             registro, corpus, persona, anno, data_pagamento, istante
         )
