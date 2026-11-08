@@ -18,6 +18,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+from . import addizionali
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
@@ -61,9 +62,12 @@ class ImponibileFiscale:
 
 @dataclass(frozen=True)
 class FiscaleDelPagamento:
+    """Ritenuta, conguaglio (con le addizionali dovute dell'anno nella sua derivazione) e importi delle addizionali (ADR 0029)."""
+
     ritenuta: Importo
     conguaglio: Importo | None = None
     avvisi: tuple[Avviso, ...] = ()
+    addizionali: tuple[Importo, ...] = ()
 
     def avvisi_di(self, tipo: str) -> tuple[Avviso, ...]:
         return tuple(avviso for avviso in self.avvisi if avviso.tipo == tipo)
@@ -233,6 +237,7 @@ def imponibile_fiscale(
 
 @dataclass(frozen=True)
 class _Calcolo:
+    imponibile: Decimal
     imposta: Decimal
     detrazione: Decimal
     dovuto: Decimal
@@ -263,6 +268,7 @@ def _calcola(
     imposta = valuta(regola.imposta, risolvi)
     detrazione = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
     return _Calcolo(
+        imponibile,
         imposta,
         detrazione,
         max(Decimal(0), imposta - detrazione),
@@ -547,7 +553,7 @@ def calcola_fiscale(
     reddito = _controlla_righe(registro, rapporto, persona, righe, regola_provvisoria, istante)
     anno = reddito[0].anno_imposta
     deduzioni = tuple(riga for riga in righe if _e_deduzione(corpus, riga, data_pagamento))
-    ritenuta, regola, _, dichiarazione = _ritenuta(
+    ritenuta, regola, riferimento, dichiarazione = _ritenuta(
         registro, corpus, rapporto, persona, reddito, data_pagamento, istante, deduzioni
     )
     avvisi: list[Avviso] = []
@@ -568,12 +574,35 @@ def calcola_fiscale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         conguaglio = _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
+        conguaglio = _con_le_addizionali_dovute(registro, corpus, conguaglio, persona, anno, annuale, riferimento, istante)
     else:
         annuale = _annuale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
     return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi))
+
+
+def _con_le_addizionali_dovute(
+    registro: Registro,
+    corpus: Corpus,
+    conguaglio: Importo,
+    persona: str,
+    anno: int,
+    annuale: _Annuale,
+    riferimento: date,
+    istante: datetime,
+) -> Importo:
+    """Il conguaglio porta le addizionali dell'anno nella sua derivazione, da cui si ricava il residuo da trattenere."""
+    regola = corpus.regola_addizionali(riferimento)
+    if regola is None:
+        return conguaglio
+    dovute = addizionali.dovute_dell_anno(
+        registro, corpus, regola, conguaglio.rapporto, persona, anno,
+        annuale.calcolo.imponibile, annuale.calcolo.dovuto, istante,
+    )
+    derivazione = replace(conguaglio.derivazione, importi=(*conguaglio.derivazione.importi, *dovute))
+    return replace(conguaglio, derivazione=derivazione)
 
 
 def _avviso_proiezione(persona: str, anno: int, annuale: _Annuale) -> Avviso:

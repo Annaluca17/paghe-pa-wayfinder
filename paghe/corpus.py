@@ -560,6 +560,60 @@ class AliquotaAddizionale:
         return totale.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+RUOLI_ADDIZIONALE = (
+    "regionale_dovuta", "comunale_dovuta", "regionale", "comunale_saldo", "comunale_acconto",
+    "regionale_credito", "comunale_credito",
+)
+PARAMETRI_ADDIZIONALE = ("percentuale_acconto", "mese_prima_rata_acconto", "mese_ultima_rata")
+
+
+@dataclass(frozen=True)
+class RegolaAddizionali:
+    """Regola delle addizionali (ADR 0029): quali istituti producono gli importi e quali parametri datati leggono.
+
+    Gli istituti `*_dovuta` portano l'addizionale dell'anno calcolata al conguaglio; `regionale`, `comunale_saldo` e
+    `comunale_acconto` sono le rate trattenute; `*_credito` la restituzione in unica soluzione. I tre parametri sono
+    la percentuale dell'acconto, il primo mese delle rate dell'acconto e l'ultimo mese di tutte le rate.
+    """
+
+    versione: int
+    dal: date
+    riferimento: str
+    percentuale_acconto: str
+    mese_prima_rata_acconto: str
+    mese_ultima_rata: str
+    regionale_dovuta: str
+    comunale_dovuta: str
+    regionale: str
+    comunale_saldo: str
+    comunale_acconto: str
+    regionale_credito: str
+    comunale_credito: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = "Addizionali"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if type(self.versione) is not int or self.versione < 1:
+            raise ErroreCorpus(f"{soggetto}: versione non valida")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        for campo in (*RUOLI_ADDIZIONALE, *PARAMETRI_ADDIZIONALE):
+            valore = getattr(self, campo)
+            if not isinstance(valore, str) or not valore.strip():
+                raise ErroreCorpus(f"{soggetto}: {campo} obbligatorio")
+        if len(set(self.istituti)) != len(RUOLI_ADDIZIONALE):
+            raise ErroreCorpus(f"{soggetto}: ogni ruolo ha un istituto diverso")
+
+    @property
+    def istituti(self) -> tuple[str, ...]:
+        return tuple(getattr(self, ruolo) for ruolo in RUOLI_ADDIZIONALE)
+
+    @property
+    def parametri(self) -> tuple[str, ...]:
+        return tuple(getattr(self, nome) for nome in PARAMETRI_ADDIZIONALE)
+
+
 @dataclass(frozen=True)
 class RegoleFiscali:
     categorie: tuple[CategoriaReddito, ...] = ()
@@ -569,6 +623,7 @@ class RegoleFiscali:
     fisiologici: tuple[DichiarazionePagamentoFisiologico, ...] = ()
     deduzioni: tuple[DichiarazioneDeduzione, ...] = ()
     aliquote: tuple[AliquotaAddizionale, ...] = ()
+    addizionali: tuple[RegolaAddizionali, ...] = ()
 
     def __bool__(self) -> bool:
         return bool(
@@ -579,6 +634,7 @@ class RegoleFiscali:
             or self.fisiologici
             or self.deduzioni
             or self.aliquote
+            or self.addizionali
         )
 
 
@@ -931,6 +987,7 @@ class Corpus:
         elenco += [(f"Deduzione fiscale {d.istituto}", d.riferimento) for d in fiscale.deduzioni]
         elenco += [(f"Ritenuta {r.istituto}", r.riferimento) for r in fiscale.ritenute]
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
+        elenco += [("Addizionali", a.riferimento) for a in fiscale.addizionali]
         elenco += [(f"Aliquota addizionale {a.ente} {a.codice} {a.anno}", a.riferimento) for a in fiscale.aliquote]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
@@ -970,7 +1027,8 @@ class Corpus:
     def _istituti_noti(self) -> set[str]:
         """Istituti con una regola, o con la ritenuta e il conguaglio fiscale."""
         fiscale = self.fiscale
-        return set(self._regole) | {r.istituto for r in fiscale.ritenute} | {c.istituto for c in fiscale.conguagli}
+        noti = set(self._regole) | {r.istituto for r in fiscale.ritenute} | {c.istituto for c in fiscale.conguagli}
+        return noti | {i for regola in fiscale.addizionali for i in regola.istituti}
 
     def _convalida_composizione(self) -> None:
         noti = self._istituti_noti()
@@ -1057,6 +1115,15 @@ class Corpus:
         for chiave in chiavi:
             if chiavi.count(chiave) > 1:
                 raise ErroreCorpus(f"Aliquota addizionale {chiave[0]} {chiave[1]} {chiave[2]}: dichiarata più volte")
+        for indice, regola in enumerate(fiscale.addizionali):
+            ignoti = set(regola.parametri) - self._parametri.keys()
+            if ignoti:
+                raise ErroreCorpus(f"Addizionali: parametri ignoti {sorted(ignoti)}")
+            gia = [i for i in regola.istituti if i in self._regole]
+            if gia:
+                raise ErroreCorpus(f"Addizionali {gia[0]}: lo stesso istituto ha anche una regola")
+            for altra in fiscale.addizionali[indice + 1 :]:
+                _vigenze_sovrapposte([regola, altra], "Addizionali")
         for indice, dichiarazione in enumerate(fiscale.fisiologici):
             soggetto = f"Pagamento fisiologico {dichiarazione.istituto}"
             if dichiarazione.istituto not in self._regole:
@@ -1275,6 +1342,12 @@ class Corpus:
                     for c in fiscale.conguagli
                 ),
             }
+            if fiscale.addizionali:
+                contenuto["fiscale"]["addizionali"] = sorted(
+                    [a.versione, a.dal.isoformat(), a.al.isoformat() if a.al else "", a.riferimento,
+                     *a.parametri, *a.istituti]
+                    for a in fiscale.addizionali
+                )
             if fiscale.aliquote:
                 contenuto["fiscale"]["aliquote"] = sorted(
                     [a.ente, a.codice, a.anno, str(a.soglia), a.riferimento,
@@ -1379,6 +1452,10 @@ class Corpus:
     def aliquota_addizionale(self, ente: str, codice: str, anno: int) -> AliquotaAddizionale | None:
         """Aliquote dell'addizionale del comune o della regione per l'anno; None se il corpus non le dichiara."""
         return next((a for a in self.fiscale.aliquote if (a.ente, a.codice, a.anno) == (ente, codice, anno)), None)
+
+    def regola_addizionali(self, giorno: date) -> RegolaAddizionali | None:
+        """Regola delle addizionali vigente alla data; None se il corpus non le calcola."""
+        return _vigente(self.fiscale.addizionali, giorno)
 
     def regola_ritenuta(self, giorno: date) -> RegolaRitenuta | None:
         return _vigente(self.fiscale.ritenute, giorno)
@@ -1778,7 +1855,17 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
         for voce in dati.get("deduzione_fiscale", [])
     )
     aliquote = tuple(_aliquota_da_toml(voce) for voce in dati.get("aliquota_addizionale", []))
-    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote)
+    addizionali = tuple(
+        RegolaAddizionali(
+            versione=voce["versione"],
+            dal=_data(voce["dal"], "dal"),
+            riferimento=voce["riferimento"],
+            al=_data(voce["al"], "al") if "al" in voce else None,
+            **{campo: voce[campo] for campo in (*PARAMETRI_ADDIZIONALE, *RUOLI_ADDIZIONALE)},
+        )
+        for voce in dati.get("addizionale", [])
+    )
+    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote, addizionali)
 
 
 def _concorsi_da_toml(voce: dict) -> list[Concorso]:
