@@ -20,99 +20,16 @@ dal = 2025-01-01
 valore = "7"
 riferimento = "fittizio:rimborso-730-primo-mese"
 
-[[parametro]]
-nome = "ritenuta_franchigia_annua"
-[[parametro.vigenza]]
-dal = 2025-01-01
-valore = "9999"
-riferimento = "fittizio:ritenuta-franchigia-annua"
-
-[[parametro]]
-nome = "ritenuta_aliquota"
-[[parametro.vigenza]]
-dal = 2025-01-01
-valore = "0.11"
-riferimento = "fittizio:ritenuta-aliquota"
-
-[[parametro]]
-nome = "ritenuta_detrazione_annua"
-[[parametro.vigenza]]
-dal = 2025-01-01
-valore = "1111"
-riferimento = "fittizio:ritenuta-detrazione-annua"
-
 # --- Categoria di reddito, ritenuta e conguaglio ---
 
-[[categoria_reddito]]
-nome = "lavoro_dipendente"
-[[categoria_reddito.cassa_allargata]]
-dal = 2025-01-01
-vale = true
-riferimento = "fittizio:cassa-allargata-lavoro-dipendente"
-
 # Categorie del co.co.co. e dell'amministratore (ticket #73, PR B): CU punti 1-2 e punto 4. Valori fiscali finti come il resto.
-[[categoria_reddito]]
-nome = "collaborazione"
-[[categoria_reddito.cassa_allargata]]
-dal = 2025-01-01
-vale = true
-riferimento = "fittizio:cassa-allargata-collaborazione"
-
-[[categoria_reddito]]
-nome = "carica_elettiva"
-[[categoria_reddito.cassa_allargata]]
-dal = 2025-01-01
-vale = true
-riferimento = "fittizio:cassa-allargata-carica-elettiva"
-
-[[ritenuta]]
-istituto = "ritenuta_irpef"
-versione = 1
-dal = 2025-01-01
-riferimento = "fittizio:ritenuta-irpef"
-categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
-detrazione_richiesta = "lavoro_dipendente"
-imposta = "arrotonda(max(0, fisco.imponibile - parametro.ritenuta_franchigia_annua / fisco.periodi) * parametro.ritenuta_aliquota, 2)"
-detrazione = "arrotonda(parametro.ritenuta_detrazione_annua / fisco.periodi, 2)"
-
-[[conguaglio]]
-istituto = "conguaglio_irpef"
-versione = 1
-dal = 2025-01-01
-riferimento = "fittizio:conguaglio-irpef"
-
 # Dichiarazione ASSUNTA: i contributi a carico del lavoratore riducono l'imponibile fiscale (art. 51 c. 2 lett. a TUIR,
 # letto su riproduzione; nel corpus reale il riferimento va riletto su Normattiva).
 
-[[deduzione_fiscale]]
-istituto = "cpdel_lavoratore"
-dal = 2025-01-01
-riferimento = "fittizio:deduzione-cpdel-lavoratore"
-
-[[deduzione_fiscale]]
-istituto = "fondo_credito"
-dal = 2025-01-01
-riferimento = "fittizio:deduzione-fondo-credito"
-
-[[deduzione_fiscale]]
-istituto = "tfs_lavoratore"
-dal = 2025-01-01
-riferimento = "fittizio:deduzione-tfs-lavoratore"
-
 # Dichiarazione ASSUNTA: la quota a carico del collaboratore della gestione separata riduce l'imponibile fiscale
 # (art. 10 c. 1 lett. e TUIR, non riletto su Normattiva).
-[[deduzione_fiscale]]
-istituto = "gs_lavoratore"
-dal = 2025-01-01
-riferimento = "fittizio:deduzione-gs-lavoratore"
-
 # Dichiarazione ASSUNTA: anche l'1% aggiuntivo a carico del lavoratore riduce l'imponibile fiscale (ticket #73: dirigente e
 # segretario superano la prima fascia mensile gia' a marzo).
-[[deduzione_fiscale]]
-istituto = "contributo_aggiuntivo"
-dal = 2025-01-01
-riferimento = "fittizio:deduzione-contributo-aggiuntivo"
-
 # --- Due istituti che leggono un fatto (input da atto), senza regola di calcolo ---
 # La performance e' di competenza 2025 e pagata nel 2026: pagamento fisiologico dichiarato qui sotto.
 # Il rimborso da 730-4 ha maturazione `periodo`: e' l'unica maturazione che non produce reddito imponibile ne' entra
@@ -146,112 +63,10 @@ riferimento = "fittizio:performance-pagamento-fisiologico"
 # --- Reddito: gli istituti retributivi sono lavoro dipendente (anche dirigente e segretario, ticket #73) ---
 
 [[reddito]]
-istituto = "tabellare_funzionari"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-funzionari"
-
-[[reddito]]
-istituto = "tabellare_istruttori"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-istruttori"
-
-[[reddito]]
-istituto = "tabellare_operatori_esperti"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-operatori-esperti"
-
-[[reddito]]
-istituto = "tabellare_operatori"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-operatori"
-
-[[reddito]]
-istituto = "comparto_funzionari"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-comparto-funzionari"
-
-[[reddito]]
-istituto = "comparto_istruttori"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-comparto-istruttori"
-
-[[reddito]]
-istituto = "comparto_operatori_esperti"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-comparto-operatori-esperti"
-
-[[reddito]]
-istituto = "comparto_operatori"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-comparto-operatori"
-
-[[reddito]]
 istituto = "performance"
 categoria = "lavoro_dipendente"
 dal = 2025-01-01
 riferimento = "fittizio:reddito-performance"
-
-[[reddito]]
-istituto = "tabellare_dirigenti"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-dirigenti"
-
-[[reddito]]
-istituto = "posizione_dirigenti"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-posizione-dirigenti"
-
-[[reddito]]
-istituto = "tabellare_segretario_a"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-segretario-a"
-
-[[reddito]]
-istituto = "tabellare_segretario_b"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-segretario-b"
-
-[[reddito]]
-istituto = "tabellare_segretario_c"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-tabellare-segretario-c"
-
-[[reddito]]
-istituto = "posizione_segretario"
-categoria = "lavoro_dipendente"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-posizione-segretario"
-
-[[reddito]]
-istituto = "compenso_collaborazione"
-categoria = "collaborazione"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-compenso-collaborazione"
-
-[[reddito]]
-istituto = "indennita_funzione"
-categoria = "carica_elettiva"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-indennita-funzione"
-
-[[reddito]]
-istituto = "dimezzamento_indennita"
-categoria = "carica_elettiva"
-dal = 2025-01-01
-riferimento = "fittizio:reddito-dimezzamento-indennita"
 
 # --- Concorsi della performance (il corpus reale non li dichiara) e del rimborso 730 ---
 
@@ -936,27 +751,6 @@ riferimento = "fittizio:mappatura-onere-art86"
 # Valori finti: comune X001 e regione 98 non esistono, le aliquote sono di fantasia. La regola e i tre parametri datati
 # (percentuale dell'acconto, primo mese dell'acconto, ultimo mese delle rate) sono quelli dell'ADR 0029, con fonte fittizia.
 
-[[parametro]]
-nome = "addizionale_acconto_percentuale"
-[[parametro.vigenza]]
-dal = 2025-01-01
-valore = "0.30"
-riferimento = "fittizio:addizionale-acconto-percentuale"
-
-[[parametro]]
-nome = "addizionale_mese_prima_rata_acconto"
-[[parametro.vigenza]]
-dal = 2025-01-01
-valore = "3"
-riferimento = "fittizio:addizionale-mese-prima-rata-acconto"
-
-[[parametro]]
-nome = "addizionale_mese_ultima_rata"
-[[parametro.vigenza]]
-dal = 2025-01-01
-valore = "11"
-riferimento = "fittizio:addizionale-mese-ultima-rata"
-
 [[aliquota_addizionale]]
 ente = "comune"
 codice = "X001"
@@ -989,21 +783,6 @@ fino_a = "15000"
 aliquota = "0.012"
 [[aliquota_addizionale.fascia]]
 aliquota = "0.02"
-
-[[addizionale]]
-versione = 1
-dal = 2025-01-01
-riferimento = "fittizio:addizionali"
-percentuale_acconto = "addizionale_acconto_percentuale"
-mese_prima_rata_acconto = "addizionale_mese_prima_rata_acconto"
-mese_ultima_rata = "addizionale_mese_ultima_rata"
-regionale_dovuta = "addizionale_regionale_dovuta"
-comunale_dovuta = "addizionale_comunale_dovuta"
-regionale = "addizionale_regionale"
-comunale_saldo = "addizionale_comunale_saldo"
-comunale_acconto = "addizionale_comunale_acconto"
-regionale_credito = "addizionale_regionale_credito"
-comunale_credito = "addizionale_comunale_credito"
 
 # Le rate sono trattenute e versate; la restituzione e' una riga sola, sul netto e verso il beneficiario, letta anche
 # dalla delega come credito (ADR 0023). Le dovute stanno nel conguaglio: non entrano nella composizione.
