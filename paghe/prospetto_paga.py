@@ -39,6 +39,7 @@ class ProspettoPaga:
     data_pagamento: date
     fermi: tuple[str, ...] = ()
     mancanti: tuple[str, ...] = ()
+    avvisi: tuple[str, ...] = ()
     ente_codice_fiscale: str | None = None
     ente_denominazione: str | None = None
     codice_fiscale: str | None = None
@@ -116,6 +117,16 @@ def prospetto_paga(
         )
         if not presente
     )
+    # Gli altri dati assenti non fermano: il contratto collettivo resta un avviso finche' il corpus non lo dichiara.
+    avvisi = ("contratto_collettivo",) + tuple(
+        dato
+        for dato, assente in (
+            ("ente_codice_fiscale", ente["codice_fiscale"] is None),
+            ("ente_denominazione", ente["denominazione"] is None),
+            ("fine_servizio", regime.fine_servizio is not None and fine_servizio is None),
+        )
+        if assente
+    )
     return ProspettoPaga(
         rapporto,
         esito_id,
@@ -124,6 +135,7 @@ def prospetto_paga(
         data,
         tuple(fermi),
         mancanti,
+        avvisi,
         ente["codice_fiscale"],
         ente["denominazione"],
         anagrafica["codice_fiscale"],

@@ -204,3 +204,29 @@ riferimento = "fittizio:prospetto-solo-oneri"
     registro.registra_pagamento(SINDACO, esito.id, PAGAMENTO)
     prospetto = prospetto_paga(registro, corpus, SINDACO, esito.id)
     assert prospetto.mancanti == ("voci",)
+
+
+def test_il_codice_del_contratto_e_sempre_un_avviso_e_non_ferma_il_prospetto(registro, corpus, orologio):
+    ente(registro)
+    dipendente(registro)
+    registro.registra_codice(DIP, "contratto", "RALN", date(2026, 1, 1))
+    registro.registra_codice(DIP, "regime_fine_servizio", "3", date(2026, 1, 1))
+    esito = paga(registro, orologio, corpus, DIP)
+    prospetto = prospetto_paga(registro, corpus, DIP, esito.id)
+    assert prospetto.avvisi == ("contratto_collettivo",)
+    assert prospetto.consegnabile
+
+
+def test_i_dati_dell_ente_e_il_tipo_di_fine_servizio_assenti_sono_avvisi_e_non_fermi(registro, corpus, orologio):
+    dipendente(registro)
+    esito = paga(registro, orologio, corpus, DIP)
+    prospetto = prospetto_paga(registro, corpus, DIP, esito.id)
+    assert prospetto.avvisi == ("contratto_collettivo", "ente_codice_fiscale", "ente_denominazione", "fine_servizio")
+    assert prospetto.consegnabile
+
+
+def test_il_tipo_di_fine_servizio_e_un_avviso_solo_dove_il_regime_lo_dichiara(registro, corpus, orologio):
+    ente(registro)
+    sindaco(registro)
+    esito = paga(registro, orologio, corpus, SINDACO)
+    assert prospetto_paga(registro, corpus, SINDACO, esito.id).avvisi == ("contratto_collettivo",)
