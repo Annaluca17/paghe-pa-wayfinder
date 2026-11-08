@@ -305,6 +305,14 @@ misura = "escluso"
 dal = 2026-01-01
 riferimento = "fittizio:concorso-rimborso-730-gestione-separata"
 
+# IRAP (ticket #81): la performance e' retribuzione imponibile, entra per intero nella base dell'acconto.
+[[concorso]]
+istituto = "performance"
+basi = ["irap"]
+misura = "intero"
+dal = 2025-01-01
+riferimento = "fittizio:concorso-performance-irap"
+
 # --- Dichiarazioni di composizione del pagamento ---
 
 [[composizione]]
@@ -664,6 +672,14 @@ intermedio = true
 istituto = "gs_totale"
 dal = 2025-01-01
 riferimento = "fittizio:comp-gs-totale"
+intermedio = true
+
+# IRAP (ticket #81): per ora l'acconto non entra nella composizione; la sua riga e la sua delega arrivano con il passo
+# sulla delega.
+[[composizione]]
+istituto = "irap_acconto"
+dal = 2025-01-01
+riferimento = "fittizio:comp-irap-acconto"
 intermedio = true
 
 # --- Mappatura verso i codici tributo e le causali F24EP ---

@@ -246,6 +246,13 @@ nome = "gestione_separata"
 massimale = "massimale_annuo_gs"
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par1"
 
+# IRAP, acconto mensile a carico dell'ente (ticket #81, ADR 0028): base propria, per cassa. Dipendenti: imponibile
+# previdenziale del pagamento, la stessa composizione della base CPDEL (prassi: ris. AdE 29/E/2010). Non coincide con la
+# base CPDEL in tre punti: non ha il massimale annuo, e per co.co.co. e amministratori segue l'importo IRPEF.
+[[base]]
+nome = "irap"
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
 # Aliquote, in punti percentuali
 
 [[parametro]]
@@ -333,6 +340,17 @@ nome = "aliquota_tfr_ulteriori"
 dal = 2019-10-01
 valore = "6.91"
 riferimento = "prassi:inps:messaggio:2019-07-01;2440 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com6"
+
+# IRAP: 8,5% per le amministrazioni pubbliche col metodo retributivo (art. 16 c. 2 D.Lgs. 446/1997; le istruzioni IRAP sono
+# la seconda fonte). E' il massimo e il valore di default: una regola regionale datata puo' ridurlo, non aumentarlo
+# (art. 16 c. 3; art. 5 D.Lgs. 68/2011).
+
+[[parametro]]
+nome = "aliquota_irap"
+[[parametro.vigenza]]
+dal = 1998-01-01
+valore = "8.50"
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art16-com2"
 
 # Soglie annuali INPS: valgono per l'anno, oltre il calcolo si ferma.
 
@@ -1001,6 +1019,16 @@ riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com30 + prassi:inps:circo
 formula = "importo.gs_totale - importo.gs_lavoratore"
 maturazione = "periodo"
 
+# IRAP: acconto mensile a carico dell'ente sulla base dei pagamenti del mese (art. 30 c. 5 D.Lgs. 446/1997). Arrotondato al
+# centesimo come i contributi. Non e' reddito ne' base: matura sul pagato come i contributi.
+[[regola]]
+istituto = "irap_acconto"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art30-com5 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art16-com2"
+formula = "arrotonda(base.irap * parametro.aliquota_irap / 100, 2)"
+maturazione = "periodo"
+
 # Concorsi: tabellare e comparto entrano per intero in entrambe le basi.
 
 [[concorso]]
@@ -1436,6 +1464,128 @@ basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori", "gestione_separata"]
 misura = "escluso"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art86-com2 + prassi:immedia:nota:2026-11-07;10"
+
+# Concorsi alla base IRAP (ticket #81): i dipendenti entrano per intero, come nella base CPDEL.
+
+[[concorso]]
+istituto = "tabellare_funzionari"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tabellare_istruttori"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tabellare_operatori_esperti"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tabellare_operatori"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "comparto_funzionari"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "comparto_istruttori"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "comparto_operatori_esperti"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "comparto_operatori"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tabellare_dirigenti"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "posizione_dirigenti"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tabellare_segretario_a"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tabellare_segretario_b"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tabellare_segretario_c"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "posizione_segretario"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+# Compenso di collaborazione e indennita' di funzione: per ora fuori dalla base IRAP, finche' la loro regola non e' scritta.
+[[concorso]]
+istituto = "compenso_collaborazione"
+basi = ["irap"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "indennita_funzione"
+basi = ["irap"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "dimezzamento_indennita"
+basi = ["irap"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 
 # Output (ADR 0015): quali rapporti il regime assegna a ciascuna vista. La ListaPosPA prende chi ha importi pagati nelle basi
 # della gestione dipendenti pubblici; la lista collaboratori chi ha importi nella gestione separata, piu' la quota

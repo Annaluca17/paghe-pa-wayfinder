@@ -8,14 +8,14 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 
 | Voce | Corpus reale | Aggiunta fittizia | Unione usata |
 |---|---:|---:|---:|
-| istituti con regola | 38 | 2 | 40 |
-| basi imponibili | 5 | 0 | 5 |
+| istituti con regola | 39 | 2 | 41 |
+| basi imponibili | 6 | 0 | 6 |
 | fermi dichiarati | 25 | 0 | 25 |
 | categorie di reddito | 0 | 3 | 3 |
 | regole di ritenuta | 0 | 1 | 1 |
 | regole di conguaglio | 0 | 1 | 1 |
 | dichiarazioni di pagamento fisiologico | 0 | 1 | 1 |
-| dichiarazioni di composizione | 0 | 42 | 42 |
+| dichiarazioni di composizione | 0 | 43 | 43 |
 | mappature verso codici esterni | 0 | 14 | 14 |
 | codici nel catalogo F24EP | 0 | 8 | 8 |
 | regole di scadenza F24EP | 0 | 2 | 2 |

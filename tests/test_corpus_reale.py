@@ -92,11 +92,13 @@ def test_denuncia_di_un_mese_intero(registro, reale, orologio):
         "base.cpdel": Decimal("2051.69"),
         "base.fondo_credito": Decimal("2051.69"),
         "base.tfs": Decimal("2019.63"),  # senza regime: base sì, contributo TFS no (ticket #33)
+        "base.irap": Decimal("2051.69"),  # come la base CPDEL (ticket #81)
         "cpdel_totale": Decimal("669.88"),
         "cpdel_lavoratore": Decimal("181.57"),
         "cpdel_ente": Decimal("488.31"),
         "fondo_credito": Decimal("7.18"),
         "contributo_aggiuntivo": Decimal("0.00"),
+        "irap_acconto": Decimal("174.39"),  # 8,5% a carico dell'ente
     }
     assert periodo.recuperi == ()
 
