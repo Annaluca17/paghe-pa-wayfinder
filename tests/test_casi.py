@@ -470,7 +470,8 @@ def test_recupero_dopo_la_fine_del_servizio_senza_cessazione_ne_sospensione_ferm
         calcola_denuncia(registro, casi, R, Mese(2026, 11))
 
 
-def test_mese_negativo_in_servizio_ferma_e_lo_nomina(registro, casi, orologio):
+def recupero_oltre_capienza(registro, casi, orologio):
+    """Ottobre pagato 300 di una tantum, poi azzerato: a novembre si recupera -300 senza stipendio da cui detrarlo."""
     assumi(registro)
     registro.registra_fatto(R, "una_tantum", "300", date(2026, 10, 5), date(2026, 10, 5))
     paga(registro, orologio, stipendi(registro, casi, Mese(2026, 10)), date(2026, 10, 27))
@@ -478,8 +479,17 @@ def test_mese_negativo_in_servizio_ferma_e_lo_nomina(registro, casi, orologio):
     registro.registra_fatto(R, "una_tantum", "0", date(2026, 10, 5), date(2026, 10, 5))
     recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 10), TipoEsito.PAGATO)]
     paga(registro, orologio, recupero, date(2026, 11, 10))
-    with pytest.raises(CasoNonModellato, match="mese negativo"):
-        calcola_denuncia(registro, casi, R, Mese(2026, 11))
+
+
+def test_recupero_oltre_capienza_in_servizio_ferma_la_base_a_zero_e_mostra_il_residuo(registro, casi, orologio):
+    recupero_oltre_capienza(registro, casi, orologio)
+    denuncia = calcola_denuncia(registro, casi, R, Mese(2026, 11))
+    periodo, = denuncia.periodi
+    assert periodo.base("pens").valore == Decimal("0")
+    assert contributi(periodo)["contributo"] == Decimal("0.00")
+    residuo, = denuncia.riporti
+    assert residuo.istituto == "riporto.pens"
+    assert residuo.valore == Decimal("-300")
 
 
 def test_recupero_fuori_servizio_senza_servizio_precedente_ferma(registro, casi, orologio):
