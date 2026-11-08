@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import pytest
 
-from paghe import Mese
+from paghe import Corpus, Mese
 from paghe.errori import ErroreRegistro
 from paghe.impegni import AttoPresupposto
 from paghe.proposta import emetti_versione
@@ -140,3 +140,72 @@ def test_l_importo_mancante_e_quello_dell_impegno_meno_incapiente(registro, corp
     orologio.vai(2, 20)
     with pytest.raises(ErroreRegistro, match="mancano 100"):  # 1500 - 1400
         emetti(registro, corpus_p, importi)
+
+
+# Origine da atto
+
+TIPO = "sottoscrizione_integrativo"
+
+
+def atto(tipo=TIPO):
+    return AttoPresupposto(tipo, "ente:ente_di_prova:contratto:2026-01-05;1")
+
+
+@pytest.fixture
+def corpus_atto():
+    from materiale_proposta import CORPUS_PROPOSTA
+
+    testo = CORPUS_PROPOSTA.replace(
+        'piano_dei_conti = "U.1.01.01.01.002"\norigine_impegno = "automatico"',
+        f'piano_dei_conti = "U.1.01.01.01.002"\norigine_impegno = "{TIPO}"',
+    )
+    assert testo != CORPUS_PROPOSTA
+    return Corpus.da_toml(testo)
+
+
+def test_un_impegno_da_atto_vuole_l_atto_di_quel_tipo(registro, corpus_atto, orologio):
+    assumi(registro)
+    impegno(registro, "I-0", 1, 2026)  # senza atto: non va
+    impegno(registro, "I-1", 2, 2026, atto=atto("altro_tipo"))  # atto di un altro tipo: non va
+    impegno(registro, "I-2", 3, 2026, atto=atto())
+    importi = stipendio(registro, corpus_atto, FEB)
+    orologio.vai(2, 20)
+    assert per_piano(emetti(registro, corpus_atto, importi))[PIANO].impegno == (2026, 3)
+
+
+def test_l_esercizio_della_valuta_precede_i_residui_anche_con_un_numero_piu_alto(registro, corpus_atto, orologio):
+    assumi(registro)
+    impegno(registro, "I-25", 1, 2025, atto=atto())
+    impegno(registro, "I-26", 90, 2026, atto=atto())
+    importi = stipendio(registro, corpus_atto, FEB)
+    orologio.vai(2, 20)
+    assert per_piano(emetti(registro, corpus_atto, importi))[PIANO].impegno == (2026, 90)
+
+
+def test_i_residui_si_scorrono_dal_piu_vecchio(registro, corpus_atto, orologio):
+    assumi(registro)
+    impegno(registro, "I-25", 1, 2025, atto=atto(), data=date(2025, 6, 1))
+    impegno(registro, "I-24", 8, 2024, atto=atto(), data=date(2024, 6, 1))
+    impegno(registro, "I-26", 3, 2026, atto=atto(), disponibilita="10")  # l'esercizio della valuta non e' capiente
+    importi = stipendio(registro, corpus_atto, FEB)
+    orologio.vai(2, 20)
+    assert per_piano(emetti(registro, corpus_atto, importi))[PIANO].impegno == (2024, 8)
+
+
+def test_un_residuo_incapiente_cede_al_residuo_successivo(registro, corpus_atto, orologio):
+    assumi(registro)
+    impegno(registro, "I-24", 8, 2024, atto=atto(), disponibilita="100", data=date(2024, 6, 1))
+    impegno(registro, "I-25", 1, 2025, atto=atto(), data=date(2025, 6, 1))
+    importi = stipendio(registro, corpus_atto, FEB)
+    orologio.vai(2, 20)
+    assert per_piano(emetti(registro, corpus_atto, importi))[PIANO].impegno == (2025, 1)
+
+
+def test_un_esercizio_successivo_alla_valuta_non_e_adatto(registro, corpus_atto, orologio):
+    assumi(registro)
+    impegno(registro, "I-27", 1, 2027, atto=atto())
+    importi = stipendio(registro, corpus_atto, FEB)
+    orologio.vai(2, 20)
+    versione = emetti(registro, corpus_atto, importi)
+    assert per_piano(versione)[PIANO].impegno is None
+    assert any(d.tipo == "impegno" and PIANO in d.soggetto for d in versione.dati_mancanti)
