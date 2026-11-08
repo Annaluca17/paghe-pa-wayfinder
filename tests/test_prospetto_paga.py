@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 
 from paghe import Atto, Corpus, Mese, TipoEsito, calcola, emetti_esito
-from paghe.errori import VistaFerma
-from paghe.prospetto_paga import prospetto_paga
+from paghe.errori import ErroreRegistro, VistaFerma
+from paghe.prospetto_paga import prospetto_paga, registra_messa_a_disposizione, segnala_scostamento_prospetto
 
 RADICE = Path(__file__).resolve().parent.parent
 REALE = (RADICE / "corpus" / "funzioni-locali-cpdel.toml").read_text(encoding="utf-8")
@@ -241,3 +241,72 @@ def test_il_collaboratore_ha_come_posizione_l_incarico_e_senza_si_ferma(registro
     con = prospetto_paga(registro, corpus, COCO, esito.id)
     assert (con.posizione, con.mancanti, con.consegnabile) == ("consulenza", (), True)
     assert [(r.istituto, r.valore) for r in con.righe_sul_netto] == [("compenso_collaborazione", Decimal("1000.00"))]
+
+
+CONSEGNA = date(2026, 11, 28)
+
+
+def consegna(registro, corpus, esito, chiave="consegna-1", data=CONSEGNA, riferimento="area-riservata:0001", rapporto=DIP):
+    return registra_messa_a_disposizione(registro, corpus, rapporto, esito.id, chiave, data, riferimento, "adattatore-prova")
+
+
+def test_la_messa_a_disposizione_fa_nascere_l_esito_dichiarato_con_le_righe_del_prospetto(registro, corpus, orologio):
+    ente(registro)
+    dipendente(registro)
+    esito = paga(registro, orologio, corpus, DIP)
+    messa = consegna(registro, corpus, esito)
+    assert (messa.esito.tipo, messa.esito.data) == (TipoEsito.DICHIARATO, CONSEGNA)
+    assert [(r.istituto, r.valore) for r in messa.esito.righe] == [
+        ("comparto_funzionari", Decimal("36.33")),
+        ("tabellare_funzionari", Decimal("2192.02")),
+    ]
+    assert messa.evento.esito_id == messa.esito.id
+    assert [e.id for e in registro.esiti(TipoEsito.DICHIARATO, registro.adesso())] == [messa.esito.id]
+
+
+def test_la_stessa_chiave_con_lo_stesso_contenuto_non_ha_effetto(registro, corpus, orologio):
+    dipendente(registro)
+    esito = paga(registro, orologio, corpus, DIP)
+    prima = consegna(registro, corpus, esito)
+    seconda = consegna(registro, corpus, esito)
+    assert seconda.evento.id == prima.evento.id and seconda.esito.id == prima.esito.id
+    assert len(registro.esiti(TipoEsito.DICHIARATO, registro.adesso())) == 1
+
+
+def test_la_stessa_chiave_con_un_contenuto_diverso_e_rifiutata(registro, corpus, orologio):
+    dipendente(registro)
+    esito = paga(registro, orologio, corpus, DIP)
+    consegna(registro, corpus, esito)
+    with pytest.raises(ErroreRegistro, match="contenuto diverso"):
+        consegna(registro, corpus, esito, riferimento="area-riservata:0002")
+    assert len(registro.esiti(TipoEsito.DICHIARATO, registro.adesso())) == 1
+
+
+def test_un_prospetto_non_consegnabile_non_si_mette_a_disposizione(registro, corpus, orologio):
+    dipendente(registro, qualifica=None)
+    esito = paga(registro, orologio, corpus, DIP)
+    with pytest.raises(VistaFerma, match="posizione"):
+        consegna(registro, corpus, esito)
+    assert registro.esiti(TipoEsito.DICHIARATO, registro.adesso()) == []
+    assert registro.evento("consegna-1") is None
+
+
+def test_senza_messa_a_disposizione_o_senza_differenze_non_c_e_scostamento(registro, corpus, orologio):
+    dipendente(registro)
+    esito = paga(registro, orologio, corpus, DIP)
+    assert segnala_scostamento_prospetto(registro, corpus, DIP, esito.id) == ()
+    consegna(registro, corpus, esito)
+    assert segnala_scostamento_prospetto(registro, corpus, DIP, esito.id) == ()
+
+
+def test_un_fatto_cambiato_dopo_la_consegna_si_segnala_con_l_ultimo_esito_dichiarato(registro, corpus, orologio):
+    dipendente(registro)
+    esito = paga(registro, orologio, corpus, DIP)
+    consegna(registro, corpus, esito)
+    orologio.avanza(3600)
+    registro.registra_codice_persona("P-R-DIP", "cognome", "CORRETTO", date(1980, 1, 1))
+    (scostamento,) = segnala_scostamento_prospetto(registro, corpus, DIP, esito.id)
+    assert (scostamento.campo, scostamento.dichiarato, scostamento.attuale) == ("cognome", "PROVA", "CORRETTO")
+    # La correzione e' una nuova messa a disposizione: l'ultimo esito dichiarato diventa il confronto.
+    consegna(registro, corpus, esito, chiave="consegna-2")
+    assert segnala_scostamento_prospetto(registro, corpus, DIP, esito.id) == ()

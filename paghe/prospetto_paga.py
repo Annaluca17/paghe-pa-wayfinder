@@ -12,13 +12,14 @@ from decimal import Decimal
 
 from .corpus import Corpus, DichiarazioneOutput
 from .denuncia import _assegnata
-from .errori import ComposizioneMancante, VistaFerma
-from .modello import Fatto, TipoEsito
+from .errori import ComposizioneMancante, ErroreRegistro, VistaFerma
+from .modello import Esito, Evento, Fatto, Importo, TipoEsito
 from .proposta import _righe_di_composizione
 from .registro import Registro
 from .tempo import Periodo, in_utc
 
 VISTA = "prospetto_paga"
+TIPO_MESSA_A_DISPOSIZIONE = "messa_a_disposizione"
 ENTE = ("codice_fiscale", "denominazione")
 PERSONA = ("codice_fiscale", "cognome", "nome")
 
@@ -28,6 +29,7 @@ class RigaProspetto:
     istituto: str
     periodo: Periodo
     valore: Decimal
+    importo: Importo
 
 
 @dataclass(frozen=True)
@@ -90,10 +92,10 @@ def prospetto_paga(
         except ComposizioneMancante as errore:
             fermi.append(str(errore))
     sul_netto = tuple(
-        RigaProspetto(riga.istituto, riga.importo.periodo, riga.sul_netto) for riga in composte if riga.effetto != "nessuno"
+        RigaProspetto(riga.istituto, riga.importo.periodo, riga.sul_netto, riga.importo) for riga in composte if riga.effetto != "nessuno"
     )
     senza_effetto = tuple(
-        RigaProspetto(riga.istituto, riga.importo.periodo, riga.importo.valore) for riga in composte if riga.effetto == "nessuno"
+        RigaProspetto(riga.istituto, riga.importo.periodo, riga.importo.valore, riga.importo) for riga in composte if riga.effetto == "nessuno"
     )
     regime = _regime(corpus, rapporto, importi, data)
     persona = registro.persona_del_rapporto(rapporto, istante)
@@ -144,3 +146,71 @@ def prospetto_paga(
         posizione,
         fine_servizio,
     )
+
+
+# Consegna: l'adattatore del canale riporta la messa a disposizione, da cui nasce l'esito dichiarato.
+
+@dataclass(frozen=True)
+class MessaADisposizione:
+    esito: Esito
+    evento: Evento
+
+
+def _in_dizionario(prospetto: ProspettoPaga) -> dict:
+    """Gli elementi del prospetto come testo: ciò che la messa a disposizione fissa."""
+
+    def righe(elenco):
+        return [[r.istituto, str(r.periodo), str(r.valore)] for r in elenco]
+
+    return {
+        "ente_codice_fiscale": prospetto.ente_codice_fiscale,
+        "ente_denominazione": prospetto.ente_denominazione,
+        "codice_fiscale": prospetto.codice_fiscale,
+        "cognome": prospetto.cognome,
+        "nome": prospetto.nome,
+        "posizione": prospetto.posizione,
+        "fine_servizio": prospetto.fine_servizio,
+        "data_pagamento": prospetto.data_pagamento.isoformat(),
+        "righe_sul_netto": righe(prospetto.righe_sul_netto),
+        "senza_effetto": righe(prospetto.senza_effetto),
+        "netto": str(prospetto.netto),
+    }
+
+
+def registra_messa_a_disposizione(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    esito_id: int,
+    chiave: str,
+    data: date,
+    riferimento: str,
+    adattatore: str,
+) -> MessaADisposizione:
+    """Evento di ritorno del canale di consegna: dal prospetto consegnabile nasce l'esito dichiarato, una sola volta.
+
+    Stessa chiave e stesso contenuto non hanno effetto; contenuto diverso è rifiutato. Un prospetto fermo non si consegna.
+    """
+    if not isinstance(riferimento, str) or not riferimento.strip():
+        raise ErroreRegistro("La messa a disposizione porta il riferimento del canale")
+    prospetto = prospetto_paga(registro, corpus, rapporto, esito_id)
+    contenuto = {
+        "rapporto": rapporto,
+        "esito_pagato": esito_id,
+        "data": data.isoformat(),
+        "riferimento": riferimento,
+        "prospetto": _in_dizionario(prospetto),
+    }
+    gia = registro.evento(chiave)
+    if gia is not None:
+        if gia.tipo != TIPO_MESSA_A_DISPOSIZIONE or gia.contenuto != contenuto:
+            raise ErroreRegistro(f"Evento {chiave}: stesso identificativo con contenuto diverso, rifiutato")
+        return MessaADisposizione(registro.esito(gia.esito_id), gia)
+    if not prospetto.consegnabile:
+        motivi = [*prospetto.fermi, *(f"dato mancante {dato}" for dato in prospetto.mancanti)]
+        raise VistaFerma(f"Prospetto del rapporto {rapporto}, esito {esito_id}, non consegnabile: " + "; ".join(motivi))
+    righe = [riga.importo for riga in (*prospetto.righe_sul_netto, *prospetto.senza_effetto)]
+    with registro.atomico():
+        esito = registro.registra_esito(TipoEsito.DICHIARATO, data, righe)
+        evento = registro.registra_evento(chiave, TIPO_MESSA_A_DISPOSIZIONE, contenuto, adattatore, esito_id=esito.id)
+    return MessaADisposizione(esito, evento)
