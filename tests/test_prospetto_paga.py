@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from paghe import Atto, Corpus, Mese, TipoEsito, calcola, emetti_esito
+from paghe.errori import VistaFerma
 from paghe.prospetto_paga import prospetto_paga
 
 RADICE = Path(__file__).resolve().parent.parent
@@ -103,3 +104,30 @@ def test_le_righe_senza_effetto_sul_netto_stanno_a_parte_e_nessuna_riga_dell_esi
     assert prospetto.netto == Decimal("3000.00")
     assert len(prospetto.righe_sul_netto) + len(prospetto.senza_effetto) == len(esito.righe)
     assert prospetto.posizione == "sindaco"
+
+
+def test_un_istituto_senza_dichiarazione_di_composizione_ferma_il_prospetto_e_si_nomina(registro, orologio):
+    solo_reale = Corpus.da_toml(REALE, reale=True)
+    dipendente(registro)
+    esito = paga(registro, orologio, solo_reale, DIP)
+    prospetto = prospetto_paga(registro, solo_reale, DIP, esito.id)
+    assert not prospetto.consegnabile
+    assert len(prospetto.fermi) == 2
+    assert any("tabellare_funzionari" in fermo for fermo in prospetto.fermi)
+    assert any("comparto_funzionari" in fermo for fermo in prospetto.fermi)
+
+
+def test_un_rapporto_senza_righe_nel_pagamento_non_ha_prospetto(registro, corpus, orologio):
+    dipendente(registro)
+    sindaco(registro)
+    esito = paga(registro, orologio, corpus, SINDACO)
+    with pytest.raises(VistaFerma, match="R-DIP.*nessun prospetto"):
+        prospetto_paga(registro, corpus, DIP, esito.id)
+
+
+def test_un_esito_che_non_e_un_pagamento_eseguito_non_da_prospetto(registro, corpus, orologio):
+    dipendente(registro)
+    orologio.vai(11, 27)
+    dichiarato = emetti_esito(registro, TipoEsito.DICHIARATO, PAGAMENTO, calcola(registro, corpus, DIP, NOVEMBRE))
+    with pytest.raises(VistaFerma, match="nessun prospetto"):
+        prospetto_paga(registro, corpus, DIP, dichiarato.id)

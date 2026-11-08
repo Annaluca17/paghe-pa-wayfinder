@@ -12,6 +12,7 @@ from decimal import Decimal
 
 from .corpus import Corpus, DichiarazioneOutput
 from .denuncia import _assegnata
+from .errori import ComposizioneMancante, VistaFerma
 from .modello import Fatto, TipoEsito
 from .proposta import _righe_di_composizione
 from .registro import Registro
@@ -36,6 +37,7 @@ class ProspettoPaga:
     righe_sul_netto: tuple[RigaProspetto, ...]
     senza_effetto: tuple[RigaProspetto, ...]
     data_pagamento: date
+    fermi: tuple[str, ...] = ()
     ente_codice_fiscale: str | None = None
     ente_denominazione: str | None = None
     codice_fiscale: str | None = None
@@ -47,6 +49,10 @@ class ProspettoPaga:
     @property
     def netto(self) -> Decimal:
         return sum((riga.valore for riga in self.righe_sul_netto), Decimal(0))
+
+    @property
+    def consegnabile(self) -> bool:
+        return not self.fermi
 
 
 def _vigente(fatti: list[Fatto], giorno: date) -> str | None:
@@ -66,9 +72,17 @@ def prospetto_paga(
     """Prospetto del rapporto nel pagamento eseguito indicato; funzione pura di registro, corpus e istante."""
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
     esito = registro.esito(esito_id)
-    data = registro.pagamenti(rapporto, istante)[esito_id].valido_dal
+    pagamento = registro.pagamenti(rapporto, istante).get(esito_id)
     importi = [riga for riga in esito.righe if riga.rapporto == rapporto]
-    composte = _righe_di_composizione(corpus, importi, data)
+    if esito.tipo != TipoEsito.PAGATO or pagamento is None or not importi:
+        raise VistaFerma(f"Rapporto {rapporto}: nessuna riga pagata nell'esito {esito_id}, nessun prospetto")
+    data = pagamento.valido_dal
+    composte, fermi = [], []
+    for importo in importi:
+        try:
+            composte.extend(_righe_di_composizione(corpus, [importo], data))
+        except ComposizioneMancante as errore:
+            fermi.append(str(errore))
     sul_netto = tuple(
         RigaProspetto(riga.istituto, riga.importo.periodo, riga.sul_netto) for riga in composte if riga.effetto != "nessuno"
     )
@@ -87,6 +101,7 @@ def prospetto_paga(
         sul_netto,
         senza_effetto,
         data,
+        tuple(fermi),
         ente["codice_fiscale"],
         ente["denominazione"],
         anagrafica["codice_fiscale"],
