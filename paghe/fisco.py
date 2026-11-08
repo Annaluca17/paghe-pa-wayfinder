@@ -430,6 +430,25 @@ class _Annuale:
         return self.calcolo.dovuto - self.operato
 
 
+def _giorni_di_servizio(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> tuple[int, int]:
+    """Giorni di servizio della persona nell'anno d'imposta e giorni dell'anno (ADR 0019, ticket #93).
+
+    I giorni sono quelli del fatto di servizio del corpus sull'unione dei rapporti della persona, festivi compresi, e
+    nessun giorno si conta due volte. Senza fatto di servizio nel corpus la persona ha servizio tutto l'anno.
+    """
+    anno_intero = Periodo(date(anno, 1, 1), date(anno, 12, 31))
+    giorni_anno = len(anno_intero.giorni())
+    if corpus.fatto_servizio is None:
+        return giorni_anno, giorni_anno
+    in_servizio = [False] * giorni_anno
+    for rapporto in registro.rapporti_della_persona(persona, istante):
+        vigenti = registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, anno_intero, istante)
+        for indice, fatto in enumerate(vigenti):
+            if fatto is not None:
+                in_servizio[indice] = True
+    return sum(in_servizio), giorni_anno
+
+
 def _annuale(
     registro: Registro,
     corpus: Corpus,
@@ -462,6 +481,7 @@ def _annuale(
     ]
     operate += list(ritenute_nuove)
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
+    giorni, giorni_anno = _giorni_di_servizio(registro, corpus, persona, anno, istante)
     calcolo = _calcola(
         corpus,
         regola_ritenuta,
@@ -469,6 +489,8 @@ def _annuale(
         1,
         riferimento,
         dichiarazione,
+        giorni,
+        giorni_anno,
     )
     return _Annuale(
         calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta
