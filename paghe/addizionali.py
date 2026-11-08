@@ -8,6 +8,7 @@ gli importi che produce sono dei pagamenti, e il residuo da trattenere si ricalc
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
@@ -264,26 +265,35 @@ def _base_dell_acconto(
     natura: _Natura,
     anno: int,
     istante: datetime,
+    imponibile_di: Callable[[int], Decimal],
 ) -> tuple[Decimal, tuple[Importo, ...], tuple[Fatto, ...], str] | None:
     """L'addizionale comunale dell'anno prima: dal conguaglio nel modello, altrimenti dal reddito della CU; None se manca."""
     residuo = _residuo(pagate, natura, anno)
-    if residuo.importi:
-        dovuta = residuo.importi[0]
+    dovuta = residuo.importi[0] if residuo.importi else None
+    if dovuta is not None and not dovuta.derivazione.fatti:  # IRPEF dell'anno prima non dovuta: addizionale zero
         return dovuta.valore, (dovuta,), (), dovuta.derivazione.riferimento
-    fatto = registro.vigente_persona(persona, TIPO_REDDITO_ANNO_PRECEDENTE, date(anno + 1, 1, 1), istante)
-    if fatto is None:
-        return None
+    fatto = None
+    if dovuta is None:
+        fatto = registro.vigente_persona(persona, TIPO_REDDITO_ANNO_PRECEDENTE, date(anno + 1, 1, 1), istante)
+        if fatto is None:
+            return None
     domicilio = domicilio_fiscale(registro, persona, date(anno + 1, 1, 1), istante)
     if domicilio is None:
         raise FattoMancante(
             f"Manca il domicilio fiscale della persona {persona} al 1° gennaio {anno + 1}, serve all'acconto "
             f"dell'addizionale comunale {anno + 1}"
         )
+    if dovuta is not None and json.loads(dovuta.derivazione.fatti[0].valore)["comune"] == domicilio.comune:
+        return dovuta.valore, (dovuta,), (), dovuta.derivazione.riferimento
+    # L'acconto è del comune del domicilio al 1° gennaio dell'anno dell'acconto, con le sue aliquote dell'anno prima:
+    # se il comune è cambiato, si ricalcola sull'imponibile dell'anno prima (art. 1 c. 4 D.Lgs. 360/1998).
     aliquota = corpus.aliquota_addizionale("comune", domicilio.comune, anno)
     if aliquota is None:
         raise ParametroMancante(
             f"Aliquote dell'addizionale comunale: nessuna per il comune {domicilio.comune} nell'anno {anno}"
         )
+    if dovuta is not None:
+        return aliquota.su(imponibile_di(anno)), (dovuta,), (domicilio.fatto,), aliquota.riferimento
     return aliquota.su(fatto.valore), (), (fatto, domicilio.fatto), aliquota.riferimento
 
 
@@ -295,6 +305,7 @@ def rate_del_mese(
     persona: str,
     data_pagamento: date,
     istante: datetime,
+    imponibile_di: Callable[[int], Decimal],
 ) -> RateDelMese:
     """Le rate delle addizionali da trattenere nel pagamento: una sola per persona e per mese.
 
@@ -329,7 +340,7 @@ def rate_del_mese(
     senza_base = None
     prima = _letto(corpus, regola.mese_prima_rata_acconto, data_pagamento)
     if data_pagamento.month >= int(prima.valore):
-        base = _base_dell_acconto(registro, corpus, persona, pagate, natura_comunale, anno, istante)
+        base = _base_dell_acconto(registro, corpus, persona, pagate, natura_comunale, anno, istante, imponibile_di)
         if base is None:
             senza_base = data_pagamento.year
         else:
@@ -395,3 +406,13 @@ def chiusura_dell_anno(
                     )
                 )
     return tuple(importi)
+
+
+def dovute_pagate(registro: Registro, regola: RegolaAddizionali, persona: str, anno: int, istante: datetime) -> dict[str, Decimal]:
+    """Le addizionali dovute dell'anno portate dall'ultimo conguaglio pagato, per istituto; vuoto se non ce n'è."""
+    pagate = _pagate(registro, persona, istante)
+    return {
+        natura.dovuta: residuo.importi[0].valore
+        for natura in _nature(regola)
+        if (residuo := _residuo(pagate, natura, anno)).importi
+    }

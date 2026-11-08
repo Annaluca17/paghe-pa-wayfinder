@@ -608,7 +608,10 @@ def _rate_delle_addizionali(
     regola = corpus.regola_addizionali(data_pagamento)
     if regola is None:
         return addizionali.RateDelMese()
-    return addizionali.rate_del_mese(registro, corpus, regola, rapporto, persona, data_pagamento, istante)
+    return addizionali.rate_del_mese(
+        registro, corpus, regola, rapporto, persona, data_pagamento, istante,
+        lambda anno: imponibile_fiscale(registro, persona, anno, istante, corpus=corpus).valore,
+    )
 
 
 def _con_le_addizionali_dovute(
@@ -682,6 +685,33 @@ def conguaglio_per_differenza(
         )
     persona = _persona(registro, rapporto, istante)
     annuale = _annuale(registro, corpus, persona, anno, data_pagamento, istante)
+    _controlla_addizionali_invariate(registro, corpus, rapporto, persona, anno, data_pagamento, annuale, istante)
     if annuale.valore == 0:
         return None
     return _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
+
+
+def _controlla_addizionali_invariate(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    persona: str,
+    anno: int,
+    data_pagamento: date,
+    annuale: _Annuale,
+    istante: datetime,
+) -> None:
+    """Il conguaglio per differenza non ricalcola ancora le addizionali (ADR 0029): se cambierebbero, si ferma."""
+    _, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
+    regola = corpus.regola_addizionali(riferimento)
+    if regola is None:
+        return
+    pagate = addizionali.dovute_pagate(registro, regola, persona, anno, istante)
+    nuove = addizionali.dovute_dell_anno(
+        registro, corpus, regola, rapporto, persona, anno, annuale.calcolo.imponibile, annuale.calcolo.dovuto, istante
+    )
+    if any(pagate.get(dovuta.istituto) != dovuta.valore for dovuta in nuove):
+        raise CasoNonModellato(
+            f"Rapporto {rapporto}: caso non modellato, il conguaglio per differenza dell'anno {anno} cambierebbe le "
+            "addizionali, che non ricalcola ancora"
+        )
