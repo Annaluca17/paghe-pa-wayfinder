@@ -374,6 +374,14 @@ _Avoid_: UniEmens privatistico (che è il canale, non la vista), DM10, flusso DS
 Vista della denuncia per chi è in gestione separata (co.co.co. e quote forfettarie degli amministratori), separata dalla ListaPosPA: ha struttura e identità proprie e segue il mese di erogazione. Produce un esito dichiarato. Finché i codici del tracciato non sono nel corpus resta una bozza non trasmissibile, e lo è anche con una somma di cassa allargata. La quota forfettaria non ha imponibile e sta a carico dell'ente.
 _Avoid_: ListaPosPA dei collaboratori, flusso parasubordinati
 
+**Prospetto paga**:
+Vista di un rapporto in un pagamento eseguito, letta dal suo esito pagato: posizione, righe sul netto con il loro periodo, netto e, a parte, le righe senza effetto sul netto. Uno per rapporto e per pagamento, mai per mese. Si ferma solo se manca un dato del contenuto di legge; gli altri dati mancanti sono avvisi. Spetta a ogni titolo che il regime dichiara.
+_Avoid_: Cedolino mensile, busta paga, nota di pagamento
+
+**Messa a disposizione del prospetto**:
+Evento portato dall'adattatore del canale di consegna, con data e riferimento, da cui nasce l'esito dichiarato del prospetto paga. Il modello non recapita.
+_Avoid_: Invio del cedolino, stampa
+
 **Quadro**:
 Elemento della ListaPosPA che dichiara un periodo: E0 per il mese corrente, V1 con una causale per un periodo precedente. Lo produce la vista dalla denuncia, mai il calcolo.
 _Avoid_: Periodo dichiarato (che è l'intervallo, non l'elemento del tracciato)
