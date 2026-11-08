@@ -437,8 +437,16 @@ Fatto della persona che chiede di trattenere nei mesi successivi, con interesse,
 _Avoid_: Rateizzazione (che è anche quella del 730-4 o dei recuperi oltre i 60 euro)
 
 **Domicilio fiscale**:
-Fatto datato della persona letto dalle regole delle addizionali, che con il domicilio al 1° gennaio dell'anno scelgono le aliquote della regione e del comune.
+Fatto datato della persona, con il comune e la regione, letto dalle regole delle addizionali, che con il domicilio al 1° gennaio dell'anno scelgono le aliquote della regione e del comune.
 _Avoid_: Residenza (quando si intende il domicilio fiscale), comune dell'anagrafica
+
+**Addizionale**:
+Imposta regionale o comunale sull'imponibile fiscale della persona dell'anno, dovuta solo se è dovuta l'IRPEF. Le aliquote, a fasce e con una soglia di esenzione, sono un parametro datato per regione e per comune. Si trattiene a rate nell'anno dopo: il **saldo** dal conguaglio e, per la comunale, l'**acconto** sul reddito dell'anno prima.
+_Avoid_: Addizionale IRPEF (senza dire quale), aliquota del comune (che è solo una parte del parametro)
+
+**Rata dell'addizionale**:
+Quota del saldo o dell'acconto trattenuta in un mese: il residuo da trattenere diviso i mesi rimasti fino a novembre. Una per persona e mese. Alla cessazione il residuo si trattiene tutto insieme.
+_Avoid_: Rateizzazione (che è del 730-4 o della richiesta di differimento), piano di rate
 
 **Esito 730-4**:
 Fatto della persona che arriva dal canale 730-4 con la sua provenienza: crediti, debiti, rate e acconti da operare, con l'anno dei redditi dichiarati. Un 730-4 rettificativo o integrativo lo sostituisce con un nuovo fatto. Le regole ne ricavano rimborsi e trattenute dal primo pagamento utile da luglio.
@@ -465,8 +473,11 @@ Dato datato che porta un riferimento abrogato al suo successore, articolo per ar
 _Avoid_: Tabella di conversione, alias della norma
 
 **Trattenuta a terzi**:
-Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, per un pignoramento, una cessione o una delegazione trascritti come atto esterno sul rapporto. È un versamento a terzi nella composizione del pagamento. Un concorso non ancora modellato ferma il calcolo.
+Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, per un pignoramento, una cessione o una delegazione trascritti come atto esterno sul rapporto. È un versamento a terzi nella composizione del pagamento. I limiti si misurano sul netto di ogni pagamento, meno le sole ritenute di legge. Tra istituti diversi vale chi è notificato prima; più pignoramenti, o un concorso non ancora modellato, fermano il calcolo.
 _Avoid_: Trattenuta (senza dire quale), ritenuta (che è fiscale), quinto (che è solo uno dei limiti)
+
+**Assenso dell'ente**:
+Atto esterno datato con cui l'ente consente che cessione e delegazione insieme superino la metà del netto. Senza, oltre la metà il calcolo si ferma.
 
 **Punto CU**:
 Mappatura datata dell'istituto o della categoria di reddito verso un punto della CU, per anno di certificazione, come la voce SICO o il codice tributo. Se la numerazione cambia, cambia la mappatura e non l'istituto.

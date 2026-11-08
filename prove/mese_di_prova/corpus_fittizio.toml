@@ -949,3 +949,214 @@ istituti = ["compenso_collaborazione"]
 posizione = "incarico"
 dal = 2025-01-01
 riferimento = "fittizio:prospetto-collaboratori"
+
+# --- Addizionali regionale e comunale (ticket #85, ADR 0029) ---
+# Valori finti: comune X001 e regione 98 non esistono, le aliquote sono di fantasia. La regola e i tre parametri datati
+# (percentuale dell'acconto, primo mese dell'acconto, ultimo mese delle rate) sono quelli dell'ADR 0029, con fonte fittizia.
+
+[[parametro]]
+nome = "addizionale_acconto_percentuale"
+[[parametro.vigenza]]
+dal = 2025-01-01
+valore = "0.30"
+riferimento = "fittizio:addizionale-acconto-percentuale"
+
+[[parametro]]
+nome = "addizionale_mese_prima_rata_acconto"
+[[parametro.vigenza]]
+dal = 2025-01-01
+valore = "3"
+riferimento = "fittizio:addizionale-mese-prima-rata-acconto"
+
+[[parametro]]
+nome = "addizionale_mese_ultima_rata"
+[[parametro.vigenza]]
+dal = 2025-01-01
+valore = "11"
+riferimento = "fittizio:addizionale-mese-ultima-rata"
+
+[[aliquota_addizionale]]
+ente = "comune"
+codice = "X001"
+anno = 2025
+riferimento = "fittizio:aliquota-comune-x001-2025"
+[[aliquota_addizionale.fascia]]
+fino_a = "15000"
+aliquota = "0.005"
+[[aliquota_addizionale.fascia]]
+aliquota = "0.008"
+
+[[aliquota_addizionale]]
+ente = "comune"
+codice = "X001"
+anno = 2026
+riferimento = "fittizio:aliquota-comune-x001-2026"
+[[aliquota_addizionale.fascia]]
+fino_a = "15000"
+aliquota = "0.005"
+[[aliquota_addizionale.fascia]]
+aliquota = "0.008"
+
+[[aliquota_addizionale]]
+ente = "regione"
+codice = "98"
+anno = 2026
+riferimento = "fittizio:aliquota-regione-98-2026"
+[[aliquota_addizionale.fascia]]
+fino_a = "15000"
+aliquota = "0.012"
+[[aliquota_addizionale.fascia]]
+aliquota = "0.02"
+
+[[addizionale]]
+versione = 1
+dal = 2025-01-01
+riferimento = "fittizio:addizionali"
+percentuale_acconto = "addizionale_acconto_percentuale"
+mese_prima_rata_acconto = "addizionale_mese_prima_rata_acconto"
+mese_ultima_rata = "addizionale_mese_ultima_rata"
+regionale_dovuta = "addizionale_regionale_dovuta"
+comunale_dovuta = "addizionale_comunale_dovuta"
+regionale = "addizionale_regionale"
+comunale_saldo = "addizionale_comunale_saldo"
+comunale_acconto = "addizionale_comunale_acconto"
+regionale_credito = "addizionale_regionale_credito"
+comunale_credito = "addizionale_comunale_credito"
+
+# Le rate sono trattenute e versate; la restituzione e' una riga sola, sul netto e verso il beneficiario, letta anche
+# dalla delega come credito (ADR 0023). Le dovute stanno nel conguaglio: non entrano nella composizione.
+[[composizione]]
+istituto = "addizionale_regionale"
+dal = 2025-01-01
+riferimento = "fittizio:comp-addizionale-regionale"
+natura = "addizionale"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "addizionale_comunale_saldo"
+dal = 2025-01-01
+riferimento = "fittizio:comp-addizionale-comunale-saldo"
+natura = "addizionale"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "addizionale_comunale_acconto"
+dal = 2025-01-01
+riferimento = "fittizio:comp-addizionale-comunale-acconto"
+natura = "addizionale"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[composizione]]
+istituto = "addizionale_regionale_credito"
+dal = 2025-01-01
+riferimento = "fittizio:comp-addizionale-regionale-credito"
+natura = "credito_sostituto"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "addizionale_comunale_credito"
+dal = 2025-01-01
+riferimento = "fittizio:comp-addizionale-comunale-credito"
+natura = "credito_sostituto"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[mappatura]]
+istituto = "addizionale_regionale"
+sistema = "codice_tributo_f24ep"
+codice = "381E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-addizionale-regionale"
+
+[[mappatura]]
+istituto = "addizionale_comunale_saldo"
+sistema = "codice_tributo_f24ep"
+codice = "384E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-addizionale-comunale-saldo"
+
+[[mappatura]]
+istituto = "addizionale_comunale_acconto"
+sistema = "codice_tributo_f24ep"
+codice = "385E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-addizionale-comunale-acconto"
+
+[[mappatura]]
+istituto = "addizionale_regionale_credito"
+sistema = "codice_tributo_f24ep"
+codice = "160E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-addizionale-regionale-credito"
+
+[[mappatura]]
+istituto = "addizionale_comunale_credito"
+sistema = "codice_tributo_f24ep"
+codice = "161E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-addizionale-comunale-credito"
+
+# Codici delle addizionali: forma ASSUNTA (riferimento A assente, B l'anno d'imposta, ADR 0029), non verificata.
+[[codice_f24ep]]
+codice = "381E"
+sezione = "R"
+codice_campo = "regione"
+estremi = "nessuno"
+rif_a = "nessuno"
+rif_b = "anno_imposta"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-381e"
+
+[[codice_f24ep]]
+codice = "384E"
+sezione = "S"
+codice_campo = "catastale"
+estremi = "nessuno"
+rif_a = "nessuno"
+rif_b = "anno_imposta"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-384e"
+
+[[codice_f24ep]]
+codice = "385E"
+sezione = "S"
+codice_campo = "catastale"
+estremi = "nessuno"
+rif_a = "nessuno"
+rif_b = "anno_imposta"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-385e"
+
+[[codice_f24ep]]
+codice = "160E"
+sezione = "R"
+codice_campo = "regione"
+estremi = "nessuno"
+rif_a = "nessuno"
+rif_b = "anno_imposta"
+modalita = "debito_credito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-160e"
+
+[[codice_f24ep]]
+codice = "161E"
+sezione = "S"
+codice_campo = "catastale"
+estremi = "nessuno"
+rif_a = "nessuno"
+rif_b = "anno_imposta"
+modalita = "debito_credito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-161e"

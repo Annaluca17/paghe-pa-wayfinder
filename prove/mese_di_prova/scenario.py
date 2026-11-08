@@ -22,6 +22,8 @@ EMAIL_ENTE = "paghe@ente.example"
 SIGLA_PROVINCIA = "RM"
 REGIONE_ENTE = "lazio"  # nome della regione, come nella mappatura del 380E
 COMUNE_SEDE = "H501"
+COMUNE_DOMICILIO = "X001"  # comune e regione di fantasia: il domicilio fiscale delle persone, per le addizionali
+REGIONE_DOMICILIO = "98"
 CAP_SEDE = "00100"
 
 MARZO = Mese(2026, 3)
@@ -135,6 +137,9 @@ ATTO_MISURA_INDENNITA = Atto("ente:ente_di_prova:delibera:2026-01-09;48", date(2
 ATTO_MANDATO = Atto("ente:ente_di_prova:verbale:2024-06-10;1", date(2024, 6, 10))
 ATTO_PIANO_DI_RATE = Atto("ente:ente_di_prova:contratto:2026-01-09;49", date(2026, 1, 9))
 ATTO_ATTESTAZIONE_MARZO = Atto("ente:ente_di_prova:attestazione:2026-03-17;50", date(2026, 3, 17))
+ATTO_DOMICILIO = Atto("ente:ente_di_prova:comunicazione.domicilio:2025-12-10;1", date(2025, 12, 10))
+ATTO_CU_2025 = Atto("ente:ente_di_prova:cu:2026-01-09;1", date(2026, 1, 9))
+REDDITO_2025_P01 = "18000.00"  # dalla CU: R01 non ha il conguaglio 2025 nel modello, l'acconto 2026 parte da qui
 ATTO_DETRAZIONI = Atto("ente:ente_di_prova:dichiarazione.detrazioni:2026-01-09;1", date(2026, 1, 9))
 
 

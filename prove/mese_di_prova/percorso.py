@@ -161,6 +161,14 @@ class Ufficio:
         self._conta_fatto(f"persona {persona}: dichiarazione del sostituito")
         return self.registro.registra_dichiarazione_sostituito(persona, detrazioni, dal, None, atto)
 
+    def domicilio_fiscale(self, persona, comune, regione, dal, atto):
+        self._conta_fatto(f"persona {persona}: domicilio fiscale")
+        return self.registro.registra_domicilio_fiscale(persona, comune, regione, dal, atto=atto)
+
+    def reddito_anno_precedente(self, persona, anno, reddito, atto):
+        self._conta_fatto(f"persona {persona}: reddito dell'anno precedente")
+        return self.registro.registra_reddito_anno_precedente(persona, anno, reddito, atto)
+
     def collega(self, rapporto, persona, dal):
         self._conta_fatto(f"rapporto {rapporto}: legame con la persona")
         return self.registro.collega_rapporto(rapporto, persona, dal)
@@ -353,6 +361,9 @@ def _registra_rapporto(c: _Contesto, r: S.Rapporto) -> dict[str, object]:
     u.codice_persona(r.persona, "cognome", r.cognome, r.nascita)
     u.codice_persona(r.persona, "nome", r.nome, r.nascita)
     u.iban_persona(r.persona, S.IBAN_PERSONE, date(2026, 1, 1))
+    u.domicilio_fiscale(r.persona, S.COMUNE_DOMICILIO, S.REGIONE_DOMICILIO, date(2026, 1, 1), S.ATTO_DOMICILIO)
+    if r.id == "R01":
+        u.reddito_anno_precedente(r.persona, 2025, S.REDDITO_2025_P01, S.ATTO_CU_2025)
     if r.dipendente and r.detrazioni:
         u.dichiarazione_sostituito(r.persona, "lavoro_dipendente", date(2026, 1, 1), S.ATTO_DETRAZIONI)
     u.collega(r.id, r.persona, r.dal)
