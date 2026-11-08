@@ -169,7 +169,8 @@ def cause_ordinate(esecuzione: Esecuzione) -> list[dict]:
                 continue
             visti.add((fermo.causa, fermo.mese, rapporto, fermo.passo))
             gruppo["bloccati"].add(rapporto)
-            gruppo["passi"] += len(PASSI) - PASSI.index(fermo.passo)
+            # Il prospetto paga e' una vista a lato: il suo fermo chiude solo se' stesso, non i passi dopo.
+            gruppo["passi"] += 1 if fermo.passo == "prospetto_paga" else len(PASSI) - PASSI.index(fermo.passo)
         for rapporto in fermo.rapporti:
             gruppo["casi"].setdefault(rapporto, fermo.caso)
     elenco = [{"causa": causa, **gruppo} for causa, gruppo in gruppi.items()]
@@ -179,7 +180,7 @@ def cause_ordinate(esecuzione: Esecuzione) -> list[dict]:
 def _cosa_manca(esecuzione: Esecuzione) -> list[str]:
     righe = [
         "I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccano e poi per quanti passi del "
-        "percorso (calcolo, versione, conferma, pagamento, denuncia, ListaPosPA, lista collaboratori, delega, file, ricevute, esito versato) "
+        "percorso (calcolo, versione, conferma, pagamento, prospetto paga, denuncia, ListaPosPA, lista collaboratori, delega, file, ricevute, esito versato) "
         "restano chiusi, sommati su marzo e dicembre.",
         "",
     ]

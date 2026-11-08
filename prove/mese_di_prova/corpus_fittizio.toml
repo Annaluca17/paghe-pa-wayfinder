@@ -932,6 +932,24 @@ codice = "ZGS1"
 dal = 2025-01-01
 riferimento = "fittizio:mappatura-onere-art86"
 
+# --- Prospetto paga (ADR 0030): la posizione di amministratori e collaboratori, senza una fonte reale da citare ---
+
+[[output]]
+vista = "prospetto_paga"
+regime = "amministratori"
+istituti = ["indennita_funzione"]
+posizione = "carica"
+dal = 2025-01-01
+riferimento = "fittizio:prospetto-amministratori"
+
+[[output]]
+vista = "prospetto_paga"
+regime = "collaboratori"
+istituti = ["compenso_collaborazione"]
+posizione = "incarico"
+dal = 2025-01-01
+riferimento = "fittizio:prospetto-collaboratori"
+
 # --- Addizionali regionale e comunale (ticket #85, ADR 0029) ---
 # Valori finti: comune X001 e regione 98 non esistono, le aliquote sono di fantasia. La regola e i tre parametri datati
 # (percentuale dell'acconto, primo mese dell'acconto, ultimo mese delle rate) sono quelli dell'ADR 0029, con fonte fittizia.

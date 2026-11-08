@@ -1610,6 +1610,20 @@ istituti = ["onere_art86"]
 dal = 2026-01-01
 riferimento = "prassi:immedia:nota:2026-11-07;10"
 
+# Prospetto paga (ADR 0030, ticket #86): per il lavoro dipendente la posizione e' la qualifica, il tipo di fine servizio il
+# regime. Contenuto minimo dell'art. 1 L. 4/1953 (nome, cognome, qualifica, periodo, voci, trattenute); l'art. 4 lo esclude per
+# Comuni e Province, la prassi ministeriale presuppone comunque un prospetto di paga per i dipendenti degli enti pubblici.
+# Amministratori e collaboratori non hanno una fonte da citare: li dichiara chi la trova.
+
+[[output]]
+vista = "prospetto_paga"
+regime = "dipendenti"
+basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori"]
+posizione = "qualifica"
+fine_servizio = "regime_fine_servizio"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1953-01-05;4~art1 + urn:nir:stato:legge:1953-01-05;4~art4"
+
 # Trattamento nel part-time (ADR 0026, ticket #72). Riferimento letto sul testo ARAN: CCNL 16/11/2022, art. 62, c. 10,
 # «il trattamento economico del personale con rapporto di lavoro a tempo parziale è proporzionale alla prestazione
 # lavorativa, con riferimento a tutte le competenze fisse e periodiche»; l'art. 55, c. 10, del CCNL 23/02/2026
