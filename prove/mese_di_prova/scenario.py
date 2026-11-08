@@ -20,6 +20,7 @@ IBAN_TESORERIA = "IT76X0100003245TEST00000001"  # IBAN di prova, conto evidentem
 IBAN_PERSONE = "IT76X0100003245TEST00000002"  # idem, per i beneficiari
 EMAIL_ENTE = "paghe@ente.example"
 SIGLA_PROVINCIA = "RM"
+REGIONE_ENTE = "lazio"  # nome della regione, come nella mappatura del 380E
 COMUNE_SEDE = "H501"
 CAP_SEDE = "00100"
 

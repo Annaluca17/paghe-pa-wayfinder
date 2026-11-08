@@ -122,3 +122,36 @@ def test_un_motivo_di_esclusione_non_ammesso_ferma_il_calcolo_e_lo_nomina(regist
     paga_il_mese(registro, orologio, reale)
     with pytest.raises(CasoNonModellato, match="motivo_inventato"):
         calcola_denuncia(registro, reale, R, Mese(2026, 11))
+
+
+def test_una_regola_regionale_datata_puo_ridurre_l_aliquota_senza_toccare_il_codice(registro, orologio):
+    """L'8,5% e' un parametro datato (art. 16 c. 3: le Regioni possono ridurre, non aumentare): un corpus di prova
+    lo sostituisce da luglio con un'aliquota regionale fittizia del 7,00%."""
+    testo = CORPUS.read_text(encoding="utf-8")
+    nazionale = 'valore = "8.50"\nriferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art16-com2"'
+    assert nazionale in testo.replace("\r\n", "\n")
+    regionale = nazionale + '''
+
+[[parametro.vigenza]]
+dal = 2026-07-01
+valore = "7.00"
+riferimento = "fittizio:legge-regionale-aliquota-irap"'''
+    corpus = Corpus.da_toml(testo.replace("\r\n", "\n").replace(nazionale, regionale))
+    assumi(registro)
+    paga_il_mese(registro, orologio, corpus)
+    assert valori(registro, corpus)["irap_acconto"] == D("143.62")  # 2.051,69 x 7,00% = 143,6183, al centesimo
+
+
+def test_il_corpus_reale_mappa_ogni_regione_al_suo_codice_f24ep(reale):
+    def codice(nome):
+        voce = reale.mappatura_di_fatto("f24ep.codice_regione", "codice_regione", "sede_lavoro", nome, date(2026, 2, 27))
+        return voce.codice if voce else None
+
+    assert codice("lazio") == "08"  # l'esempio ufficiale della tabella AdE (ricerca irap-scadenza-riparto)
+    regioni = [
+        "abruzzo", "basilicata", "provincia_autonoma_bolzano", "calabria", "campania", "emilia_romagna",
+        "friuli_venezia_giulia", "lazio", "liguria", "lombardia", "marche", "molise", "piemonte", "puglia", "sardegna",
+        "sicilia", "toscana", "provincia_autonoma_trento", "umbria", "valle_d_aosta", "veneto",
+    ]
+    assert [codice(nome) for nome in regioni] == [f"{numero:02d}" for numero in range(1, 22)]
+    assert codice("atlantide") is None

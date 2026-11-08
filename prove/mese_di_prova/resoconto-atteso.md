@@ -16,8 +16,8 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 | regole di conguaglio | 0 | 1 | 1 |
 | dichiarazioni di pagamento fisiologico | 0 | 1 | 1 |
 | dichiarazioni di composizione | 0 | 43 | 43 |
-| mappature verso codici esterni | 0 | 14 | 14 |
-| codici nel catalogo F24EP | 0 | 8 | 8 |
+| mappature verso codici esterni | 0 | 15 | 15 |
+| codici nel catalogo F24EP | 0 | 9 | 9 |
 | regole di scadenza F24EP | 0 | 2 | 2 |
 | calendari dei festivi | 0 | 2 | 2 |
 
@@ -73,17 +73,17 @@ I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccan
 
 | Categoria | Avvio | Preparazione di febbraio | Marzo | Dicembre |
 |---|---:|---:|---:|---:|
-| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 153 | 0 | 13 | 0 |
+| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 154 | 0 | 13 | 0 |
 | Fatti ricorrenti del mese (atti, variazioni, cessazioni, 730) | 0 | 0 | 17 | 1 |
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
 | Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 5 | 1 |
 | Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 1 |
-| **Totale senza i comandi** | **153** | **3** | **38** | **6** |
+| **Totale senza i comandi** | **154** | **3** | **38** | **6** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
 
-Fatti di avvio per soggetto: R01 14, R02 14, R03 14, R04 16, R05 14, R07 14, R08 13, R09 14, R10 9, R11 8, R12 18, ente 5.
+Fatti di avvio per soggetto: R01 14, R02 14, R03 14, R04 16, R05 14, R07 14, R08 13, R09 14, R10 9, R11 8, R12 18, ente 6.
 Assunzione di marzo (avvio di un rapporto nuovo): R06 13.
 
 Dettaglio di Marzo, escluso l'avvio:
@@ -136,7 +136,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Fatti**
 
 - Riuscito:
-  - 166 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
+  - 167 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
   - 17 fatti del mese: performance, progressione, cessazione
 - Fermi: nessuno
 - Su dati fittizi:
@@ -166,7 +166,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Versione di proposta**
 
 - Riuscito:
-  - versione 2: 95 righe di composizione, valuta prevista 2026-03-27, 12 rapporti
+  - versione 2: 107 righe di composizione, valuta prevista 2026-03-27, 12 rapporti
   - netto R01: 1945.99
   - netto R02: 2085.69
   - netto R03: 2111.25
@@ -198,7 +198,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Pagamento eseguito**
 
 - Riuscito:
-  - esito pagato 2: 95 righe, valuta 2026-03-27
+  - esito pagato 2: 107 righe, valuta 2026-03-27
 - Fermi: nessuno
 - Su dati fittizi:
   - l'evento di pagamento eseguito e' simulato dal percorso, con valuta uguale alla prevista
@@ -270,12 +270,13 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Riuscito:
   - scadenza 2026-04-16, data di versamento scelta 2026-04-16
   - riga F 100E: debito 1108.98, credito 0.00
+  - riga R 380E: debito 2332.35, credito 0.00
   - riga Q P201: debito 7554.80, credito 0.00
   - riga Q P607: debito 504.55, credito 0.00
   - riga Q P608: debito 584.83, credito 0.00
   - riga Q P909: debito 80.90, credito 0.00
   - riga Q ZGS1: debito 1053.96, credito 0.00
-  - saldo 10888.02
+  - saldo 13220.37
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
 - Su dati fittizi:
@@ -300,7 +301,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 4: 64 righe, 10888.02 versati il 2026-04-16
+  - esito versato 4: 76 righe, 13220.37 versati il 2026-04-16
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:
@@ -332,7 +333,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Versione di proposta**
 
 - Riuscito:
-  - versione 3: 68 righe di composizione, valuta prevista 2026-12-18, 8 rapporti
+  - versione 3: 76 righe di composizione, valuta prevista 2026-12-18, 8 rapporti
   - netto R01: 2013.01
   - netto R02: 2046.51
   - netto R03: 1674.31
@@ -364,7 +365,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Pagamento eseguito**
 
 - Riuscito:
-  - esito pagato 5: 68 righe, valuta 2026-12-18
+  - esito pagato 5: 76 righe, valuta 2026-12-18
 - Fermi: nessuno
 - Su dati fittizi:
   - l'evento di pagamento eseguito e' simulato dal percorso, con valuta uguale alla prevista
@@ -388,7 +389,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Su dati fittizi:
   - mappatura dei codici, catalogo dei codici F24EP, scadenza e festivi del corpus fittizio
 - Note:
-  - righe costruite ma non trasmissibili: 100E -426.23, 150E -150.00, P201 3943.56, P607 450.65, P608 129.74, P909 42.27, ZGS1 528.51
+  - righe costruite ma non trasmissibili: 100E -426.23, 150E -150.00, 380E 1281.64, P201 3943.56, P607 450.65, P608 129.74, P909 42.27, ZGS1 528.51
 
 **File telematico**
 
@@ -418,10 +419,9 @@ Nessuno trovato.
 ## Non esercitato dal mese
 
 - La tredicesima non e' un istituto del corpus: il pagamento di dicembre non la contiene, anche se il tabellare annuo del corpus e' per dodici mensilita' piu' la tredicesima.
-- Le addizionali regionale e comunale non si calcolano: nessuna regola le produce e il registro non ha il domicilio fiscale. Se un istituto le portasse con 384E o 380E, la delega si fermerebbe per il codice catastale o della regione, che nessun fatto porta (`codice_non_modellato`).
+- Le addizionali regionale e comunale non si calcolano: nessuna regola le produce e il registro non ha il domicilio fiscale. Se un istituto le portasse con 384E o con un codice che vuole la regione di residenza, la delega si fermerebbe per il codice catastale o della regione, che nessun fatto porta (`codice_non_modellato`).
 - Il contributo aggiuntivo dell'1% scatta in almeno un quadro, e non ha una causale nel catalogo.
-- L'IRAP non e' calcolata; una riga IRAP nella delega la ferma (`irap`: scadenza e riparto non modellati).
-- L'ente e' in una sola regione, ma il nucleo non ha un fatto per la regione: l'unico dato territoriale e' la sigla di provincia, che entra nella causale P201.
+- L'acconto IRAP e' calcolato all'8,5% sulla base di ogni pagamento e versato col 380E, una riga per regione. Nessun rapporto del mese ha una sede di lavoro: vale la regione dell'ente, un fatto dell'ente. Il codice regione e' del corpus reale, da riscontrare sulla tabella AdE. Comando e convenzione non sono modellati (la convenzione di segreteria ferma gia' il calcolo del rapporto).
 
 ## File prodotti
 

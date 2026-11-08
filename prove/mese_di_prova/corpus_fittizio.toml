@@ -674,15 +674,24 @@ dal = 2025-01-01
 riferimento = "fittizio:comp-gs-totale"
 intermedio = true
 
-# IRAP (ticket #81): per ora l'acconto non entra nella composizione; la sua riga e la sua delega arrivano con il passo
-# sulla delega.
+# IRAP (ticket #81): l'acconto e' a carico dell'ente, non tocca il netto e va in delega nella sezione Regioni (380E).
 [[composizione]]
 istituto = "irap_acconto"
 dal = 2025-01-01
 riferimento = "fittizio:comp-irap-acconto"
-intermedio = true
+natura = "irap"
+effetto = "nessuno"
+destinatario = "terzo"
+canale = "f24ep"
 
 # --- Mappatura verso i codici tributo e le causali F24EP ---
+
+[[mappatura]]
+istituto = "irap_acconto"
+sistema = "codice_tributo_f24ep"
+codice = "380E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-irap-acconto"
 
 [[mappatura]]
 istituto = "ritenuta_irpef"
@@ -764,6 +773,17 @@ riferimento = "fittizio:mappatura-rimborso-730-4"
 # --- Catalogo dei codici F24EP ---
 # 100E, P201 e 150E con la forma confermata dalla ricerca. P607, P608, P632 e P909 esistono (ricerca, tema 5) ma la
 # loro forma e' qui ASSUNTA uguale a quella di P201: non verificata.
+
+[[codice_f24ep]]
+codice = "380E"
+sezione = "R"
+codice_campo = "regione"
+estremi = "nessuno"
+rif_a = "mese_pagamento"
+rif_b = "anno_pagamento"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-380e"
 
 [[codice_f24ep]]
 codice = "100E"

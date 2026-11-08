@@ -1772,3 +1772,197 @@ valore = "RALN"
 codice = "02"
 dal = 2022-02-01
 riferimento = "prassi:inps:messaggio:2022-03-07;1058 + prassi:inps:documento.tecnico:2026-09-29;4.33~pag42"
+
+# Codice regione del 380E (ticket #81, ADR 0028): colonna «codice» della sezione Regioni, 2 cifre dalla tabella T0 dei codici
+# regione dell'F24EP (ris. AdE 367/E/2007; tabella AdE aggiornata al 01/04/2020). Il valore e' il nome della regione, quello
+# del fatto sede_lavoro e del fatto dell'ente regione. Prassi: nella ricerca docs/research/irap-scadenza-riparto.md e' letto
+# per esteso solo 08 = Lazio; gli altri codici seguono l'ordine alfabetico della tabella e sono DA VERIFICARE sulla tabella.
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "abruzzo"
+codice = "01"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "basilicata"
+codice = "02"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "provincia_autonoma_bolzano"
+codice = "03"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "calabria"
+codice = "04"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "campania"
+codice = "05"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "emilia_romagna"
+codice = "06"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "friuli_venezia_giulia"
+codice = "07"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "lazio"
+codice = "08"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "liguria"
+codice = "09"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "lombardia"
+codice = "10"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "marche"
+codice = "11"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "molise"
+codice = "12"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "piemonte"
+codice = "13"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "puglia"
+codice = "14"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "sardegna"
+codice = "15"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "sicilia"
+codice = "16"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "toscana"
+codice = "17"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "provincia_autonoma_trento"
+codice = "18"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "umbria"
+codice = "19"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "valle_d_aosta"
+codice = "20"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
+
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "veneto"
+codice = "21"
+dal = 2008-01-01
+riferimento = "prassi:ade:risoluzione:2007-12-12;367-E"
