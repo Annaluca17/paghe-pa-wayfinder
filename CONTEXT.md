@@ -57,11 +57,11 @@ Dichiarazione dell'istituto, con date e riferimento, accanto alla sua classifica
 _Avoid_: Tipo impegno, flag automatico
 
 **Fatto contabile**:
-Fatto comunicato dalla Ragioneria attraverso un canale di input, come un impegno sulla spesa di personale (numero, esercizio, classificazione, atto presupposto, importo). Il modello lo legge e non lo produce.
+Fatto comunicato dalla Ragioneria attraverso un canale di input, come un impegno sulla spesa di personale (numero, esercizio, classificazione, atto presupposto, disponibilità a una data). Il modello lo legge e non lo produce.
 _Avoid_: Impegno del modello, anagrafica capitoli
 
 **Abbinamento**:
-Scelta, fatta da una regola dichiarata, dell'impegno che un importo consuma (classificazione, esercizio di esigibilità, atto). Se nessun impegno è capiente scatta un fermo; se l'impegno non è noto, nella proposta è un dato mancante. La Ragioneria può cambiarlo in conferma. Per un importo finanziato dal fondo, la regola cerca l'impegno che ha come atto presupposto la sottoscrizione del contratto integrativo del fondo dell'anno di competenza, con la classificazione dell'istituto e l'esercizio della data di pagamento prevista.
+Scelta, fatta da una regola dichiarata, dell'impegno che una riga di proposta consuma: stessa classificazione, atto presupposto richiesto dall'origine dell'impegno, esercizio della valuta prevista e, per un'origine da atto, i residui dal più vecchio; nello stesso esercizio il numero più basso. La riga va intera su un solo impegno. Se nessun impegno adatto è capiente scatta un fermo dei rapporti della riga; se l'impegno non è noto, nella proposta è un dato mancante. La Ragioneria può cambiarlo in conferma con un impegno noto della stessa classificazione. Per un importo finanziato dal fondo, la regola cerca l'impegno che ha come atto presupposto la sottoscrizione del contratto integrativo del fondo dell'anno di competenza, con la classificazione dell'istituto e l'esercizio della data di pagamento prevista.
 _Avoid_: Imputazione automatica
 
 **Versione di proposta**:
@@ -101,8 +101,16 @@ Componente dell'ente che traduce il contratto neutro verso una sorgente concreta
 _Avoid_: Connettore, integrazione
 
 **Riga di proposta**:
-Parte di una proposta per una classificazione ufficiale (missione, programma, piano dei conti di V livello) e un impegno, con l'elenco degli importi che la sommano. Non porta il capitolo.
+Parte di una proposta per una classificazione ufficiale (missione, programma, piano dei conti di V livello) e un impegno, con l'elenco degli importi che la sommano. Comprende solo la spesa: retribuzione, contributi a carico dell'ente, IRAP. Le ritenute restano nella composizione del pagamento. Non porta il capitolo.
 _Avoid_: Riga per dipendente, dettaglio contabile
+
+**Disponibilità dell'impegno**:
+Quanto resta di un impegno a una data, secondo la Ragioneria, portato dal fatto contabile. Il modello ne sottrae le righe delle proprie versioni vive registrate dopo quella data; una disponibilità nuova è un fatto nuovo.
+_Avoid_: Saldo dell'impegno, residuo (che è un impegno di un esercizio precedente)
+
+**Programma del rapporto**:
+Fatto datato del rapporto, scritto dall'ente: missione e programma dove la persona lavora, ai quali si imputa la sua spesa. Se manca, nella proposta è un dato mancante.
+_Avoid_: Centro di costo, ufficio
 
 **Mappatura contabile dell'ente**:
 Corrispondenza datata tra classificazione ufficiale e capitolo/articolo del bilancio dell'ente, tenuta dalla Ragioneria e applicata fuori dal modello paghe.
