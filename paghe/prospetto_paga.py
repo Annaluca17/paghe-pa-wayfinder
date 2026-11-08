@@ -103,8 +103,10 @@ def prospetto_paga(
         tipo: _vigente(registro.fatti_persona_noti(persona, tipo, istante), data) if persona else None for tipo in PERSONA
     }
     ente = {tipo: _vigente(registro.fatti_ente_noti(tipo, istante), data) for tipo in ENTE}
-    # Posizione e fine servizio sono del periodo pagato, non del giorno di pagamento: un rapporto cessato prima conserva la sua.
-    periodo = max((riga.periodo.al for riga in (sul_netto or importi)), default=data)
+    # Posizione e fine servizio sono del periodo delle competenze pagate, non del giorno di pagamento ne' di ritenute e contributi
+    # (di mese intero): un rapporto cessato prima del pagamento conserva la sua.
+    competenze = [riga.importo for riga in composte if riga.natura == "retribuzione"]
+    periodo = max((riga.periodo.al for riga in (competenze or importi)), default=data)
     posizione = _vigente(registro.fatti_noti(rapporto, regime.posizione, istante), periodo) if regime.posizione else None
     fine_servizio = (
         _vigente(registro.fatti_noti(rapporto, regime.fine_servizio, istante), periodo) if regime.fine_servizio else None
