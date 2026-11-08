@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import tomllib
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -33,6 +34,8 @@ CONTEGGI = {"lun_sab", "calendario"}
 MISURE = {"intero", "parziale", "escluso"}
 AMBITI_FERMO = {"calcolo", "denuncia", "vista"}
 FITTIZIO = "fittizio:"
+# Codice di V livello del piano dei conti finanziario (allegato 6/1 D.Lgs. 118/2011), spesa o entrata (ADR 0031).
+PIANO_DEI_CONTI = re.compile(r"[UE]\.\d\.\d{2}\.\d{2}\.\d{2}\.\d{3}")
 # Dichiarazione di composizione (ADR 0025): valori ammessi.
 NATURE = frozenset({
     "retribuzione", "ritenuta", "addizionale", "contributo_lavoratore", "contributo_ente",
@@ -682,6 +685,34 @@ class DichiarazioneComposizione:
 
 
 @dataclass(frozen=True)
+class DichiarazioneClassificazione:
+    """L'istituto dichiara il codice di V livello del piano dei conti e l'origine del proprio impegno (ADR 0031).
+
+    `origine_impegno` e' `automatico` (l'impegno nasce col bilancio) oppure il nome di un tipo di atto del registro.
+    """
+
+    istituto: str
+    dal: date
+    riferimento: str
+    piano_dei_conti: str
+    origine_impegno: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Classificazione {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if not isinstance(self.origine_impegno, str) or not self.origine_impegno or self.origine_impegno != self.origine_impegno.strip():
+            raise ErroreCorpus(f"{soggetto}: l'origine dell'impegno e' `automatico` o il nome di un tipo di atto")
+        if not isinstance(self.piano_dei_conti, str) or not PIANO_DEI_CONTI.fullmatch(self.piano_dei_conti):
+            raise ErroreCorpus(f"{soggetto}: codice del piano dei conti non valido, {self.piano_dei_conti!r}")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
 class CondizioneDiProposta:
     """Un fatto che il corpus richiede perche' un importo dell'istituto entri in una versione di proposta (ADR 0015).
 
@@ -926,6 +957,7 @@ class Corpus:
         reale: bool = False,
         fiscale: RegoleFiscali | None = None,
         composizioni: tuple[DichiarazioneComposizione, ...] = (),
+        classificazioni: tuple[DichiarazioneClassificazione, ...] = (),
         mappature: tuple[MappaturaEsterna, ...] = (),
         mappature_di_fatto: tuple[MappaturaDiFatto, ...] = (),
         codici_f24ep: tuple[CodiceF24EP, ...] = (),
@@ -948,6 +980,7 @@ class Corpus:
         self._calendari_festivi = tuple(calendari_festivi)
         self._codici_f24ep = tuple(codici_f24ep)
         self._composizioni = tuple(composizioni)
+        self._classificazioni = tuple(classificazioni)
         self._mappature = tuple(mappature)
         self._mappature_di_fatto = tuple(mappature_di_fatto)
         self.fiscale = fiscale or RegoleFiscali()
@@ -976,6 +1009,7 @@ class Corpus:
         self._convalida_denuncia()
         self._convalida_fiscale()
         self._convalida_composizione()
+        self._convalida_classificazione()
         self._convalida_part_time()
         self._convalida_massimali_di_base()
         self._convalida_condizioni_di_proposta()
@@ -1002,6 +1036,7 @@ class Corpus:
         elenco += [("Addizionali", a.riferimento) for a in fiscale.addizionali]
         elenco += [(f"Aliquota addizionale {a.ente} {a.codice} {a.anno}", a.riferimento) for a in fiscale.aliquote]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
+        elenco += [(f"Classificazione {c.istituto}", c.riferimento) for c in self._classificazioni]
         elenco += [(f"Mappatura {m.istituto} -> {m.sistema}", m.riferimento) for m in self._mappature]
         elenco += [
             (f"Mappatura di fatto {m.sistema}.{m.elemento} ({m.fatto}={m.valore})", m.riferimento)
@@ -1383,6 +1418,12 @@ class Corpus:
                  c.destinatario or "", c.canale or "", c.intermedio, c.riferimento]
                 for c in self._composizioni
             )
+        if self._classificazioni:
+            contenuto["classificazioni"] = sorted(
+                [c.istituto, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.piano_dei_conti, c.origine_impegno,
+                 c.riferimento]
+                for c in self._classificazioni
+            )
         if self._trattamenti_part_time:
             contenuto["part_time"] = sorted(
                 [t.istituto, t.trattamento, t.dal.isoformat(), t.al.isoformat() if t.al else "", t.fatto or "", t.riferimento]
@@ -1467,6 +1508,15 @@ class Corpus:
         """Aliquote dell'addizionale del comune o della regione per l'anno; None se il corpus non le dichiara."""
         return next((a for a in self.fiscale.aliquote if (a.ente, a.codice, a.anno) == (ente, codice, anno)), None)
 
+    def _convalida_classificazione(self) -> None:
+        noti = self._istituti_noti()
+        for indice, dichiarazione in enumerate(self._classificazioni):
+            if dichiarazione.istituto not in noti:
+                raise ErroreCorpus(f"Classificazione {dichiarazione.istituto}: istituto ignoto")
+            for altra in self._classificazioni[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], f"Classificazione {dichiarazione.istituto}")
+
     def regola_addizionali(self, giorno: date) -> RegolaAddizionali | None:
         """Regola delle addizionali vigente alla data; None se il corpus non le calcola."""
         return _vigente(self.fiscale.addizionali, giorno)
@@ -1480,6 +1530,10 @@ class Corpus:
     def composizione(self, istituto: str, giorno: date) -> DichiarazioneComposizione | None:
         """Dichiarazione di composizione vigente alla data; None se l'istituto non ne dichiara."""
         return _vigente([c for c in self._composizioni if c.istituto == istituto], giorno)
+
+    def classificazione(self, istituto: str, giorno: date) -> DichiarazioneClassificazione | None:
+        """Dichiarazione di classificazione vigente alla data; None se l'istituto non ne dichiara."""
+        return _vigente([c for c in self._classificazioni if c.istituto == istituto], giorno)
 
     def output(self, vista: str, giorno: date) -> DichiarazioneOutput | None:
         """Dichiarazione vigente alla data per la vista; None se il regime non la dichiara."""
@@ -1599,6 +1653,7 @@ class Corpus:
             denuncia = _denuncia_da_toml(dati.get("denuncia", {}))
             fiscale = _fiscale_da_toml(dati)
             composizioni = tuple(_composizione_da_toml(voce) for voce in dati.get("composizione", []))
+            classificazioni = tuple(_classificazione_da_toml(voce) for voce in dati.get("classificazione", []))
             mappature = tuple(_mappatura_da_toml(voce) for voce in dati.get("mappatura", []))
             mappature_di_fatto = tuple(
                 MappaturaDiFatto(
@@ -1673,6 +1728,7 @@ class Corpus:
             reale=reale,
             fiscale=fiscale,
             composizioni=composizioni,
+            classificazioni=classificazioni,
             mappature=mappature,
             mappature_di_fatto=mappature_di_fatto,
             codici_f24ep=codici_f24ep,
@@ -1706,6 +1762,17 @@ def _composizione_da_toml(voce: dict) -> DichiarazioneComposizione:
         destinatario=voce.get("destinatario"),
         canale=voce.get("canale"),
         intermedio=voce.get("intermedio", False),
+        al=_data(voce["al"], "al") if "al" in voce else None,
+    )
+
+
+def _classificazione_da_toml(voce: dict) -> DichiarazioneClassificazione:
+    return DichiarazioneClassificazione(
+        istituto=voce["istituto"],
+        dal=_data(voce["dal"], "dal"),
+        riferimento=voce["riferimento"],
+        piano_dei_conti=voce["piano_dei_conti"],
+        origine_impegno=voce["origine_impegno"],
         al=_data(voce["al"], "al") if "al" in voce else None,
     )
 
