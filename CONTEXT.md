@@ -457,8 +457,11 @@ Dato datato che porta un riferimento abrogato al suo successore, articolo per ar
 _Avoid_: Tabella di conversione, alias della norma
 
 **Trattenuta a terzi**:
-Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, per un pignoramento, una cessione o una delegazione trascritti come atto esterno sul rapporto. È un versamento a terzi nella composizione del pagamento. Un concorso non ancora modellato ferma il calcolo.
+Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, per un pignoramento, una cessione o una delegazione trascritti come atto esterno sul rapporto. È un versamento a terzi nella composizione del pagamento. I limiti si misurano sul netto di ogni pagamento, meno le sole ritenute di legge. Tra istituti diversi vale chi è notificato prima; più pignoramenti, o un concorso non ancora modellato, fermano il calcolo.
 _Avoid_: Trattenuta (senza dire quale), ritenuta (che è fiscale), quinto (che è solo uno dei limiti)
+
+**Assenso dell'ente**:
+Atto esterno datato con cui l'ente consente che cessione e delegazione insieme superino la metà del netto. Senza, oltre la metà il calcolo si ferma.
 
 **Punto CU**:
 Mappatura datata dell'istituto o della categoria di reddito verso un punto della CU, per anno di certificazione, come la voce SICO o il codice tributo. Se la numerazione cambia, cambia la mappatura e non l'istituto.
