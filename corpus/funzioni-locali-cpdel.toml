@@ -2325,6 +2325,8 @@ riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com1 + u
 # minimo di 690 euro si applica dopo il rapporto e solo con reddito fino a 15.000. Nella ritenuta del mese i giorni non pesano.
 # Marcatura: norma certa per scaglioni e importi, prassi per il criterio dei giorni. Il minimo di 1.380 per il tempo determinato
 # non e' applicato: lo segnala un avviso.
+# I rapporti delle fasce b) e c) si troncano alle prime quattro cifre decimali (art. 13 c. 6 TUIR, c. 8 TU; troncamento:
+# prassi-interpretazione, da verificare). L'ulteriore detrazione spetta solo con reddito di lavoro dipendente (L. 207/2024 c. 6).
 
 [[ritenuta]]
 istituto = "ritenuta_irpef"
@@ -2334,6 +2336,7 @@ al = 2026-12-31
 riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-leta + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1"
 categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
 detrazione_richiesta = "lavoro_dipendente"
+categorie_detrazione_automatica = ["lavoro_dipendente"]
 imposta = '''arrotonda(
     (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
      + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
@@ -2342,9 +2345,9 @@ detrazione = '''arrotonda(
     se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_a,
        max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a),
        (se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_b,
-           parametro.art13_importo_b_c + parametro.art13_integrazione_b * (parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b,
+           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b, 4),
            se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_c,
-              parametro.art13_importo_b_c * (parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c,
+              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c, 4),
               0))
         + se((fisco.imponibile * fisco.periodi) > parametro.art13_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
        * fisco.giorni / fisco.giorni_anno) / fisco.periodi, 2)'''
@@ -2371,6 +2374,7 @@ dal = 2027-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1"
 categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
 detrazione_richiesta = "lavoro_dipendente"
+categorie_detrazione_automatica = ["lavoro_dipendente"]
 imposta = '''arrotonda(
     (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
      + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
@@ -2379,9 +2383,9 @@ detrazione = '''arrotonda(
     se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_a,
        max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a),
        (se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_b,
-           parametro.art13_importo_b_c + parametro.art13_integrazione_b * (parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b,
+           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b, 4),
            se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_c,
-              parametro.art13_importo_b_c * (parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c,
+              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c, 4),
               0))
         + se((fisco.imponibile * fisco.periodi) > parametro.art13_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
        * fisco.giorni / fisco.giorni_anno) / fisco.periodi, 2)'''

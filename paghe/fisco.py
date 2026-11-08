@@ -268,6 +268,7 @@ def _calcola(
     dichiarazione: Fatto | None,
     giorni: int = 1,
     giorni_anno: int = 1,
+    categorie: frozenset[str] = frozenset(),
 ) -> _Calcolo:
     """Imposta, detrazioni e dovuto del periodo, o dell'anno con un solo periodo.
 
@@ -291,7 +292,8 @@ def _calcola(
 
     imposta = valuta(regola.imposta, risolvi)
     detrazione = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
-    automatica = valuta(regola.detrazione_automatica, risolvi)
+    spetta = not regola.categorie_detrazione_automatica or bool(categorie & set(regola.categorie_detrazione_automatica))
+    automatica = valuta(regola.detrazione_automatica, risolvi) if spetta else Decimal(0)
     return _Calcolo(
         imponibile,
         imposta,
@@ -388,7 +390,10 @@ def _ritenuta(
         (riga.valore for riga in (*gia_dedotte, *deduzioni)), Decimal(0)
     )
     dichiarazione = _dichiarazione(registro, persona, regola, data_pagamento, istante)
-    calcolo = _calcola(corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione)
+    calcolo = _calcola(
+        corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione,
+        categorie=frozenset(riga.categoria_reddito for riga in (*gia_pagate, *righe)),
+    )
     operato = sum((riga.valore for riga in gia_operate), Decimal(0))
     importo = Importo(
         rapporto=rapporto,
@@ -508,6 +513,7 @@ def _annuale(
         dichiarazione,
         giorni,
         giorni_anno,
+        frozenset(riga.categoria_reddito for riga in reddito),
     )
     return _Annuale(
         calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta

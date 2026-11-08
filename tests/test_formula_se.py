@@ -58,3 +58,21 @@ def test_se_dichiara_i_riferimenti_di_tutti_i_suoi_argomenti():
 def test_se_e_confronti_fuori_posto_rifiutati(formula):
     with pytest.raises(ErroreFormula):
         riferimenti(formula)
+
+
+@pytest.mark.parametrize(
+    ("formula", "atteso"),
+    [
+        ("tronca(3000 / 13000, 4)", "0.2307"),  # 0,230769...: si prendono le prime quattro cifre, senza arrotondare
+        ("tronca(21999 / 22000, 4)", "0.9999"),
+        ("tronca(1 / 2, 4)", "0.5000"),
+        ("tronca(fatto.r, 0)", "15000"),
+    ],
+)
+def test_tronca_prende_le_prime_cifre_decimali(formula, atteso):
+    assert valuta(formula, letti) == Decimal(atteso)
+
+
+def test_tronca_vuole_decimali_interi_non_negativi():
+    with pytest.raises(ErroreFormula):
+        valuta("tronca(fatto.r, -1)", letti)

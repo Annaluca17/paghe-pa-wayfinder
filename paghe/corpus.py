@@ -461,6 +461,7 @@ class RegolaRitenuta:
     detrazione_richiesta: str
     al: date | None = None
     detrazione_automatica: str = "0"
+    categorie_detrazione_automatica: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         soggetto = f"Ritenuta {self.istituto}"
@@ -1834,6 +1835,7 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
             detrazione_richiesta=voce["detrazione_richiesta"],
             al=_data(voce["al"], "al") if "al" in voce else None,
             detrazione_automatica=voce.get("detrazione_automatica", "0"),
+            categorie_detrazione_automatica=tuple(voce.get("categorie_detrazione_automatica", ())),
         )
         for voce in dati.get("ritenuta", [])
     )
