@@ -4,6 +4,8 @@ Il nucleo dell'ADR 0001 è in Python, senza dipendenze a runtime. Il registro è
 
 Scelto perché l'aritmetica `Decimal`, `tomllib` e `sqlite3` sono nella libreria standard, e perché per enti fino a 400 dipendenti un database relazionale append-only basta. Il corpus resta dato: si può versionare, confrontare e tradurre verso altri formati.
 
+*Precisato il 08/11/2026 (grilling del ticket #93, scelta di Luca):* la grammatica ammette `se(condizione, allora, altrimenti)`, con un solo confronto (`<`, `<=`, `>`, `>=`) fra due espressioni come condizione. La formula resta testo analizzato e mai eseguito, e le costanti restano intere. Serve alle norme a fasce con un salto, come la detrazione dell'art. 13 c. 1 TUIR, che passa da 1.955 a 3.100 euro appena il reddito supera 15.000, e che con `min` e `max` non si può scrivere. Le alternative scartate sono due. La prima è il gradino `min(1, max(0, (R - soglia) × 100))`, esatto al centesimo ma illeggibile. La seconda è una tabella a fasce nel corpus: dovrebbe contenere formule diverse per fascia, quindi richiederebbe più motore.
+
 ## Considered Options
 
 - Regole come funzioni Python: più semplici, ma non restano dato leggibile e traducibile.

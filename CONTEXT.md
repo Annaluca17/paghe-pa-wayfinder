@@ -417,8 +417,20 @@ Importo sul rapporto del pagamento in cui è operata, calcolato sulle somme di q
 _Avoid_: Ritenuta progressiva, trattenuta IRPEF (la trattenuta a terzi è un'altra cosa)
 
 **Dichiarazione del sostituito**:
-Fatto della persona, con validità e documento di origine, che chiede le detrazioni e ne dà le condizioni, e che può indicare un'aliquota più alta o redditi di altri sostituti da conguagliare. Senza dichiarazione non si applicano detrazioni e il modello lo segnala, senza fermarsi.
+Fatto della persona, con validità e documento di origine, che chiede le detrazioni a richiesta e ne dà le condizioni, e che può indicare un'aliquota più alta o redditi di altri sostituti da conguagliare. Senza dichiarazione le detrazioni a richiesta non si applicano e il modello lo segnala, senza fermarsi; la detrazione automatica si applica comunque.
 _Avoid_: Modulo detrazioni, carichi di famiglia (che sono solo una parte)
+
+**Detrazione a richiesta**:
+Detrazione che si applica solo se la persona la chiede con la dichiarazione del sostituito, come quella per lavoro dipendente.
+_Avoid_: Detrazione d'ufficio
+
+**Detrazione automatica**:
+Detrazione che il sostituto riconosce senza richiesta della persona, come l'ulteriore detrazione per i redditi tra 20.000 e 40.000 euro.
+_Avoid_: Bonus, cuneo (che comprende anche la somma esente, che non è una detrazione)
+
+**Periodo di lavoro nell'anno**:
+I giorni dell'anno in cui la persona ha avuto servizio presso l'ente, su tutti i suoi rapporti, festivi compresi. Al conguaglio rapporta le detrazioni che la norma lega al lavoro svolto.
+_Avoid_: Giorni lavorati (che escludono i festivi), mesi di servizio
 
 **Conguaglio fiscale**:
 Ricalcolo dell'imposta dell'anno sull'imponibile fiscale della persona, confrontato con le ritenute già negli esiti. Si fa sull'ultimo pagamento attribuito all'anno, o su quello finale alla cessazione; se un fatto cambia il dovuto, ne segue uno nuovo per differenza, entro il 28 febbraio per l'anno precedente. Una proiezione resta visibile come avviso.
