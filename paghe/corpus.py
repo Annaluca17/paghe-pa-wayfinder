@@ -1343,7 +1343,8 @@ class Corpus:
                 ),
                 "ritenute": sorted(
                     [r.istituto, r.versione, r.dal.isoformat(), r.al.isoformat() if r.al else "", r.riferimento,
-                     r.imposta, r.detrazione, sorted(r.categorie), r.detrazione_richiesta, r.detrazione_automatica]
+                     r.imposta, r.detrazione, sorted(r.categorie), r.detrazione_richiesta,
+                     *([r.detrazione_automatica] if r.detrazione_automatica != "0" else [])]
                     for r in fiscale.ritenute
                 ),
                 "conguagli": sorted(

@@ -1,7 +1,7 @@
 """Detrazione automatica e giorni di servizio nella ritenuta e nel conguaglio (ADR 0019, ticket #93).
 
-Valori e fonti fittizi. La regola di prova ha scaglioni 10% fino a 10000 e 20% oltre, la detrazione a richiesta di
-1200 annui, e una detrazione automatica di 600 annui rapportata ai giorni di servizio sull'anno.
+Valori e fonti fittizi, sul corpus di test_fiscale (detrazione a richiesta: 55,00 al mese su 1500 al mese). La detrazione
+automatica di prova è di 600 annui, rapportata ai giorni di servizio sull'anno e al periodo.
 """
 
 from dataclasses import replace
@@ -14,7 +14,7 @@ from paghe import Corpus, Mese
 from paghe.errori import ErroreCorpus, ErroreFormula
 from test_fiscale import (
     ALTRO,
-    CF,
+    DETRAZIONE,
     P,
     R,
     TESTO,
@@ -25,7 +25,6 @@ from test_fiscale import (
 )
 
 IMPOSTA_PROVA = "arrotonda(parametro.aliquota_1 * min(fisco.imponibile, parametro.limite_1 / fisco.periodi) + parametro.aliquota_2 * max(0, fisco.imponibile - parametro.limite_1 / fisco.periodi), 2)"
-DETRAZIONE_PROVA = "arrotonda(parametro.detrazione_annua / fisco.periodi, 2)"
 AUTOMATICA_PROVA = "arrotonda(parametro.detrazione_annua / 2 * fisco.giorni / fisco.giorni_anno / fisco.periodi, 2)"
 
 
@@ -67,3 +66,51 @@ def test_giorni_e_giorni_anno_sono_ammessi_come_fisco():
 
 def test_la_versione_del_corpus_cambia_con_la_detrazione_automatica():
     assert Corpus.da_toml(TESTO).versione != Corpus.da_toml(con_automatica(AUTOMATICA_PROVA)).versione
+
+
+# Ritenuta del mese: detrazione a richiesta e detrazione automatica separate
+
+def corpus_prova(automatica=AUTOMATICA_PROVA):
+    return Corpus.da_toml(con_automatica(automatica))
+
+
+def imposta_di(imponibile, periodi):
+    """Imposta di prova: 10% fino a limite_1 (10000) ragguagliato al periodo, 20% oltre."""
+    limite = Decimal(10000) / periodi
+    return (Decimal("0.1") * min(imponibile, limite) + Decimal("0.2") * max(Decimal(0), imponibile - limite)).quantize(
+        Decimal("0.01")
+    )
+
+
+def test_la_detrazione_automatica_si_applica_senza_dichiarazione(registro, orologio):
+    corpus = corpus_prova()
+    assumi(registro)
+    esito, fiscale = paga(registro, orologio, corpus, stipendio(registro, corpus, Mese(2026, 6)), date(2026, 6, 27))
+    # automatica del mese: 600 * 1 / 1 / 12 = 50,00 (nella ritenuta del mese i giorni non pesano)
+    assert fiscale.ritenuta.valore == imposta_di(Decimal(1500), 12) - Decimal("50.00")
+
+
+def test_con_la_dichiarazione_si_sommano_le_due_detrazioni(registro, orologio):
+    corpus = corpus_prova()
+    assumi(registro)
+    dichiara(registro, orologio)
+    _, fiscale = paga(registro, orologio, corpus, stipendio(registro, corpus, Mese(2026, 6)), date(2026, 6, 27))
+    assert fiscale.ritenuta.valore == imposta_di(Decimal(1500), 12) - Decimal("55.00") - Decimal("50.00")
+    formula = fiscale.ritenuta.derivazione.formula
+    assert DETRAZIONE in formula and AUTOMATICA_PROVA in formula
+
+
+def test_la_derivazione_dice_quando_la_detrazione_a_richiesta_non_e_applicata(registro, orologio):
+    corpus = corpus_prova()
+    assumi(registro)
+    _, fiscale = paga(registro, orologio, corpus, stipendio(registro, corpus, Mese(2026, 6)), date(2026, 6, 27))
+    formula = fiscale.ritenuta.derivazione.formula
+    assert "non applicata" in formula and AUTOMATICA_PROVA in formula
+
+
+def test_le_detrazioni_non_portano_la_ritenuta_sotto_zero(registro, orologio):
+    corpus = corpus_prova()
+    assumi(registro)
+    dichiara(registro, orologio)
+    _, fiscale = paga(registro, orologio, corpus, stipendio(registro, corpus, Mese(2026, 6), "100"), date(2026, 6, 27))
+    assert fiscale.ritenuta.valore == Decimal("0.00")

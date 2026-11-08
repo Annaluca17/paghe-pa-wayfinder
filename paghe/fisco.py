@@ -241,6 +241,7 @@ class _Calcolo:
     imponibile: Decimal
     imposta: Decimal
     detrazione: Decimal
+    detrazione_automatica: Decimal
     dovuto: Decimal
     parametri: tuple[ParametroLetto, ...]
     fatti: tuple[Fatto, ...]
@@ -254,25 +255,44 @@ def _dichiarazione(registro: Registro, persona: str, regola: RegolaRitenuta, gio
 
 
 def _calcola(
-    corpus: Corpus, regola: RegolaRitenuta, imponibile: Decimal, periodi: int, riferimento: date, dichiarazione: Fatto | None
+    corpus: Corpus,
+    regola: RegolaRitenuta,
+    imponibile: Decimal,
+    periodi: int,
+    riferimento: date,
+    dichiarazione: Fatto | None,
+    giorni: int = 1,
+    giorni_anno: int = 1,
 ) -> _Calcolo:
-    """Imposta, detrazione (solo con la dichiarazione) e dovuto del periodo, o dell'anno con un solo periodo."""
+    """Imposta, detrazioni e dovuto del periodo, o dell'anno con un solo periodo.
+
+    La detrazione a richiesta c'è solo con la dichiarazione, la detrazione automatica sempre. Nella ritenuta del
+    mese `giorni` e `giorni_anno` valgono 1: il rapporto è neutro e il periodo è un dodicesimo per pagamento.
+    """
     parametri: dict[str, ParametroLetto] = {}
+    valori_fisco = {
+        "imponibile": imponibile,
+        "periodi": Decimal(periodi),
+        "giorni": Decimal(giorni),
+        "giorni_anno": Decimal(giorni_anno),
+    }
 
     def risolvi(origine: str, nome: str) -> Decimal:
         if origine == "fisco":
-            return imponibile if nome == "imponibile" else Decimal(periodi)
+            return valori_fisco[nome]
         vigenza = corpus.parametro(nome).vigenza_per(Periodo(riferimento, riferimento))
         parametri[nome] = ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento)
         return vigenza.valore
 
     imposta = valuta(regola.imposta, risolvi)
     detrazione = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
+    automatica = valuta(regola.detrazione_automatica, risolvi)
     return _Calcolo(
         imponibile,
         imposta,
         detrazione,
-        max(Decimal(0), imposta - detrazione),
+        automatica,
+        max(Decimal(0), imposta - detrazione - automatica),
         tuple(parametri[nome] for nome in sorted(parametri)),
         (dichiarazione,) if dichiarazione is not None else (),
     )
@@ -380,7 +400,8 @@ def _ritenuta(
             formula=(
                 f"imposta del periodo = {regola.imposta}; detrazione rapportata = "
                 f"{regola.detrazione if dichiarazione is not None else 'non applicata'}; "
-                "ritenuta = imposta meno detrazione meno ritenute già operate nel periodo"
+                f"detrazione automatica = {regola.detrazione_automatica}; "
+                "ritenuta = imposta meno detrazione meno detrazione automatica meno ritenute già operate nel periodo"
             ),
             versione_corpus=corpus.versione,
             noto_al=istante,
@@ -473,7 +494,9 @@ def _importo_conguaglio(
             formula=(
                 f"imposta dell'anno = {annuale.regola_ritenuta.imposta}; detrazione = "
                 f"{annuale.regola_ritenuta.detrazione if annuale.calcolo.fatti else 'non applicata'}; "
-                "conguaglio = imposta meno detrazione meno ritenute e conguagli già operati, con un solo periodo"
+                f"detrazione automatica = {annuale.regola_ritenuta.detrazione_automatica}; "
+                "conguaglio = imposta meno detrazione meno detrazione automatica meno ritenute e conguagli già operati, "
+                "con un solo periodo"
             ),
             versione_corpus=corpus.versione,
             noto_al=istante,
