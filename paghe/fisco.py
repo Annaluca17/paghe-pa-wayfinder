@@ -33,6 +33,7 @@ ULTIMO_GIORNO_CONGUAGLIO = (2, 28)  # entro il 28 febbraio (art. 23 c. 3 DPR 600
 
 AVVISO_SENZA_DICHIARAZIONE = "senza_dichiarazione_sostituito"
 AVVISO_PROIEZIONE = "proiezione_conguaglio"
+AVVISO_ACCONTO_SENZA_BASE = "acconto_senza_base"
 
 
 @dataclass(frozen=True)
@@ -580,17 +581,26 @@ def calcola_fiscale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
-    return FiscaleDelPagamento(
-        ritenuta, conguaglio, tuple(avvisi), _rate_delle_addizionali(registro, corpus, rapporto, persona, data_pagamento, istante)
-    )
+    rate = _rate_delle_addizionali(registro, corpus, rapporto, persona, data_pagamento, istante)
+    if rate.acconto_senza_base is not None:
+        avvisi.append(
+            Avviso(
+                AVVISO_ACCONTO_SENZA_BASE,
+                f"Persona {persona}: senza il conguaglio dell'anno prima né il reddito dell'anno precedente, "
+                f"niente acconto dell'addizionale comunale {rate.acconto_senza_base}: passa tutto al saldo",
+                persona,
+                rate.acconto_senza_base,
+            )
+        )
+    return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi), rate.importi)
 
 
 def _rate_delle_addizionali(
     registro: Registro, corpus: Corpus, rapporto: str, persona: str, data_pagamento: date, istante: datetime
-) -> tuple[Importo, ...]:
+) -> addizionali.RateDelMese:
     regola = corpus.regola_addizionali(data_pagamento)
     if regola is None:
-        return ()
+        return addizionali.RateDelMese()
     return addizionali.rate_del_mese(registro, corpus, regola, rapporto, persona, data_pagamento, istante)
 
 

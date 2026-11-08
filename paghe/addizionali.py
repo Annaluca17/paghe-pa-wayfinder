@@ -8,14 +8,14 @@ gli importi che produce sono dei pagamenti, e il residuo da trattenere si ricalc
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 from .corpus import AliquotaAddizionale, Corpus, RegolaAddizionali
 from .errori import FattoMancante, ParametroMancante
 from .modello import Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
-from .registro import TIPO_DOMICILIO_FISCALE, Registro
+from .registro import TIPO_DOMICILIO_FISCALE, TIPO_REDDITO_ANNO_PRECEDENTE, Registro
 from .tempo import Periodo
 
 
@@ -247,6 +247,45 @@ def _rata(residuo: Decimal, mesi_rimasti: int) -> Decimal:
     return (residuo / mesi_rimasti).quantize(CENTESIMO, rounding=ROUND_HALF_UP)
 
 
+@dataclass(frozen=True)
+class RateDelMese:
+    """Le rate da trattenere nel pagamento e, se l'acconto non ha una base, l'anno dell'acconto che ne resta senza."""
+
+    importi: tuple[Importo, ...] = ()
+    acconto_senza_base: int | None = None
+
+
+def _base_dell_acconto(
+    registro: Registro,
+    corpus: Corpus,
+    persona: str,
+    pagate: list[_Pagata],
+    natura: _Natura,
+    anno: int,
+    istante: datetime,
+) -> tuple[Decimal, tuple[Importo, ...], tuple[Fatto, ...], str] | None:
+    """L'addizionale comunale dell'anno prima: dal conguaglio nel modello, altrimenti dal reddito della CU; None se manca."""
+    residuo = _residuo(pagate, natura, anno)
+    if residuo.importi:
+        dovuta = residuo.importi[0]
+        return dovuta.valore, (dovuta,), (), dovuta.derivazione.riferimento
+    fatto = registro.vigente_persona(persona, TIPO_REDDITO_ANNO_PRECEDENTE, date(anno + 1, 1, 1), istante)
+    if fatto is None:
+        return None
+    domicilio = domicilio_fiscale(registro, persona, date(anno + 1, 1, 1), istante)
+    if domicilio is None:
+        raise FattoMancante(
+            f"Manca il domicilio fiscale della persona {persona} al 1° gennaio {anno + 1}, serve all'acconto "
+            f"dell'addizionale comunale {anno + 1}"
+        )
+    aliquota = corpus.aliquota_addizionale("comune", domicilio.comune, anno)
+    if aliquota is None:
+        raise ParametroMancante(
+            f"Aliquote dell'addizionale comunale: nessuna per il comune {domicilio.comune} nell'anno {anno}"
+        )
+    return aliquota.su(fatto.valore), (), (fatto, domicilio.fatto), aliquota.riferimento
+
+
 def rate_del_mese(
     registro: Registro,
     corpus: Corpus,
@@ -255,26 +294,26 @@ def rate_del_mese(
     persona: str,
     data_pagamento: date,
     istante: datetime,
-) -> tuple[Importo, ...]:
-    """Le rate delle addizionali dell'anno prima da trattenere nel pagamento: una sola per persona e per mese.
+) -> RateDelMese:
+    """Le rate delle addizionali da trattenere nel pagamento: una sola per persona e per mese.
 
-    La rata è il residuo da trattenere diviso i mesi rimasti fino all'ultimo mese delle rate (compreso), dal mese dopo
-    il conguaglio. Il primo pagamento del mese le trattiene; dopo l'ultimo mese non c'è nulla.
+    La rata è il residuo da trattenere diviso i mesi rimasti fino all'ultimo mese delle rate (compreso): del saldo
+    dell'anno prima dal mese dopo il conguaglio, dell'acconto comunale dell'anno dal primo mese dell'acconto. Il primo
+    pagamento del mese le trattiene; dopo l'ultimo mese non c'è nulla.
     """
     pagate = _pagate(registro, persona, istante)
     mese = (data_pagamento.year, data_pagamento.month)
-    if any(
-        (p.data.year, p.data.month) == mese and p.riga.istituto in (n.rata for n in _nature(regola))
-        for p in pagate
-    ):
-        return ()
+    natura_regionale, natura_comunale = _nature(regola)
+    istituti_rata = {n.rata for n in (natura_regionale, natura_comunale)} | {natura_comunale.acconto}
+    if any((p.data.year, p.data.month) == mese and p.riga.istituto in istituti_rata for p in pagate):
+        return RateDelMese()
     ultimo = _letto(corpus, regola.mese_ultima_rata, data_pagamento)
     mesi_rimasti = int(ultimo.valore) - data_pagamento.month + 1
     if mesi_rimasti < 1:
-        return ()
+        return RateDelMese()
     anno = data_pagamento.year - 1
     rate = []
-    for natura in _nature(regola):
+    for natura in (natura_regionale, natura_comunale):
         residuo = _residuo(pagate, natura, anno)
         if residuo.valore <= 0 or residuo.conguaglio is None or (residuo.conguaglio.year, residuo.conguaglio.month) >= mese:
             continue
@@ -286,4 +325,26 @@ def rate_del_mese(
                 (ultimo,), residuo, istante,
             )
         )
-    return tuple(rate)
+    senza_base = None
+    prima = _letto(corpus, regola.mese_prima_rata_acconto, data_pagamento)
+    if data_pagamento.month >= int(prima.valore):
+        base = _base_dell_acconto(registro, corpus, persona, pagate, natura_comunale, anno, istante)
+        if base is None:
+            senza_base = data_pagamento.year
+        else:
+            addizionale, importi_base, fatti, riferimento_base = base
+            percentuale = _letto(corpus, regola.percentuale_acconto, data_pagamento)
+            totale = (addizionale * percentuale.valore).quantize(CENTESIMO, rounding=ROUND_HALF_UP)
+            trattenuto = [p.riga for p in pagate if p.riga.istituto == natura_comunale.acconto and p.riga.anno_imposta == data_pagamento.year]
+            resto = totale - sum((r.valore for r in trattenuto), Decimal(0))
+            if resto > 0:
+                trasparenza = _Residuo(resto, (*importi_base, *trattenuto), None)
+                importo = _importo_trattenuto(
+                    corpus, regola, natura_comunale.acconto, rapporto, data_pagamento.year,
+                    _rata(resto, mesi_rimasti),
+                    f"rata dell'acconto = residuo ({resto}) diviso i mesi rimasti fino al mese {ultimo.valore} compreso "
+                    f"({mesi_rimasti}); acconto = {percentuale.valore} dell'addizionale comunale {anno} ({addizionale})",
+                    (percentuale, prima, ultimo), trasparenza, istante,
+                )
+                rate.append(replace(importo, derivazione=replace(importo.derivazione, fatti=fatti)))
+    return RateDelMese(tuple(rate), senza_base)
