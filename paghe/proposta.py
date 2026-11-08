@@ -359,7 +359,7 @@ def _rapporto(
     fiscali = [fiscale.ritenuta] + ([fiscale.conguaglio] if fiscale.conguaglio is not None else [])
     fiscali = [replace(i, esiti_confrontati=_esiti_con_la_stessa_chiave(registro, i, istante)) for i in fiscali]
 
-    righe = _righe_di_composizione(corpus, [*attribuiti, *fiscali, *contributi], valuta)
+    righe = _righe_di_composizione(corpus, [*attribuiti, *fiscali, *fiscale.addizionali, *contributi], valuta)
     netto = sum((riga.sul_netto for riga in righe), Decimal(0))
     if netto < 0:
         raise CasoNonModellato(f"Rapporto {rapporto}: caso non modellato, netto negativo di {netto} nel pagamento del {valuta}")

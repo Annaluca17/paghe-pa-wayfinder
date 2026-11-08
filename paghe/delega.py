@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
+from .addizionali import domicilio_fiscale
 from .corpus import Corpus
 from .errori import ErroreRegistro, ParametroMancante, VistaFerma
 from .f24ep import problemi_dati_ente
@@ -392,6 +393,11 @@ def _regione_lasciata_da_poco(registro: Registro, rapporto: str, pagamento: date
     return str(precedente.valore) if precedente.valore != attuale.valore else None
 
 
+def _e_di_addizionale(corpus: Corpus, istituto: str, giorno: date) -> bool:
+    regola = corpus.regola_addizionali(giorno)
+    return regola is not None and istituto in regola.istituti
+
+
 def _ordine_riga(riga: RigaDelega) -> tuple:
     return (ORDINE_SEZIONI.index(riga.sezione), riga.tributo, riga.codice, riga.rif_a, riga.rif_b)
 
@@ -467,6 +473,7 @@ def costruisci_delega(
     serve_provincia = False
     mancanti_regione: dict[str, DatoMancante] = {}
     avvisi_sede: dict[str, AvvisoDelega] = {}
+    mancanti_domicilio: dict[str, DatoMancante] = {}
 
     for riga, riferimento, pagamento in _righe_candidate(registro, mese_pagamento, istante):
         if riferimento in versate:
@@ -545,6 +552,24 @@ def costruisci_delega(
                         "continuita' da almeno tre mesi, la soglia e' del saldo annuale e il modello non la applica",
                     ),
                 )
+        elif voce.codice_campo in ("regione", "catastale") and _e_di_addizionale(corpus, istituto, pagamento):
+            # Le addizionali versano al comune o alla regione del domicilio fiscale al 1° gennaio dell'anno d'imposta (ADR 0029).
+            persona = registro.persona_del_rapporto(riga.rapporto, istante)
+            domicilio = None
+            if persona is not None:
+                domicilio = domicilio_fiscale(registro, persona, date(importo.anno_imposta or pagamento.year, 1, 1), istante)
+            if domicilio is None:
+                soggetto = persona or riga.rapporto
+                mancanti_domicilio.setdefault(
+                    soggetto,
+                    DatoMancante(
+                        "domicilio_fiscale", soggetto,
+                        f"manca il domicilio fiscale della persona {soggetto} al 1° gennaio "
+                        f"{importo.anno_imposta or pagamento.year}: serve al codice {codice} dell'addizionale",
+                    ),
+                )
+                continue
+            codice_regione = domicilio.regione if voce.codice_campo == "regione" else domicilio.comune
         elif voce.codice_campo in ("regione", "catastale"):
             cosa = "codice catastale del comune" if voce.codice_campo == "catastale" else "codice della regione"
             ferma(
@@ -622,7 +647,7 @@ def costruisci_delega(
             f"La delega ha {len(righe)} righe e un modulo ne porta {RIGHE_PER_MODULO}: dividere i crediti "
             "tra più moduli non è modellato",
         )
-    mancanti = list(mancanti_regione.values())
+    mancanti = [*mancanti_regione.values(), *mancanti_domicilio.values()]
     obbligatori = (*TIPI_DATI_ENTE, *(("sigla_provincia",) if serve_provincia else ()))
     for tipo in obbligatori:
         if getattr(ente, tipo) is None:
