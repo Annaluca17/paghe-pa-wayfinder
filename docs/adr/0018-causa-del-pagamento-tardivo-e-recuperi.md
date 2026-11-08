@@ -54,3 +54,12 @@ Scelto da Luca il 06/11/2026 nel grilling del ticket #16, domande 1–9.
 - La risposta di INPS su sentenze e transazioni.
 - L'interpello: al primo caso reale l'ente può presentarlo prima del pagamento, senza dati nel repo. Il modello non ne dipende, e la risposta aggiorna il corpus.
 - Una rilettura della nota di prassi 8 da parte di un consulente fiscale, prima del corpus reale.
+
+## Aggiornamento dal ticket #43
+
+Scelto da Luca l'08/11/2026 nel grilling del ticket #43, domande 1–4.
+
+- **Cessazione** e **sospensione** sono due fatti minimi del rapporto, validi dal giorno dopo l'ultimo giorno di servizio. Il rientro è un nuovo fatto di servizio. Il codice cessazione della ListaPosPA resta un dato della vista, non dice quale dei due fatti è avvenuto.
+- Il **riporto** è calcolato, non registrato: ogni denuncia legge il residuo della precedente, base per base, con la derivazione fino al recupero di origine.
+- Sul sospeso il recupero, e il riporto già aperto, attendono il primo periodo in servizio dopo il rientro.
+- La data di un recupero è quella del pagamento in cui la trattenuta è operata. L'incasso diretto, senza retribuzione da trattenere, ferma il calcolo ed entra con l'indebito.
