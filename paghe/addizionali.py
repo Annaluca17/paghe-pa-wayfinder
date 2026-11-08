@@ -187,11 +187,12 @@ class _Residuo:
     conguaglio: date | None
 
 
-def _residuo(pagate: list[_Pagata], natura: _Natura, anno: int) -> _Residuo:
-    """Quanto resta da trattenere dell'addizionale dell'anno: la dovuta dell'ultimo conguaglio pagato, meno l'acconto
-    trattenuto e le rate già pagate, più quanto già restituito. Nessun piano salvato: si ricalcola ogni volta."""
-    dovuta, conguaglio = None, None
-    for pagata in pagate:
+def _residuo(pagate: list[_Pagata], natura: _Natura, anno: int, dovuta: Importo | None = None) -> _Residuo:
+    """Quanto resta da trattenere dell'addizionale dell'anno: la dovuta dell'ultimo conguaglio pagato (o quella appena
+    calcolata, se è passata), meno l'acconto trattenuto e le rate già pagate, più quanto già restituito.
+    Nessun piano salvato: si ricalcola ogni volta."""
+    conguaglio = None
+    for pagata in pagate if dovuta is None else ():
         riga = pagata.riga
         if riga.derivazione.maturazione == "conguaglio" and riga.anno_imposta == anno:
             trovate = [d for d in riga.derivazione.importi if d.istituto == natura.dovuta]
@@ -348,3 +349,49 @@ def rate_del_mese(
                 )
                 rate.append(replace(importo, derivazione=replace(importo.derivazione, fatti=fatti)))
     return RateDelMese(tuple(rate), senza_base)
+
+
+def chiusura_dell_anno(
+    registro: Registro,
+    corpus: Corpus,
+    regola: RegolaAddizionali,
+    rapporto: str,
+    persona: str,
+    anno: int,
+    dovute: tuple[Importo, ...],
+    finale: bool,
+    istante: datetime,
+) -> tuple[Importo, ...]:
+    """Cosa il pagamento del conguaglio dell'anno trattiene o restituisce subito, in unica soluzione.
+
+    Una differenza negativa (acconto trattenuto oltre l'addizionale, o un conguaglio più basso del precedente) si
+    restituisce sempre, con la riga a credito. Alla cessazione (`finale`) si trattengono anche il residuo delle rate
+    dell'anno prima e il saldo dell'anno: nessuna rata successiva li prenderebbe.
+    """
+    pagate = _pagate(registro, persona, istante)
+    importi = []
+    for natura in _nature(regola):
+        dovuta = next(d for d in dovute if d.istituto == natura.dovuta)
+        anni = [(anno, _residuo(pagate, natura, anno, dovuta))]
+        if finale:
+            anni.append((anno - 1, _residuo(pagate, natura, anno - 1)))
+        for anno_addizionale, residuo in sorted(anni):
+            if residuo.valore < 0:
+                importi.append(
+                    _importo_trattenuto(
+                        corpus, regola, natura.credito, rapporto, anno_addizionale, -residuo.valore,
+                        f"restituzione = acconto e rate trattenute oltre l'addizionale {natura.nome} dovuta "
+                        f"({-residuo.valore}), in unica soluzione",
+                        (), residuo, istante,
+                    )
+                )
+            elif residuo.valore > 0 and finale:
+                importi.append(
+                    _importo_trattenuto(
+                        corpus, regola, natura.rata, rapporto, anno_addizionale, residuo.valore,
+                        f"alla cessazione, residuo dell'addizionale {natura.nome} {anno_addizionale} "
+                        f"({residuo.valore}) in unica soluzione",
+                        (), residuo, istante,
+                    )
+                )
+    return tuple(importi)

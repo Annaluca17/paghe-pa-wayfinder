@@ -11,7 +11,7 @@ Comune X002: soglia 12000 e 0,6% unico: su 18000, 108,00. Regione 97: 1% unico: 
 from datetime import date
 from decimal import Decimal
 
-from paghe import Atto, Corpus, Mese, TipoEsito, attribuisci_reddito, calcola_fiscale, emetti_esito
+from paghe import Atto, Corpus, Mese, TipoEsito, attribuisci_reddito, calcola, calcola_fiscale, emetti_esito
 
 from materiale_proposta import CORPUS_PROPOSTA, P, R, _cambia, assumi, stipendio
 
@@ -132,13 +132,18 @@ def assumi_a(registro, comune="X001", regione="98", rapporto=R, persona=P):
         domicilio(registro, comune, regione, persona=persona)
 
 
-def paga(registro, orologio, corpus, giorno, importo="1500", ultimo=False, rapporto=R):
+def paga(registro, orologio, corpus, giorno, importo="1500", ultimo=False, rapporto=R, fino_al=None):
     """Un pagamento dello stipendio: attribuzione, fiscale (ritenuta, conguaglio, addizionali) ed esito pagato.
 
     Restituisce il `FiscaleDelPagamento`.
     """
     orologio.vai(giorno.month, giorno.day, giorno.year)
-    righe = stipendio(registro, corpus, Mese(giorno.year, giorno.month), importo, rapporto)
+    mese = Mese(giorno.year, giorno.month)
+    if fino_al is None:
+        righe = stipendio(registro, corpus, mese, importo, rapporto)
+    else:  # rapporto cessato in `fino_al`: lo stipendio dura fino alla cessazione
+        registro.registra_fatto(rapporto, "mensile", importo, mese.primo_giorno, fino_al)
+        righe = [r for r in calcola(registro, corpus, rapporto, mese) if r.istituto == "stipendio"]
     attribuite = attribuisci_reddito(corpus, righe, giorno)
     fiscale = calcola_fiscale(registro, corpus, rapporto, attribuite, giorno, ultimo_dell_anno=ultimo)
     contenuto = [
@@ -163,3 +168,11 @@ def anno_di_paghe(registro, orologio, corpus, anno=2026, rapporto=R, importo="15
 
 def per_istituto(importi):
     return {importo.istituto: importo for importo in importi}
+
+
+def assumi_fino_al(registro, al, comune="X001", regione="98", rapporto=R, persona=P):
+    """Come `assumi_a`, ma il servizio finisce in `al`: l'ultimo pagamento e' finale (ADR 0019)."""
+    registro.registra_codice_persona(persona, "codice_fiscale", "RSSMRA80A01H501U", date(1980, 1, 1))
+    registro.collega_rapporto(rapporto, persona, date(2026, 1, 1))
+    registro.registra_codice(rapporto, "tipo_impiego", "1", date(2026, 1, 1), al)
+    domicilio(registro, comune, regione, persona=persona)

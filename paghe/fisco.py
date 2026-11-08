@@ -568,20 +568,27 @@ def calcola_fiscale(
                 anno,
             )
         )
-    conguaglio = None
+    conguaglio, chiusura, finale = None, (), False
     if ultimo_dell_anno:
         _controlla_ultimo(registro, persona, anno, data_pagamento, istante)
         annuale = _annuale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         conguaglio = _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
-        conguaglio = _con_le_addizionali_dovute(registro, corpus, conguaglio, persona, anno, annuale, riferimento, istante)
+        finale = corpus.regola_addizionali(riferimento) is not None and pagamento_finale(
+            registro, corpus, persona, anno, data_pagamento, istante
+        )
+        conguaglio, chiusura = _con_le_addizionali_dovute(
+            registro, corpus, conguaglio, persona, anno, annuale, riferimento, finale, istante
+        )
     else:
         annuale = _annuale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
-    rate = _rate_delle_addizionali(registro, corpus, rapporto, persona, data_pagamento, istante)
+    rate = addizionali.RateDelMese() if finale else _rate_delle_addizionali(
+        registro, corpus, rapporto, persona, data_pagamento, istante
+    )
     if rate.acconto_senza_base is not None:
         avvisi.append(
             Avviso(
@@ -592,7 +599,7 @@ def calcola_fiscale(
                 rate.acconto_senza_base,
             )
         )
-    return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi), rate.importi)
+    return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi), (*chiusura, *rate.importi))
 
 
 def _rate_delle_addizionali(
@@ -612,18 +619,25 @@ def _con_le_addizionali_dovute(
     anno: int,
     annuale: _Annuale,
     riferimento: date,
+    finale: bool,
     istante: datetime,
-) -> Importo:
-    """Il conguaglio porta le addizionali dell'anno nella sua derivazione, da cui si ricava il residuo da trattenere."""
+) -> tuple[Importo, tuple[Importo, ...]]:
+    """Il conguaglio porta le addizionali dell'anno nella sua derivazione, da cui si ricava il residuo da trattenere.
+
+    Restituisce anche gli importi che il pagamento trattiene o restituisce subito (credito, cessazione).
+    """
     regola = corpus.regola_addizionali(riferimento)
     if regola is None:
-        return conguaglio
+        return conguaglio, ()
     dovute = addizionali.dovute_dell_anno(
         registro, corpus, regola, conguaglio.rapporto, persona, anno,
         annuale.calcolo.imponibile, annuale.calcolo.dovuto, istante,
     )
     derivazione = replace(conguaglio.derivazione, importi=(*conguaglio.derivazione.importi, *dovute))
-    return replace(conguaglio, derivazione=derivazione)
+    chiusura = addizionali.chiusura_dell_anno(
+        registro, corpus, regola, conguaglio.rapporto, persona, anno, dovute, finale, istante
+    )
+    return replace(conguaglio, derivazione=derivazione), chiusura
 
 
 def _avviso_proiezione(persona: str, anno: int, annuale: _Annuale) -> Avviso:
