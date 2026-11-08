@@ -470,6 +470,21 @@ def test_recupero_dopo_la_fine_del_servizio_senza_cessazione_ne_sospensione_ferm
         calcola_denuncia(registro, casi, R, Mese(2026, 11))
 
 
+def test_il_recupero_ha_la_data_del_pagamento_in_cui_la_trattenuta_e_operata(registro, casi, orologio):
+    assumi(registro)
+    registro.registra_fatto(R, "una_tantum", "300", date(2026, 10, 5), date(2026, 10, 5))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 10)), date(2026, 10, 27))
+    orologio.vai(11, 2)
+    registro.registra_fatto(R, "una_tantum", "100", date(2026, 10, 5), date(2026, 10, 5))
+    recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 10), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero + stipendi(registro, casi, Mese(2026, 11)), date(2026, 11, 27))
+
+    caso, = calcola_denuncia(registro, casi, R, Mese(2026, 11)).periodi[0].recuperi
+    assert caso.importo.data_pagamento == date(2026, 11, 27)
+    assert caso.importo.periodo.dal == date(2026, 10, 5)  # la competenza resta quella d'origine
+    assert calcola_denuncia(registro, casi, R, Mese(2026, 10)).periodi[0].base("pens").valore == Decimal("1300.00")
+
+
 def recupero_oltre_capienza(registro, casi, orologio):
     """Ottobre pagato 300 di una tantum, poi azzerato: a novembre si recupera -300 senza stipendio da cui detrarlo."""
     assumi(registro)

@@ -6,8 +6,22 @@ cui è pagato e il mese originario non cambia. Regole di cassa, parametri e conc
 scelgono alla data di pagamento.
 
 Le regole sul mese leggono il totale del mese e si espongono sull'ultimo periodo (nota di
-prassi 2). I recuperi in servizio e su cessato sono casi modellati; gli altri, e i cumuli
-per persona e per anno che la prima fetta non calcola, fermano la denuncia e li nominano.
+prassi 2). I recuperi sono casi modellati (ADR 0018, ticket #43):
+
+- in servizio: l'importo negativo si detrae dalla base del periodo, che si ferma a zero (l'E0 non espone mai un
+  negativo, Manuale ListaPosPA 2017, pp. 20 e 33). L'eccedenza e' un riporto, calcolato e non registrato: passa al
+  periodo in servizio successivo per la stessa base. Ogni denuncia lo ricava dalla precedente, base per base,
+  in `Denuncia.riporti` (`riporto.<base>`, negativo) con la derivazione fino al recupero d'origine; nella base che lo
+  detrae compare come riga. Se non entra nemmeno nel mese dopo, continua;
+- su cessato: periodo fuori servizio, negativo, dopo una fine del servizio con il fatto di cessazione;
+- da sospeso: il recupero pagato in un mese senza servizio, dopo una fine del servizio con il fatto di sospensione,
+  non entra nel mese: passa al riporto e attende il primo periodo in servizio dopo il rientro, come ogni riporto
+  aperto alla sospensione.
+
+Cessazione e sospensione sono fatti del rapporto validi dal giorno dopo l'ultimo giorno di servizio; il rientro e'
+un nuovo fatto di servizio. Una fine del servizio senza nessuno dei due, o un riporto ancora aperto alla cessazione,
+fermano il calcolo e nominano il caso. Gli altri casi, e i cumuli per persona e per anno che la prima fetta non
+calcola, fermano la denuncia e li nominano. Il recupero ha la data del pagamento in cui la trattenuta e' operata.
 """
 
 from __future__ import annotations
@@ -640,18 +654,18 @@ def _denuncia_del_mese(
     def dei_mesi_prima(base: Base) -> Decimal:
         return _base_dei_mesi_prima(registro, corpus, rapporto, mese, base, istante)
 
+    def _del_periodo(base: Base, righe: list[_RigaPagata], periodo: Periodo) -> Importo | None:
+        """Base del periodo; in servizio con il riporto dei recuperi, fuori servizio il recupero resta negativo."""
+        importo = _base_del_periodo(base, righe, periodo, corpus, istante, _esclusione(lettore, base))
+        return _con_riporto(importo, base, riporto, periodo, corpus, istante) if in_servizio else importo
+
     risultato: list[PeriodoDenuncia] = []
     for periodo in periodi:
         basi = tuple(
             importo
             for importo in (
                 _con_massimale(
-                    _con_riporto(
-                        _base_del_periodo(base, gruppi[periodo], periodo, corpus, istante, _esclusione(lettore, base)),
-                        base, riporto, periodo, corpus, istante,
-                    )
-                    if in_servizio
-                    else _base_del_periodo(base, gruppi[periodo], periodo, corpus, istante, _esclusione(lettore, base)),
+                    _del_periodo(base, gruppi[periodo], periodo),
                     base, cumulato, corpus, mese, dei_mesi_prima
                 )
                 for base in corpus.basi()

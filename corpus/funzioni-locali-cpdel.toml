@@ -20,6 +20,10 @@
 
 [periodo_dichiarato]
 servizio = "tipo_impiego"
+# Ticket #43 (ADR 0018): validi dal giorno dopo l'ultimo giorno di servizio. Un recupero dopo la fine
+# del servizio e' su cessato o da sospeso; senza uno dei due fatti il calcolo si ferma.
+cessazione = "cessazione"
+sospensione = "sospensione"
 # ADR 0005: aprono un periodo i cambi di questi codici. Il servizio è sempre compreso.
 fatti = [
     "tipo_servizio",
