@@ -669,6 +669,15 @@ class Registro:
             self._db.execute("SELECT * FROM eventi_ritorno WHERE id = ?", (cursore.lastrowid,)).fetchone()
         )
 
+    def evento_identico(self, chiave: str, tipo: str, contenuto: dict) -> Evento | None:
+        """Stesso identificativo e stesso contenuto: l'evento già noto, che non ha effetto. Contenuto diverso: errore."""
+        evento = self.evento(chiave)
+        if evento is None:
+            return None
+        if evento.tipo != tipo or evento.contenuto != contenuto:
+            raise ErroreRegistro(f"Evento {chiave}: stesso identificativo con contenuto diverso, rifiutato")
+        return evento
+
     def evento(self, chiave: str) -> Evento | None:
         riga = self._db.execute("SELECT * FROM eventi_ritorno WHERE chiave = ?", (chiave,)).fetchone()
         return self._evento_da_riga(riga) if riga else None

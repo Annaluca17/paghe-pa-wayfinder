@@ -678,12 +678,7 @@ def controlla_superata(
 
 def _evento_gia_noto(registro: Registro, chiave: str, tipo: str, contenuto: dict) -> Evento | None:
     """Stesso identificativo e stesso contenuto: nessun effetto. Contenuto diverso: errore, nessun fatto nuovo."""
-    evento = registro.evento(chiave)
-    if evento is None:
-        return None
-    if evento.tipo != tipo or evento.contenuto != contenuto:
-        raise ErroreRegistro(f"Evento {chiave}: stesso identificativo con contenuto diverso, rifiutato")
-    return evento
+    return registro.evento_identico(chiave, tipo, contenuto)
 
 
 @dataclass(frozen=True)
