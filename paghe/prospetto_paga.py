@@ -60,10 +60,14 @@ def _vigente(fatti: list[Fatto], giorno: date) -> str | None:
     return str(fatto.valore) if fatto is not None else None
 
 
-def _regime(corpus: Corpus, importi, giorno: date) -> DichiarazioneOutput:
-    return next(
-        d for d in corpus.outputs(VISTA, giorno) if any(_assegnata(corpus, d, riga, giorno) for riga in importi)
-    )
+def _regime(corpus: Corpus, rapporto: str, importi, giorno: date) -> DichiarazioneOutput:
+    """La dichiarazione che assegna il rapporto al prospetto: una sola, altrimenti la vista si ferma."""
+    trovate = [d for d in corpus.outputs(VISTA, giorno) if any(_assegnata(corpus, d, riga, giorno) for riga in importi)]
+    if not trovate:
+        raise VistaFerma(f"Rapporto {rapporto}: il corpus non dichiara che il prospetto paga spetti al regime, al {giorno}")
+    if len(trovate) > 1:
+        raise VistaFerma(f"Rapporto {rapporto}: più regimi assegnano il prospetto paga ({', '.join(d.regime for d in trovate)})")
+    return trovate[0]
 
 
 def prospetto_paga(
@@ -89,7 +93,7 @@ def prospetto_paga(
     senza_effetto = tuple(
         RigaProspetto(riga.istituto, riga.importo.periodo, riga.importo.valore) for riga in composte if riga.effetto == "nessuno"
     )
-    regime = _regime(corpus, importi, data)
+    regime = _regime(corpus, rapporto, importi, data)
     persona = registro.persona_del_rapporto(rapporto, istante)
     anagrafica = {
         tipo: _vigente(registro.fatti_persona_noti(persona, tipo, istante), data) if persona else None for tipo in PERSONA

@@ -131,3 +131,36 @@ def test_un_esito_che_non_e_un_pagamento_eseguito_non_da_prospetto(registro, cor
     dichiarato = emetti_esito(registro, TipoEsito.DICHIARATO, PAGAMENTO, calcola(registro, corpus, DIP, NOVEMBRE))
     with pytest.raises(VistaFerma, match="nessun prospetto"):
         prospetto_paga(registro, corpus, DIP, dichiarato.id)
+
+
+def collaboratore(registro):
+    persona(registro, COCO)
+    registro.registra_codice(COCO, "posizione_previdenziale", "gestione_separata", date(2026, 1, 1), atto=ATTO)
+    registro.registra_fatto(COCO, "rata_collaborazione", "1000.00", PAGAMENTO, PAGAMENTO, atto=ATTO)
+
+
+def test_senza_una_dichiarazione_del_regime_il_prospetto_non_spetta(registro, orologio):
+    solo_reale = Corpus.da_toml(REALE, reale=True)
+    collaboratore(registro)
+    esito = paga(registro, orologio, solo_reale, COCO)
+    with pytest.raises(VistaFerma, match="R-COCO.*non dichiara"):
+        prospetto_paga(registro, solo_reale, COCO, esito.id)
+
+
+def test_due_regimi_che_assegnano_lo_stesso_rapporto_fermano_la_vista(registro, orologio):
+    doppio = Corpus.da_toml(
+        REALE + FITTIZIO + """
+[[output]]
+vista = "prospetto_paga"
+regime = "doppio"
+istituti = ["indennita_funzione"]
+posizione = "incarico"
+dal = 2025-01-01
+riferimento = "fittizio:prospetto-doppio"
+""",
+        reale=False,
+    )
+    sindaco(registro)
+    esito = paga(registro, orologio, doppio, SINDACO)
+    with pytest.raises(VistaFerma, match="R-SINDACO.*più regimi"):
+        prospetto_paga(registro, doppio, SINDACO, esito.id)
