@@ -173,7 +173,7 @@ def test_scadenza_e_calendario_cambiano_la_versione_del_corpus():
 
 
 def test_la_natura_irap_e_ammessa_nella_composizione():
-    """Serve a riconoscere le righe IRAP, che fermano la delega (ADR 0023): le sue regole non sono in questo ticket."""
+    """Serve a riconoscere le righe IRAP, che la delega versa per regione col 380E (ADR 0028)."""
     testo = """
 [[parametro]]
 nome = "aliquota"

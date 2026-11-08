@@ -32,7 +32,7 @@ from .proposta import (
     registra_versamento_eseguito,
     stato_delega,
 )
-from .registro import TIPO_CREDITO_RIPORTATO, Fatto, Registro
+from .registro import TIPO_CREDITO_RIPORTATO, TIPO_REGIONE_ENTE, Fatto, Registro
 from .tempo import Mese, in_utc
 
 # Sistema della mappatura esterna dell'istituto: codice tributo o causale F24EP (ADR 0022).
@@ -40,6 +40,13 @@ SISTEMA_F24EP = "codice_tributo_f24ep"
 TIPO_DELEGA_TRASMESSA = "delega_trasmessa"
 TIPO_DELEGA_ANNULLATA = "delega_annullata"
 
+# Mappatura datata della regione al codice del campo «codice» del 380E (ticket #81, ADR 0028): valore = nome della
+# regione, quello del fatto di sede di lavoro e quello della regione dell'ente.
+SISTEMA_REGIONE_F24EP = "f24ep.codice_regione"
+ELEMENTO_REGIONE_F24EP = "codice_regione"
+TIPO_SEDE_DI_LAVORO = "sede_lavoro"
+
+AVVISO_CAMBIO_SEDE_RECENTE = "cambio_sede_recente"
 AVVISO_SCADENZA_PER_PRASSI = "scadenza_per_prassi"
 AVVISO_PROROGA_SU_FESTIVO = "proroga_su_festivo"
 AVVISO_VERSAMENTO_TARDIVO = "versamento_dopo_la_scadenza"
@@ -354,6 +361,37 @@ def _dati_ente(registro: Registro, giorno: date, istante: datetime) -> DatiEnte:
     return DatiEnte(*(valore(tipo) for tipo in (*TIPI_DATI_ENTE, "sigla_provincia")))
 
 
+def _regione_dell_irap(registro: Registro, rapporto: str, pagamento: date, istante: datetime) -> str | None:
+    """La regione dell'acconto IRAP: la sede di lavoro del rapporto al pagamento, altrimenti la regione dell'ente."""
+    sedi = registro.fatti_noti(rapporto, TIPO_SEDE_DI_LAVORO, istante)
+    sede = next((fatto for fatto in reversed(sedi) if fatto.copre(pagamento)), None)
+    if sede is not None:
+        return str(sede.valore)
+    ente = registro.vigente_ente(TIPO_REGIONE_ENTE, pagamento, istante)
+    return str(ente.valore) if ente is not None else None
+
+
+def _tre_mesi_prima(giorno: date) -> date:
+    mese = giorno.month - 3
+    anno = giorno.year - (1 if mese < 1 else 0)
+    mese = mese + 12 if mese < 1 else mese
+    ultimo = (date(anno + (mese == 12), mese % 12 + 1, 1) - timedelta(days=1)).day
+    return date(anno, mese, min(giorno.day, ultimo))
+
+
+def _regione_lasciata_da_poco(registro: Registro, rapporto: str, pagamento: date, istante: datetime) -> str | None:
+    """La regione della sede precedente, se la sede che vale al pagamento e' di un'altra regione e decorre da meno di tre mesi."""
+    sedi = registro.fatti_noti(rapporto, TIPO_SEDE_DI_LAVORO, istante)
+    attuale = next((fatto for fatto in reversed(sedi) if fatto.copre(pagamento)), None)
+    if attuale is None or attuale.valido_dal <= _tre_mesi_prima(pagamento):
+        return None
+    prima = [fatto for fatto in sedi if fatto.valido_dal < attuale.valido_dal]
+    if not prima:
+        return None
+    precedente = max(prima, key=lambda fatto: (fatto.valido_dal, fatto.id))
+    return str(precedente.valore) if precedente.valore != attuale.valore else None
+
+
 def _ordine_riga(riga: RigaDelega) -> tuple:
     return (ORDINE_SEZIONI.index(riga.sezione), riga.tributo, riga.codice, riga.rif_a, riga.rif_b)
 
@@ -427,6 +465,8 @@ def costruisci_delega(
     somme: dict[tuple, list] = {}
     sorgenti: list[RiferimentoRiga] = []
     serve_provincia = False
+    mancanti_regione: dict[str, DatoMancante] = {}
+    avvisi_sede: dict[str, AvvisoDelega] = {}
 
     for riga, riferimento, pagamento in _righe_candidate(registro, mese_pagamento, istante):
         if riferimento in versate:
@@ -436,13 +476,6 @@ def costruisci_delega(
                 altre.append(tenute[riferimento])
             continue
         istituto, importo = riga.istituto, riga.importo
-        if riga.natura == "irap":
-            ferma(
-                "irap",
-                istituto,
-                f"Istituto {istituto}: riga IRAP nella delega, la scadenza e il riparto per regione non sono ancora modellati",
-            )
-            continue
         mappatura = corpus.mappatura(istituto, SISTEMA_F24EP, pagamento, importo.anno_imposta)
         if mappatura is None:
             ferma(
@@ -475,7 +508,41 @@ def costruisci_delega(
                 f"Istituto {istituto}: credito su {codice}, di cui il limite di compensazione non è ancora modellato",
             )
             continue
-        if voce.codice_campo in ("regione", "catastale"):
+        codice_regione = ""
+        if riga.natura == "irap" and voce.codice_campo == "regione":
+            nome_regione = _regione_dell_irap(registro, riga.rapporto, pagamento, istante)
+            if nome_regione is None:
+                mancanti_regione.setdefault(
+                    "regione",
+                    DatoMancante(
+                        "regione", "ente",
+                        f"manca il fatto dell'ente regione valido al {pagamento}: serve all'IRAP dei rapporti senza sede di lavoro",
+                    ),
+                )
+                continue
+            mappata = corpus.mappatura_di_fatto(
+                SISTEMA_REGIONE_F24EP, ELEMENTO_REGIONE_F24EP, TIPO_SEDE_DI_LAVORO, nome_regione, pagamento
+            )
+            if mappata is None:
+                ferma(
+                    "regione_non_mappata",
+                    nome_regione,
+                    f"Istituto {istituto}: la regione {nome_regione} non ha un codice regione nel corpus per un pagamento del {pagamento}",
+                )
+                continue
+            codice_regione = mappata.codice
+            precedente = _regione_lasciata_da_poco(registro, riga.rapporto, pagamento, istante)
+            if precedente is not None:
+                avvisi_sede.setdefault(
+                    riga.rapporto,
+                    AvvisoDelega(
+                        AVVISO_CAMBIO_SEDE_RECENTE,
+                        f"Rapporto {riga.rapporto}: la sede di lavoro e' cambiata da {precedente} a {nome_regione} da meno di "
+                        f"tre mesi al pagamento del {pagamento}: il riparto per regione dell'IRAP conta il personale con "
+                        "continuita' da almeno tre mesi, la soglia e' del saldo annuale e il modello non la applica",
+                    ),
+                )
+        elif voce.codice_campo in ("regione", "catastale"):
             cosa = "codice catastale del comune" if voce.codice_campo == "catastale" else "codice della regione"
             ferma(
                 "codice_non_modellato",
@@ -495,7 +562,7 @@ def costruisci_delega(
         chiave = (
             voce.sezione,
             codice,
-            (ente.sigla_provincia or "") if voce.codice_campo == "provincia" else "",
+            (ente.sigla_provincia or "") if voce.codice_campo == "provincia" else codice_regione,
             "",
             _formato(voce.rif_a, importo, pagamento),
             _formato(voce.rif_b, importo, pagamento),
@@ -552,7 +619,7 @@ def costruisci_delega(
             f"La delega ha {len(righe)} righe e un modulo ne porta {RIGHE_PER_MODULO}: dividere i crediti "
             "tra più moduli non è modellato",
         )
-    mancanti = []
+    mancanti = list(mancanti_regione.values())
     obbligatori = (*TIPI_DATI_ENTE, *(("sigla_provincia",) if serve_provincia else ()))
     for tipo in obbligatori:
         if getattr(ente, tipo) is None:
@@ -573,6 +640,7 @@ def costruisci_delega(
             f"Dati dell'ente: sigla di provincia {ente.sigla_provincia!r}, servono due lettere maiuscole",
         )
     avvisi = list(scadenza.avvisi) if scadenza else []
+    avvisi.extend(avvisi_sede.values())
     if scadenza and data_versamento and data_versamento > scadenza.data:
         avvisi.append(
             AvvisoDelega(

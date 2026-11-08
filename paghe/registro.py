@@ -99,8 +99,10 @@ TIPO_ULTIMO_PAGAMENTO = "ultimo_pagamento_anno"
 # credito non assorbito che passa alla scadenza successiva, con la sua origine.
 TIPO_DATA_VERSAMENTO = "data_versamento_f24ep"
 TIPO_CREDITO_RIPORTATO = "credito_riportato"
+# La regione dell'ente: dove versa l'acconto IRAP dei rapporti senza sede di lavoro (ticket #81, ADR 0028).
+TIPO_REGIONE_ENTE = "regione"
 TIPI_ENTE_CODICE = frozenset(
-    {"codice_fiscale", "denominazione", "email", "iban_tesoreria", "sigla_provincia", TIPO_CREDITO_RIPORTATO}
+    {"codice_fiscale", "denominazione", "email", "iban_tesoreria", "sigla_provincia", TIPO_REGIONE_ENTE, TIPO_CREDITO_RIPORTATO}
 )
 TIPI_ENTE_NUMERICI = frozenset({TIPO_ULTIMO_PAGAMENTO, TIPO_DATA_VERSAMENTO})
 

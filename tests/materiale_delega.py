@@ -169,9 +169,27 @@ MAPPATURE_DEL_CICLO = "".join(
 )
 
 
+def _regione(nome, codice):
+    return f'''
+[[mappatura_fatto]]
+sistema = "f24ep.codice_regione"
+elemento = "codice_regione"
+fatto = "sede_lavoro"
+valore = "{nome}"
+codice = "{codice}"
+dal = 2020-01-01
+riferimento = "fittizio:regione-{nome}"
+'''
+
+
+# Codici regione di prova: solo i due che i test usano.
+REGIONI = "".join(_regione(nome, codice) for nome, codice in (("lazio", "08"), ("lombardia", "10")))
+
+
 def toml_delega(extra_festivi: tuple[str, ...] = ()) -> str:
     return (
         CORPUS_PROPOSTA
+        + REGIONI
         + MAPPATURE_DEL_CICLO
         + "".join(_istituto_a_mano(*voce) for voce in ISTITUTI_A_MANO)
         + CATALOGO
@@ -191,6 +209,7 @@ def dati_ente(registro: Registro, dal=date(2026, 1, 1), **modifiche) -> None:
         "email": "paghe@ente.example",
         "iban_tesoreria": IBAN_TESORERIA,
         "sigla_provincia": SIGLA,
+        "regione": "lazio",
     }
     dati.update(modifiche)
     for tipo, valore in dati.items():
