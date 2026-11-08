@@ -155,3 +155,69 @@ def test_il_corpus_reale_mappa_ogni_regione_al_suo_codice_f24ep(reale):
     ]
     assert [codice(nome) for nome in regioni] == [f"{numero:02d}" for numero in range(1, 22)]
     assert codice("atlantide") is None
+
+
+FINE_MANDATO = """
+[periodo_dichiarato]
+servizio = "tipo_impiego"
+
+[[base]]
+nome = "irap"
+riferimento = "fittizio:base-irap"
+
+[[parametro]]
+nome = "aliquota_irap"
+[[parametro.vigenza]]
+dal = 2020-01-01
+valore = "8.50"
+riferimento = "fittizio:aliquota-irap"
+
+[[parametro]]
+nome = "franchigia_fine_mandato"
+[[parametro.vigenza]]
+dal = 2020-01-01
+valore = "309.87"
+riferimento = "fittizio:franchigia"
+
+[[regola]]
+istituto = "fine_mandato"
+versione = 1
+dal = 2020-01-01
+riferimento = "fittizio:fine-mandato"
+formula = "fatto.importo_fine_mandato"
+maturazione = "evento"
+applica_se = "importo_fine_mandato"
+
+[[concorso]]
+istituto = "fine_mandato"
+basi = ["irap"]
+misura = "intero"
+dal = 2020-01-01
+riferimento = "fittizio:concorso-fine-mandato"
+
+[[regola]]
+istituto = "irap_acconto"
+versione = 1
+dal = 2020-01-01
+riferimento = "fittizio:irap-fine-mandato"
+formula = "arrotonda(max(base.irap - fatto.anni_mandato * parametro.franchigia_fine_mandato, 0) * parametro.aliquota_irap / 100, 2)"
+maturazione = "periodo"
+applica_se = "anni_mandato"
+"""
+
+
+@pytest.mark.parametrize(
+    ("indennita", "atteso"),
+    [("10000.00", "718.31"), ("1549.35", "0.00"), ("1000.00", "0.00")],
+)
+def test_la_fine_mandato_entra_al_netto_di_309_87_per_anno_e_mai_sotto_zero(registro, orologio, indennita, atteso):
+    """Modello della regola per quando l'indennita' di fine mandato uscira' dai fermi: il corpus reale la ferma ancora
+    (tassazione separata non modellata), quindi la prova gira su un corpus fittizio. 5 anni = franchigia di 1.549,35."""
+    corpus = Corpus.da_toml(FINE_MANDATO)
+    registro.registra_codice_persona("PERSONA-1", "codice_fiscale", CF, date(1972, 10, 9))
+    registro.collega_rapporto(R, "PERSONA-1", date(2026, 1, 1))
+    registro.registra_codice(R, "tipo_impiego", "1", date(2026, 1, 1))
+    registro.registra_fatto(R, "anni_mandato", 5, date(2026, 1, 1))
+    registro.registra_fatto(R, "importo_fine_mandato", indennita, date(2026, 11, 20), date(2026, 11, 20))
+    paga(registro, orologio, calcola(registro, corpus, R, Mese(2026, 11)), date(2026, 11, 27))
+    assert valori(registro, corpus)["irap_acconto"] == D(atteso)  # (10.000,00 - 1.549,35) x 8,5% = 718,30525, al centesimo 718,31
