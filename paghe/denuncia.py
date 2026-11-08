@@ -53,7 +53,8 @@ FORMULA_RIPORTO = "eccedenza del recupero non detratta dalla base, riportata al 
 RIPORTO = "riporto"
 # Derivano dagli importi pagati: non sono retribuzione e non concorrono a una base.
 # `onere`: a carico dell'ente, non e' retribuzione della persona (ticket #73).
-MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere"} | MATURAZIONI_FISCALI
+# `addizionale`: addizionali regionale e comunale, dovute al conguaglio o trattenute a rate (ticket #85).
+MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere", "addizionale"} | MATURAZIONI_FISCALI
 IN_SERVIZIO = "in servizio"
 SU_CESSATO = "su cessato"
 CESSAZIONE = "cessazione"
