@@ -301,7 +301,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 4: 76 righe, 13220.37 versati il 2026-04-16
+  - esito versato 4: 73 righe, 13220.37 versati il 2026-04-16
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:

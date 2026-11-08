@@ -476,6 +476,9 @@ def costruisci_delega(
                 altre.append(tenute[riferimento])
             continue
         istituto, importo = riga.istituto, riga.importo
+        if importo.valore == 0:
+            # Un importo nullo (es. acconto IRAP di una persona esclusa) non versa nulla: nessuna riga da 0,00 (#81).
+            continue
         mappatura = corpus.mappatura(istituto, SISTEMA_F24EP, pagamento, importo.anno_imposta)
         if mappatura is None:
             ferma(
