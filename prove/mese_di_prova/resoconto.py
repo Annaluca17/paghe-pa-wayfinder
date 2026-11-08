@@ -216,12 +216,13 @@ def _non_esercitato(esecuzione: Esecuzione) -> list[str]:
             "La tredicesima non e' un istituto del corpus: il pagamento di dicembre non la contiene, anche se il tabellare "
             "annuo del corpus e' per dodici mensilita' piu' la tredicesima."
         )
-    if not any("addizional" in i for i in istituti):
-        voci.append(
-            "Le addizionali regionale e comunale non si calcolano: nessuna regola le produce e il registro non ha il "
-            "domicilio fiscale. Se un istituto le portasse con 384E o con un codice che vuole la regione di residenza, "
-            "la delega si fermerebbe per il codice catastale o della regione, che nessun fatto porta (`codice_non_modellato`)."
-        )
+    voci.append(
+        "Le addizionali regionale e comunale sono calcolate al conguaglio di dicembre sul domicilio fiscale delle persone "
+        "(comune e regione di fantasia) e trattenute a rate dal 2027: nel mese di prova si vede solo l'acconto comunale di "
+        "R01, che ha il reddito 2025 dalla CU (le rate del saldo, la cessazione e la restituzione a credito sono nei test). "
+        "Per le altre persone, senza conguaglio 2025 ne' CU, niente acconto e un avviso. 381E, 384E, 385E, 160E e 161E "
+        "hanno nel catalogo fittizio una forma assunta, da verificare."
+    )
     if esecuzione.uno_per_cento:
         voci.append("Il contributo aggiuntivo dell'1% scatta in almeno un quadro, e non ha una causale nel catalogo.")
     else:
