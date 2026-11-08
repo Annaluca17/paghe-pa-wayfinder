@@ -29,12 +29,17 @@ Riferimento: `prassi:immedia:nota:2026-11-06;3`. Fonte: decisioni dell'operatore
 
 **Da verificare.** Il periodo da valorizzare, cioè quello che precede la sospensione, e il codice cessazione 32 vengono ancora solo dal vault, da una pagina PassWeb sui pensionamenti.
 
-Il motore distingue i recuperi così:
+Il motore distingue i recuperi così (ticket #43, ADR 0018):
 
 - **In servizio:** l'importo negativo è detratto dalla base del periodo (nota di prassi 2).
-- **Su cessato:** periodo fuori servizio, con un servizio terminato prima del mese.
+- **Su cessato:** periodo fuori servizio, dopo una fine del servizio con il fatto di **cessazione**, valido dal giorno dopo l'ultimo giorno di servizio.
+- **Da sospeso:** un recupero pagato in un mese senza servizio, dopo una fine del servizio con il fatto di **sospensione** (stessa validità), non entra in quel mese: attende il primo periodo in servizio dopo il rientro. Il rientro è un nuovo fatto di servizio. La vista ListaPosPA non indica il V1 causale 7, codice motivo 7: resta solo per il cessato.
+- **Fine del servizio senza cessazione né sospensione:** il calcolo si ferma e nomina il caso. Vale quando serve distinguere, cioè con un recupero fuori servizio o con un riporto aperto.
 - **Fuori servizio senza un servizio precedente:** il calcolo si ferma.
-- **Mese negativo in servizio:** se la base del periodo resta negativa, il calcolo si ferma. *Superato dall'ADR 0018 quando il ticket del codice sarà chiuso: la parte eccedente si riporta ai mesi successivi (Manuale INPS 2017, pp. 20 e 33).*
+
+**Mese negativo in servizio (riporto).** La base del periodo si ferma a zero: l'E0 non espone mai un negativo (Manuale ListaPosPA 2017, pp. 20 e 33). L'eccedenza non è un fatto registrato: è un valore calcolato che passa al periodo in servizio successivo per la stessa base. La denuncia del mese lo ricava da quella precedente, base per base, e lo mostra (`Denuncia.riporti`, importo `riporto.<base>` negativo) con la derivazione fino al recupero d'origine; la base che lo detrae lo elenca tra i propri importi. Se non entra nemmeno nel mese dopo, continua. Un riporto aperto alla sospensione aspetta il rientro. Un riporto ancora aperto alla cessazione, anche dopo una sospensione, ferma il calcolo e nomina il caso.
+
+**Data del recupero.** È la data del pagamento in cui la trattenuta è operata. L'incasso diretto, cioè la restituzione senza stipendio da cui trattenere, resta fuori e non ha un codice proprio: entra con l'indebito.
 
 Restano fuori le riduzioni INADEL ed ENPAS, che riguardano il TFS e ricadono già nel suo fermo. Restano fuori anche il massimale, che ha un fermo proprio, e le sentenze e transazioni. Queste ultime oggi non si riconoscono dai fatti: un recupero da sentenza verrebbe trattato come in servizio o su cessato. Serve un fatto o un tipo di atto che le distingua. *Definito dall'ADR 0018: è la causa del pagamento tardivo, e la vista dà un quadro fermo finché INPS non chiarisce.*
 

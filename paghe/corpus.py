@@ -731,12 +731,19 @@ class DichiarazioneOutput:
     basi: tuple[str, ...] = ()
     istituti: tuple[str, ...] = ()
     al: date | None = None
+    regime: str = ""
+    posizione: str | None = None
+    fine_servizio: str | None = None
 
     def __post_init__(self) -> None:
         soggetto = f"Output {self.vista}"
         _riferimento_obbligatorio(self.riferimento, soggetto)
         if not isinstance(self.vista, str) or not self.vista.strip() or self.vista != self.vista.strip():
             raise ErroreCorpus(f"{soggetto}: la vista va nominata")
+        for campo in ("posizione", "fine_servizio"):
+            valore = getattr(self, campo)
+            if valore is not None and (not isinstance(valore, str) or not valore.strip() or valore != valore.strip()):
+                raise ErroreCorpus(f"{soggetto}: `{campo}` nomina un tipo di fatto")
         if not self.basi and not self.istituti:
             raise ErroreCorpus(f"{soggetto}: servono basi o istituti che assegnano i rapporti alla vista")
         if self.al is not None and self.al < self.dal:
@@ -937,8 +944,13 @@ class Corpus:
         trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
         condizioni_di_proposta: tuple[CondizioneDiProposta, ...] = (),
         output: tuple[DichiarazioneOutput, ...] = (),
+        fatto_cessazione: str | None = None,
+        fatto_sospensione: str | None = None,
     ):
         self.reale = reale
+        # Fatti del rapporto validi dal giorno dopo l'ultimo giorno di servizio (ticket #43, ADR 0018).
+        self.fatto_cessazione = fatto_cessazione
+        self.fatto_sospensione = fatto_sospensione
         self._output = tuple(output)
         self._condizioni_di_proposta = tuple(condizioni_di_proposta)
         self._trattamenti_part_time = tuple(trattamenti_part_time)
@@ -1070,7 +1082,7 @@ class Corpus:
                 if istituto not in self._regole:
                     raise ErroreCorpus(f"Output {dichiarazione.vista}: istituto senza regola {istituto}")
             for altra in self._output[indice + 1 :]:
-                if altra.vista == dichiarazione.vista:
+                if (altra.vista, altra.regime) == (dichiarazione.vista, dichiarazione.regime):
                     _vigenze_sovrapposte([dichiarazione, altra], f"Output {dichiarazione.vista}")
 
     def _convalida_condizioni_di_proposta(self) -> None:
@@ -1285,6 +1297,7 @@ class Corpus:
         contenuto = {
             "fatti_periodo_dichiarato": sorted(self.fatti_periodo_dichiarato),
             "servizio": self.fatto_servizio,
+            **({"fine_servizio": [self.fatto_cessazione, self.fatto_sospensione]} if self.fatto_cessazione or self.fatto_sospensione else {}),
             "basi": [
                 [base.nome, base.riferimento, *([base.massimale] if base.massimale else []),
                  *(["esclusione", base.esclusione, sorted(base.motivi_esclusione)] if base.esclusione else [])]
@@ -1389,6 +1402,7 @@ class Corpus:
         if self._output:
             contenuto["output"] = sorted(
                 [o.vista, sorted(o.basi), sorted(o.istituti), o.dal.isoformat(), o.al.isoformat() if o.al else "", o.riferimento]
+                + ([o.regime, o.posizione or "", o.fine_servizio or ""] if o.regime or o.posizione or o.fine_servizio else [])
                 for o in self._output
             )
         if self._condizioni_di_proposta:
@@ -1481,6 +1495,10 @@ class Corpus:
     def output(self, vista: str, giorno: date) -> DichiarazioneOutput | None:
         """Dichiarazione vigente alla data per la vista; None se il regime non la dichiara."""
         return _vigente([o for o in self._output if o.vista == vista], giorno)
+
+    def outputs(self, vista: str, giorno: date) -> tuple[DichiarazioneOutput, ...]:
+        """Tutte le dichiarazioni vigenti alla data per la vista, una per regime."""
+        return tuple(o for o in self._output if o.vista == vista and o.copre(giorno))
 
     def condizione_di_proposta(self, istituto: str, giorno: date) -> CondizioneDiProposta | None:
         """Condizione vigente alla data della valuta; None se l'istituto non ne richiede."""
@@ -1635,6 +1653,9 @@ class Corpus:
                     basi=tuple(voce.get("basi", ())),
                     istituti=tuple(voce.get("istituti", ())),
                     al=_data(voce["al"], "al") if "al" in voce else None,
+                    regime=voce.get("regime", ""),
+                    posizione=voce.get("posizione"),
+                    fine_servizio=voce.get("fine_servizio"),
                 )
                 for voce in dati.get("output", [])
             )
@@ -1671,6 +1692,8 @@ class Corpus:
             trattamenti_part_time=trattamenti_part_time,
             condizioni_di_proposta=condizioni_di_proposta,
             output=output,
+            fatto_cessazione=periodo.get("cessazione"),
+            fatto_sospensione=periodo.get("sospensione"),
         )
 
     @classmethod

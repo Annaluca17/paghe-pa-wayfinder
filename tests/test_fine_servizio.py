@@ -272,6 +272,7 @@ def test_recupero_su_cessato_recupera_anche_il_tfs(registro, reale, orologio):
         registro.annulla_fatto(fatto.id, "cessazione comunicata in ritardo")
     for tipo, codice in (("tipo_impiego", "1"), ("area", "istruttori"), ("regime_fine_servizio", "3")):
         registro.registra_codice(R, tipo, codice, date(2026, 1, 1), date(2026, 10, 15))
+    registro.registra_codice(R, "cessazione", "1", date(2026, 10, 16))  # dal giorno dopo l'ultimo di servizio
     recupero = [voce.importo() for voce in differenze(registro, reale, R, Mese(2026, 10), TipoEsito.PAGATO)]
     paga(registro, orologio, recupero, date(2026, 11, 20))
 
@@ -371,6 +372,7 @@ def test_recupero_su_cessato_in_tfr(registro, reale, orologio):
         registro.annulla_fatto(fatto.id, "cessazione comunicata in ritardo")
     for tipo, codice in (("tipo_impiego", "1"), ("area", "istruttori"), ("regime_fine_servizio", "1")):
         registro.registra_codice(R, tipo, codice, date(2026, 1, 1), date(2026, 10, 15))
+    registro.registra_codice(R, "cessazione", "1", date(2026, 10, 16))  # dal giorno dopo l'ultimo di servizio
     recupero = [voce.importo() for voce in differenze(registro, reale, R, Mese(2026, 10), TipoEsito.PAGATO)]
     assert {riga.istituto: riga.valore for riga in recupero}["riduzione_tfr"] == Decimal("20.19")
     paga(registro, orologio, recupero, date(2026, 11, 20))

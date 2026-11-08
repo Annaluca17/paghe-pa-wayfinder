@@ -318,6 +318,15 @@ _Avoid_: Contributo mensile (quando si intende un contributo per periodo)
 Importo negativo pagato che entra in una base. Modellati i casi in servizio, detratto dal periodo fino a capienza con riporto ai mesi successivi; su sospeso, rinviato al rientro in servizio; e su cessato, in un periodo fuori servizio. Gli altri fermano il calcolo, compreso un riporto ancora aperto alla cessazione.
 _Avoid_: Trattenuta (la trattenuta è un istituto)
 
+**Riporto del recupero**:
+Parte di un recupero che non trova capienza nella base di un periodo e passa, calcolata, al periodo in servizio successivo per la stessa base. Non è un fatto: ogni denuncia la ricava dalla precedente.
+
+**Cessazione**:
+Fatto del rapporto, valido dal giorno dopo l'ultimo giorno di servizio, che dice che il servizio è finito. Diverso dal codice cessazione della ListaPosPA, che è un dato della vista.
+
+**Sospensione**:
+Fatto del rapporto, valido dal giorno dopo l'ultimo giorno di servizio, che dice che il servizio è interrotto e riprende con un nuovo fatto di servizio. Recuperi e riporti attendono il rientro.
+
 **Indebito**:
 Fatto che dichiara una somma pagata senza titolo, con atto, modalità di restituzione (netto o lordo), importo tassato, ritenute riferibili e data di definitività. Ne leggono CU e 770; il movimento nelle basi è il recupero.
 _Avoid_: Recupero (che è il movimento), somma a debito
@@ -373,6 +382,14 @@ _Avoid_: UniEmens privatistico (che è il canale, non la vista), DM10, flusso DS
 **Lista collaboratori**:
 Vista della denuncia per chi è in gestione separata (co.co.co. e quote forfettarie degli amministratori), separata dalla ListaPosPA: ha struttura e identità proprie e segue il mese di erogazione. Produce un esito dichiarato. Finché i codici del tracciato non sono nel corpus resta una bozza non trasmissibile, e lo è anche con una somma di cassa allargata. La quota forfettaria non ha imponibile e sta a carico dell'ente.
 _Avoid_: ListaPosPA dei collaboratori, flusso parasubordinati
+
+**Prospetto paga**:
+Vista di un rapporto in un pagamento eseguito, letta dal suo esito pagato: posizione, righe sul netto con il loro periodo, netto e, a parte, le righe senza effetto sul netto. Uno per rapporto e per pagamento, mai per mese. Si ferma solo se manca un dato del contenuto di legge; gli altri dati mancanti sono avvisi. Spetta a ogni titolo che il regime dichiara.
+_Avoid_: Cedolino mensile, busta paga, nota di pagamento
+
+**Messa a disposizione del prospetto**:
+Evento portato dall'adattatore del canale di consegna, con data e riferimento, da cui nasce l'esito dichiarato del prospetto paga. Il modello non recapita.
+_Avoid_: Invio del cedolino, stampa
 
 **Quadro**:
 Elemento della ListaPosPA che dichiara un periodo: E0 per il mese corrente, V1 con una causale per un periodo precedente. Lo produce la vista dalla denuncia, mai il calcolo.

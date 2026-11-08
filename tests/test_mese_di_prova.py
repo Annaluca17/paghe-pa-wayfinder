@@ -74,6 +74,19 @@ def test_il_percorso_di_marzo(esecuzione, uscita):
     assert b"ZGS1" in f24ep
 
 
+def test_il_prospetto_paga_di_marzo_si_ferma_solo_per_la_posizione_e_non_cambia_dove_arrivano_i_rapporti(esecuzione):
+    """ADR 0030: un prospetto per rapporto pagato; dirigente, segretario e co.co.co. senza qualifica o incarico non si consegnano."""
+    fermi = [f for f in esecuzione.fermi if f.passo == "prospetto_paga" and f.mese == "2026-03"]
+    assert {r for f in fermi for r in f.rapporti} == {"R08", "R09", "R11"}
+    assert {f.causa for f in fermi} == {"prospetto paga: dato mancante posizione"}
+    (passo,) = [p for p in esecuzione.passi if p.mese == "2026-03" and p.nome == "prospetto_paga"]
+    assert any(riga.startswith("R10: ") and "posizione sindaco" in riga and "consegnato" in riga for riga in passo.riuscito)
+    assert any(riga.startswith("R01: ") and "consegnato" in riga for riga in passo.riuscito)
+    assert not any(riga.startswith(("R08:", "R09:", "R11:")) and "consegnato" in riga for riga in passo.riuscito)
+    arrivi = {r: a for (m, r), a in esecuzione.arrivi.items() if m == "2026-03"}
+    assert {arrivi[r] for r in ("R08", "R09")} == {"lista_pos_pa"} and {arrivi[r] for r in ("R10", "R11")} == {"lista_collaboratori"}
+
+
 def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
     per_causa = {g["causa"]: g for g in cause_ordinate(esecuzione)}
     assert not [causa for causa in per_causa if "regime del titolo" in causa]  # ogni titolo ha il suo regime nel corpus

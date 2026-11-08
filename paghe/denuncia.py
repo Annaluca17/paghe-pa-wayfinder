@@ -6,8 +6,22 @@ cui è pagato e il mese originario non cambia. Regole di cassa, parametri e conc
 scelgono alla data di pagamento.
 
 Le regole sul mese leggono il totale del mese e si espongono sull'ultimo periodo (nota di
-prassi 2). I recuperi in servizio e su cessato sono casi modellati; gli altri, e i cumuli
-per persona e per anno che la prima fetta non calcola, fermano la denuncia e li nominano.
+prassi 2). I recuperi sono casi modellati (ADR 0018, ticket #43):
+
+- in servizio: l'importo negativo si detrae dalla base del periodo, che si ferma a zero (l'E0 non espone mai un
+  negativo, Manuale ListaPosPA 2017, pp. 20 e 33). L'eccedenza e' un riporto, calcolato e non registrato: passa al
+  periodo in servizio successivo per la stessa base. Ogni denuncia lo ricava dalla precedente, base per base,
+  in `Denuncia.riporti` (`riporto.<base>`, negativo) con la derivazione fino al recupero d'origine; nella base che lo
+  detrae compare come riga. Se non entra nemmeno nel mese dopo, continua;
+- su cessato: periodo fuori servizio, negativo, dopo una fine del servizio con il fatto di cessazione;
+- da sospeso: il recupero pagato in un mese senza servizio, dopo una fine del servizio con il fatto di sospensione,
+  non entra nel mese: passa al riporto e attende il primo periodo in servizio dopo il rientro, come ogni riporto
+  aperto alla sospensione.
+
+Cessazione e sospensione sono fatti del rapporto validi dal giorno dopo l'ultimo giorno di servizio; il rientro e'
+un nuovo fatto di servizio. Una fine del servizio senza nessuno dei due, o un riporto ancora aperto alla cessazione,
+fermano il calcolo e nominano il caso. Gli altri casi, e i cumuli per persona e per anno che la prima fetta non
+calcola, fermano la denuncia e li nominano. Il recupero ha la data del pagamento in cui la trattenuta e' operata.
 """
 
 from __future__ import annotations
@@ -34,12 +48,17 @@ from .tempo import Mese, Periodo, in_utc
 
 FORMULA_BASE = "somma degli importi pagati nel periodo"
 FORMULA_BASE_MESE = "somma delle basi dei periodi del mese"
+FORMULA_BASE_CON_RIPORTO = f"{FORMULA_BASE}, al netto del riporto dei recuperi, ferma a zero"
+FORMULA_RIPORTO = "eccedenza del recupero non detratta dalla base, riportata al periodo in servizio successivo"
+RIPORTO = "riporto"
 # Derivano dagli importi pagati: non sono retribuzione e non concorrono a una base.
 # `onere`: a carico dell'ente, non e' retribuzione della persona (ticket #73).
 # `addizionale`: addizionali regionale e comunale, dovute al conguaglio o trattenute a rate (ticket #85).
 MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere", "addizionale"} | MATURAZIONI_FISCALI
 IN_SERVIZIO = "in servizio"
 SU_CESSATO = "su cessato"
+CESSAZIONE = "cessazione"
+SOSPENSIONE = "sospensione"
 
 
 @dataclass(frozen=True)
@@ -70,6 +89,8 @@ class Denuncia:
     mese: Mese
     periodi: tuple[PeriodoDenuncia, ...]
     esiti_senza_data: tuple[int, ...] = ()
+    # Riporto dei recuperi ancora aperto a fine mese, un importo `riporto.<base>` negativo per base (ADR 0018).
+    riporti: tuple[Importo, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -179,17 +200,50 @@ def _basi_del_mese(periodi: list[PeriodoDenuncia], corpus: Corpus, istante: date
     return tuple(risultato)
 
 
+def _fine_del_servizio(
+    registro: Registro, corpus: Corpus, rapporto: str, giorno: date, istante: datetime
+) -> tuple[date | None, str]:
+    """Ultimo giorno di servizio fino a `giorno` e come finisce: `cessazione` o `sospensione`.
+
+    Il fatto vale dal giorno dopo l'ultimo giorno di servizio. Se il corpus non dichiara i due fatti la
+    fine resta `cessazione`. Una fine senza nessuno dei due ferma il calcolo e nomina il caso (ticket #43).
+    """
+    ultimo = _ultimo_giorno_fino_a(registro, corpus, rapporto, giorno, istante)
+    if ultimo is None or not (corpus.fatto_cessazione or corpus.fatto_sospensione):
+        return ultimo, CESSAZIONE
+    dopo = ultimo + timedelta(days=1)
+
+    def presente(tipo: str | None) -> bool:
+        return tipo is not None and any(
+            fatto.valido_dal == dopo for fatto in registro.fatti_noti(rapporto, tipo, istante)
+        )
+
+    if presente(corpus.fatto_cessazione):
+        return ultimo, CESSAZIONE
+    if presente(corpus.fatto_sospensione):
+        return ultimo, SOSPENSIONE
+    raise CasoNonModellato(
+        f"Rapporto {rapporto}: caso non modellato, il servizio finisce il {ultimo} senza cessazione né sospensione "
+        f"dal {dopo}"
+    )
+
+
+def _ultimo_giorno_fino_a(registro: Registro, corpus: Corpus, rapporto: str, giorno: date, istante: datetime) -> date | None:
+    giorni = [
+        min(fatto.valido_al or giorno, giorno)
+        for fatto in registro.fatti_noti(rapporto, corpus.fatto_servizio, istante)
+        if fatto.valido_dal <= giorno
+    ]
+    for candidato in sorted(set(giorni), reverse=True):
+        if registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, Periodo(candidato, candidato), istante)[0] is not None:
+            return candidato
+    return None
+
+
 def _recuperi(
     registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, periodo: PeriodoDenuncia, istante: datetime
 ) -> tuple[Recupero, ...]:
     """Classifica gli importi negativi entrati nelle basi; i casi non modellati fermano la denuncia."""
-    if periodo.in_servizio:
-        negative = [base for base in periodo.basi if base.valore < 0]
-        if negative:
-            raise CasoNonModellato(
-                f"Rapporto {rapporto}: caso non modellato, mese negativo nel periodo {periodo.periodo} "
-                f"(base {negative[0].istituto} = {negative[0].valore})"
-            )
     righe: list[Importo] = []
     for base in periodo.basi:
         for riga in base.derivazione.importi:
@@ -207,8 +261,75 @@ def _recuperi(
             raise CasoNonModellato(
                 f"Rapporto {rapporto}: caso non modellato, recupero fuori servizio senza servizio precedente in {mese}"
             )
+        _fine_del_servizio(registro, corpus, rapporto, mese.primo_giorno - timedelta(days=1), istante)
         caso = SU_CESSATO
     return tuple(Recupero(caso, riga) for riga in righe)
+
+
+def _riga_recupero(riga: Importo) -> bool:
+    """Importo negativo pagato, non calcolato su un altro importo (ticket #81)."""
+    return riga.valore < 0 and not riga.derivazione.importi
+
+
+def _residuo(
+    corpus: Corpus, base: Base, periodo: Periodo, valore: Decimal, origine: tuple[Importo, ...], istante: datetime
+) -> Importo:
+    """Eccedenza di recupero che passa al periodo in servizio successivo, con la derivazione fino all'origine."""
+    return Importo(
+        rapporto=origine[0].rapporto,
+        istituto=f"riporto.{base.nome}",
+        periodo=periodo,
+        valore=valore,
+        derivazione=Derivazione(
+            istituto=f"riporto.{base.nome}",
+            maturazione=RIPORTO,
+            regola_versione=1,
+            riferimento=base.riferimento,
+            formula=FORMULA_RIPORTO,
+            versione_corpus=corpus.versione,
+            noto_al=istante,
+            parametri=(),
+            fatti=(),
+            importi=origine,
+        ),
+    )
+
+
+def _con_riporto(
+    importo: Importo | None, base: Base, riporto: dict[str, Importo], periodo: Periodo, corpus: Corpus, istante: datetime
+) -> Importo | None:
+    """Detrae dalla base del periodo il riporto entrante e ferma la base a zero; l'eccedenza resta in `riporto`.
+
+    L'E0 non espone mai una base negativa (Manuale ListaPosPA 2017, pp. 20 e 33). Senza importi nel periodo il
+    riporto non entra e continua. `riporto` si aggiorna sul posto.
+    """
+    entrante = riporto.get(base.nome)
+    if importo is None:
+        return None
+    if entrante is None and importo.valore >= 0:
+        return importo
+    righe = importo.derivazione.importi
+    totale = importo.valore
+    if entrante is not None:
+        giorno = min(riga.data_pagamento for riga in righe)
+        applicato = replace(
+            _residuo(corpus, base, periodo, entrante.valore, (entrante,), istante),
+            data_pagamento=giorno,
+        )
+        righe = (applicato, *righe)
+        totale += entrante.valore
+    if totale < 0:
+        origine = tuple(riga for riga in importo.derivazione.importi if _riga_recupero(riga)) or importo.derivazione.importi
+        riporto[base.nome] = _residuo(
+            corpus, base, periodo, totale, ((entrante,) if entrante is not None else ()) + origine, istante
+        )
+    else:
+        riporto.pop(base.nome, None)
+    return replace(
+        importo,
+        valore=max(totale, Decimal(0)),
+        derivazione=replace(importo.derivazione, formula=FORMULA_BASE_CON_RIPORTO, importi=righe),
+    )
 
 
 def _base_del_periodo(
@@ -443,8 +564,69 @@ def calcola_denuncia(
     return denuncia
 
 
+def _primo_mese_con_recupero(registro: Registro, rapporto: str, mese: Mese, istante: datetime) -> Mese | None:
+    """Primo mese, prima di `mese`, in cui e' stato pagato un importo negativo: da li' puo' esserci un riporto."""
+    pagamenti = registro.pagamenti(rapporto, istante)
+    primi: list[date] = []
+    for esito in registro.esiti(TipoEsito.PAGATO, istante):
+        fatto = pagamenti.get(esito.id)
+        if fatto is None or fatto.valido_dal >= mese.primo_giorno:
+            continue
+        if any(
+            riga.rapporto == rapporto and riga.derivazione.maturazione not in MATURAZIONI_DERIVATE and _riga_recupero(riga)
+            for riga in esito.righe
+        ):
+            primi.append(fatto.valido_dal)
+    return Mese(min(primi).year, min(primi).month) if primi else None
+
+
+def _riporto_entrante(
+    registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime
+) -> dict[str, Importo]:
+    """Residuo dei recuperi a inizio mese, ricavato mese per mese dalla denuncia precedente (ADR 0018)."""
+    corrente = _primo_mese_con_recupero(registro, rapporto, mese, istante)
+    riporto: dict[str, Importo] = {}
+    while corrente is not None and corrente < mese:
+        denuncia = _denuncia_del_mese(registro, corpus, rapporto, corrente, istante, (), riporto)
+        riporto = {riga.istituto.removeprefix("riporto."): riga for riga in denuncia.riporti}
+        corrente = Mese(corrente.anno + 1, 1) if corrente.mese == 12 else Mese(corrente.anno, corrente.mese + 1)
+    return riporto
+
+
 def _denuncia(
     registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime, ipotetiche=()
+) -> Denuncia:
+    riporto = _riporto_entrante(registro, corpus, rapporto, mese, istante) if corpus.basi() else {}
+    return _denuncia_del_mese(registro, corpus, rapporto, mese, istante, ipotetiche, riporto)
+
+
+def _servizio_al(registro: Registro, corpus: Corpus, rapporto: str, giorno: date, istante: datetime) -> bool:
+    return registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, Periodo(giorno, giorno), istante)[0] is not None
+
+
+def _chiudi_il_mese(
+    registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime, riporto: dict[str, Importo]
+) -> None:
+    """Un riporto aperto con il servizio finito entro il mese: attende il rientro se e' sospensione, ferma se e' cessazione."""
+    if not riporto or _servizio_al(registro, corpus, rapporto, mese.ultimo_giorno + timedelta(days=1), istante):
+        return
+    ultimo, fine = _fine_del_servizio(registro, corpus, rapporto, mese.ultimo_giorno, istante)
+    if fine == CESSAZIONE:
+        aperto = next(iter(riporto.values()))
+        raise CasoNonModellato(
+            f"Rapporto {rapporto}: caso non modellato, riporto del recupero ancora aperto alla cessazione "
+            f"({aperto.istituto} = {aperto.valore}, servizio finito il {ultimo})"
+        )
+
+
+def _denuncia_del_mese(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    mese: Mese,
+    istante: datetime,
+    ipotetiche,
+    riporto_entrante: dict[str, Importo],
 ) -> Denuncia:
     if not corpus.basi():
         raise ErroreCorpus("Il corpus non dichiara alcuna base imponibile")
@@ -452,11 +634,14 @@ def _denuncia(
     lettore.controlla_fermi(mese, {"calcolo", "denuncia"})
     pagate, senza_data = _righe_pagate(registro, rapporto, mese, istante, ipotetiche)
 
+    riporto = dict(riporto_entrante)
     periodi = _periodi_in_servizio(lettore, mese)
     in_servizio = bool(periodi)
     if not in_servizio:
+        pagate = _recuperi_da_sospeso(registro, corpus, lettore, rapporto, mese, istante, pagate, riporto)
         if not pagate:
-            return Denuncia(rapporto, mese, (), senza_data)
+            _chiudi_il_mese(registro, corpus, rapporto, mese, istante, riporto)
+            return Denuncia(rapporto, mese, (), senza_data, tuple(riporto.values()))
         periodi = [mese.periodo]
 
     gruppi: dict[Periodo, list[_RigaPagata]] = {periodo: [] for periodo in periodi}
@@ -470,13 +655,18 @@ def _denuncia(
     def dei_mesi_prima(base: Base) -> Decimal:
         return _base_dei_mesi_prima(registro, corpus, rapporto, mese, base, istante)
 
+    def _del_periodo(base: Base, righe: list[_RigaPagata], periodo: Periodo) -> Importo | None:
+        """Base del periodo; in servizio con il riporto dei recuperi, fuori servizio il recupero resta negativo."""
+        importo = _base_del_periodo(base, righe, periodo, corpus, istante, _esclusione(lettore, base))
+        return _con_riporto(importo, base, riporto, periodo, corpus, istante) if in_servizio else importo
+
     risultato: list[PeriodoDenuncia] = []
     for periodo in periodi:
         basi = tuple(
             importo
             for importo in (
                 _con_massimale(
-                    _base_del_periodo(base, gruppi[periodo], periodo, corpus, istante, _esclusione(lettore, base)),
+                    _del_periodo(base, gruppi[periodo], periodo),
                     base, cumulato, corpus, mese, dei_mesi_prima
                 )
                 for base in corpus.basi()
@@ -492,7 +682,38 @@ def _denuncia(
         basi_mese = _basi_del_mese(risultato, corpus, istante)
         del_mese = _Contributi(lettore, ultimo.periodo, basi_mese, condizione_su).tutti(corpus.istituti_sul_mese)
         risultato[-1] = replace(ultimo, contributi=ultimo.contributi + del_mese)
-    return Denuncia(rapporto, mese, tuple(risultato), senza_data)
+    _chiudi_il_mese(registro, corpus, rapporto, mese, istante, riporto)
+    return Denuncia(rapporto, mese, tuple(risultato), senza_data, tuple(riporto.values()))
+
+
+def _recuperi_da_sospeso(
+    registro: Registro,
+    corpus: Corpus,
+    lettore: _Lettore,
+    rapporto: str,
+    mese: Mese,
+    istante: datetime,
+    pagate: list[_RigaPagata],
+    riporto: dict[str, Importo],
+) -> list[_RigaPagata]:
+    """Mese senza servizio: i recuperi di un sospeso passano al riporto, il resto resta nel mese.
+
+    Da cessato i recuperi restano nel mese (caso `su cessato`); `riporto` si aggiorna sul posto.
+    """
+    recuperi = [riga for riga in pagate if _riga_recupero(riga.importo)]
+    if not recuperi:
+        return pagate
+    if _fine_del_servizio(registro, corpus, rapporto, mese.primo_giorno - timedelta(days=1), istante)[1] != SOSPENSIONE:
+        return pagate
+    for base in corpus.basi():
+        importo = _base_del_periodo(base, recuperi, mese.periodo, corpus, istante, _esclusione(lettore, base))
+        if importo is None:
+            continue
+        entrante = riporto.get(base.nome)
+        origine = ((entrante,) if entrante is not None else ()) + importo.derivazione.importi
+        totale = importo.valore + (entrante.valore if entrante is not None else Decimal(0))
+        riporto[base.nome] = _residuo(corpus, base, mese.periodo, totale, origine, istante)
+    return [riga for riga in pagate if riga not in recuperi]
 
 
 def _ultimo_giorno_di_servizio(
