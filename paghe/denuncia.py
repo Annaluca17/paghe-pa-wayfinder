@@ -39,6 +39,8 @@ FORMULA_BASE_MESE = "somma delle basi dei periodi del mese"
 MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere"} | MATURAZIONI_FISCALI
 IN_SERVIZIO = "in servizio"
 SU_CESSATO = "su cessato"
+CESSAZIONE = "cessazione"
+SOSPENSIONE = "sospensione"
 
 
 @dataclass(frozen=True)
@@ -178,6 +180,46 @@ def _basi_del_mese(periodi: list[PeriodoDenuncia], corpus: Corpus, istante: date
     return tuple(risultato)
 
 
+def _fine_del_servizio(
+    registro: Registro, corpus: Corpus, rapporto: str, giorno: date, istante: datetime
+) -> tuple[date | None, str]:
+    """Ultimo giorno di servizio fino a `giorno` e come finisce: `cessazione` o `sospensione`.
+
+    Il fatto vale dal giorno dopo l'ultimo giorno di servizio. Se il corpus non dichiara i due fatti la
+    fine resta `cessazione`. Una fine senza nessuno dei due ferma il calcolo e nomina il caso (ticket #43).
+    """
+    ultimo = _ultimo_giorno_fino_a(registro, corpus, rapporto, giorno, istante)
+    if ultimo is None or not (corpus.fatto_cessazione or corpus.fatto_sospensione):
+        return ultimo, CESSAZIONE
+    dopo = ultimo + timedelta(days=1)
+
+    def presente(tipo: str | None) -> bool:
+        return tipo is not None and any(
+            fatto.valido_dal == dopo for fatto in registro.fatti_noti(rapporto, tipo, istante)
+        )
+
+    if presente(corpus.fatto_cessazione):
+        return ultimo, CESSAZIONE
+    if presente(corpus.fatto_sospensione):
+        return ultimo, SOSPENSIONE
+    raise CasoNonModellato(
+        f"Rapporto {rapporto}: caso non modellato, il servizio finisce il {ultimo} senza cessazione né sospensione "
+        f"dal {dopo}"
+    )
+
+
+def _ultimo_giorno_fino_a(registro: Registro, corpus: Corpus, rapporto: str, giorno: date, istante: datetime) -> date | None:
+    giorni = [
+        min(fatto.valido_al or giorno, giorno)
+        for fatto in registro.fatti_noti(rapporto, corpus.fatto_servizio, istante)
+        if fatto.valido_dal <= giorno
+    ]
+    for candidato in sorted(set(giorni), reverse=True):
+        if registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, Periodo(candidato, candidato), istante)[0] is not None:
+            return candidato
+    return None
+
+
 def _recuperi(
     registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, periodo: PeriodoDenuncia, istante: datetime
 ) -> tuple[Recupero, ...]:
@@ -206,6 +248,7 @@ def _recuperi(
             raise CasoNonModellato(
                 f"Rapporto {rapporto}: caso non modellato, recupero fuori servizio senza servizio precedente in {mese}"
             )
+        _fine_del_servizio(registro, corpus, rapporto, mese.primo_giorno - timedelta(days=1), istante)
         caso = SU_CESSATO
     return tuple(Recupero(caso, riga) for riga in righe)
 

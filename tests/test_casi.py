@@ -72,6 +72,8 @@ riferimento = "fittizio:tabella-basso"
 REGOLE = """
 [periodo_dichiarato]
 servizio = "tipo_impiego"
+cessazione = "cessazione"
+sospensione = "sospensione"
 fatti = ["qualifica"]
 
 [denuncia]
@@ -191,6 +193,16 @@ def paga(registro, orologio, righe, giorno, rapporto=R):
     registro.registra_pagamento(rapporto, esito.id, giorno)
     orologio.avanza()
     return esito
+
+
+def cessa(registro, giorno, rapporto=R):
+    """Cessazione: valida dal giorno dopo l'ultimo giorno di servizio (ticket #43)."""
+    registro.registra_codice(rapporto, "cessazione", "1", giorno)
+
+
+def sospendi(registro, giorno, rapporto=R):
+    """Sospensione: valida dal giorno dopo l'ultimo giorno di servizio (ticket #43)."""
+    registro.registra_codice(rapporto, "sospensione", "1", giorno)
 
 
 def contributi(periodo):
@@ -430,6 +442,7 @@ def test_recupero_in_servizio_detratto_dalla_denuncia_del_mese(registro, casi, o
 
 def test_recupero_su_cessato_in_un_periodo_fuori_servizio(registro, casi, orologio):
     assumi(registro, al=date(2026, 9, 30))
+    cessa(registro, date(2026, 10, 1))
     registro.registra_fatto(R, "una_tantum", "300", date(2026, 9, 5), date(2026, 9, 5))
     paga(registro, orologio, stipendi(registro, casi, Mese(2026, 9)), date(2026, 9, 25))
     orologio.vai(11, 2)
@@ -443,6 +456,18 @@ def test_recupero_su_cessato_in_un_periodo_fuori_servizio(registro, casi, orolog
     assert contributi(periodo)["contributo"] == Decimal("-20.00")
     caso, = periodo.recuperi
     assert caso.caso == "su cessato"
+
+
+def test_recupero_dopo_la_fine_del_servizio_senza_cessazione_ne_sospensione_ferma_e_nomina_il_caso(registro, casi, orologio):
+    assumi(registro, al=date(2026, 9, 30))
+    registro.registra_fatto(R, "una_tantum", "300", date(2026, 9, 5), date(2026, 9, 5))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 9)), date(2026, 9, 25))
+    orologio.vai(11, 2)
+    registro.registra_fatto(R, "una_tantum", "100", date(2026, 9, 5), date(2026, 9, 5))
+    recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 9), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero, date(2026, 11, 20))
+    with pytest.raises(CasoNonModellato, match="finisce il 2026-09-30 senza cessazione né sospensione"):
+        calcola_denuncia(registro, casi, R, Mese(2026, 11))
 
 
 def test_mese_negativo_in_servizio_ferma_e_lo_nomina(registro, casi, orologio):
