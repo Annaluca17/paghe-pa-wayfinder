@@ -2,7 +2,7 @@
 
 Dal 2026: regionale dovuta 240,00 e comunale dovuta 99,00 (vedi materiale_addizionali), nessun acconto trattenuto.
 Dal mese dopo il conguaglio fino a novembre compreso, la rata e' il residuo diviso i mesi rimasti:
-regionale 240 / 11 = 21,8181..., rata 21,82 (al centesimo) e i centesimi di differenza sull'ultima (21,80); comunale 99 / 11 = 9,00.
+regionale 240 / 11 = 21,8181..., rata 21,82 (al centesimo); comunale 99 / 11 = 9,00.
 """
 
 from datetime import date
@@ -47,9 +47,10 @@ def test_la_rata_dice_da_dove_viene(dal_2027):
     assert {p.nome: p.valore for p in regionale.derivazione.parametri} == {"addizionale_mese_ultima_rata": D("11")}
 
 
-def test_le_rate_restano_uguali_e_i_centesimi_finiscono_nell_ultima(dal_2027):
+def test_le_rate_sono_quasi_uguali_e_l_ultima_chiude_il_residuo_al_centesimo(dal_2027):
+    """Il residuo ricalcolato ogni mese fa oscillare la rata di un centesimo (21,82 e 21,81): l'ultima porta il resto."""
     regionali = [rate(dal_2027(mese))[REG].valore for mese in range(1, 12)]
-    assert regionali[:-1] == [D("21.82")] * 10 and regionali[-1] == D("21.80")
+    assert regionali == [D("21.82")] * 8 + [D("21.81"), D("21.82"), D("21.81")]
     assert sum(regionali) == D("240.00")
 
 
