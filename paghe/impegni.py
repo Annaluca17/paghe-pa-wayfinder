@@ -14,6 +14,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from .errori import ErroreRegistro
+from .modello import Importo
 from .corpus import PIANO_DEI_CONTI
 from .registro import Registro, _in_decimale
 from .tempo import in_utc
@@ -120,6 +121,21 @@ def impegni_noti(registro: Registro, noto_al: datetime) -> dict[tuple[int, int],
 
 STATI_VIVI = ("inviata", "confermata")
 AUTOMATICO = "automatico"
+TIPO_PAGAMENTO_ESEGUITO = "pagamento_eseguito"  # lo stesso tipo di evento di paghe.proposta
+
+
+def _chiave_riferimento(rif: dict) -> tuple:
+    return (rif["rapporto"], rif["istituto"], rif["periodo"], tuple(rif["esiti_confrontati"]))
+
+
+def _valori_delle_righe(dati: dict) -> dict[tuple, Decimal]:
+    """Il valore di ogni riga di composizione della versione, per la chiave con cui una riga di proposta la indica."""
+    valori: dict[tuple, Decimal] = {}
+    for riga in dati["righe"]:
+        importo = Importo.da_dizionario(riga["importo"])
+        chiave = (importo.rapporto, importo.istituto, str(importo.periodo), tuple(importo.esiti_confrontati))
+        valori[chiave] = valori.get(chiave, Decimal(0)) + importo.valore
+    return valori
 # Cambio di abbinamento fatto dalla Ragioneria in conferma, con l'impegno proposto e quello scelto (ADR 0031).
 TIPO_ABBINAMENTO = "abbinamento_confermato"
 
@@ -146,9 +162,18 @@ class DisponibilitaImpegni:
         self._consumi: list[tuple[date, tuple[int, int], Decimal]] = []
         for versione_id in registro.versioni_registrate(istante):
             stati = registro.stati_versione(versione_id, istante)
-            if not stati or stati[-1][0] not in STATI_VIVI:
+            pagati = {
+                rapporto
+                for evento in registro.eventi(TIPO_PAGAMENTO_ESEGUITO, istante)
+                if evento.versione_id == versione_id
+                for rapporto in evento.contenuto["rapporti"]
+            }
+            # Il denaro reale vince (ADR 0025): una versione pagata consuma per i soli rapporti pagati, anche se
+            # superata; i non pagati ripartono con una nuova versione. Senza pagamento consumano le versioni vive.
+            if not pagati and (not stati or stati[-1][0] not in STATI_VIVI):
                 continue
             _, registrato, dati = registro.versione_registrata(versione_id)
+            valori = _valori_delle_righe(dati) if pagati else {}
             scelte = {
                 json.dumps(evento.contenuto["riga"]): tuple(evento.contenuto["scelto"])
                 for evento in registro.eventi(TIPO_ABBINAMENTO, istante)
@@ -158,8 +183,16 @@ class DisponibilitaImpegni:
                 proposto = tuple(riga["impegno"]) if riga["impegno"] else None
                 chiave = json.dumps(chiave_riga(riga["piano_dei_conti"], riga["missione"], riga["programma"], proposto))
                 effettivo = scelte.get(chiave, proposto)
-                if effettivo is not None:
-                    self._consumi.append((registrato.date(), effettivo, Decimal(riga["totale"])))
+                if effettivo is None:
+                    continue
+                if pagati:
+                    totale = sum(
+                        (valori.get(_chiave_riferimento(rif), Decimal(0)) for rif in riga["riferimenti"] if rif["rapporto"] in pagati),
+                        Decimal(0),
+                    )
+                else:
+                    totale = Decimal(riga["totale"])
+                self._consumi.append((registrato.date(), effettivo, totale))
 
     def residua(self, impegno: Impegno) -> Decimal:
         """Disponibilità a una data meno le righe delle versioni vive registrate da quella data in poi."""

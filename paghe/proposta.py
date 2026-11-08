@@ -623,7 +623,8 @@ def _costruisci(
     netti: list[NettoRapporto] = []
     fermi: list[RapportoFermo] = []
     mancanti: dict[tuple[str, str], DatoMancante] = {}
-    avvisi: list[Avviso] = []
+    avvisi_di: list[tuple[str, tuple[Avviso, ...]]] = []
+    origini: dict[tuple[str, str], set[str]] = {}
     anni_con_ultimo: set[int] = set()
     for rapporto in sorted(per_rapporto):
         try:
@@ -639,22 +640,27 @@ def _costruisci(
             continue
         righe.extend(dati.righe)
         netti.append(NettoRapporto(rapporto, dati.netto))
-        avvisi.extend(dati.avvisi)
+        avvisi_di.append((rapporto, dati.avvisi))
         for dato in dati.mancanti:
             mancanti.setdefault((dato.tipo, dato.soggetto), dato)
+            origini.setdefault((dato.tipo, dato.soggetto), set()).add(rapporto)
         if dati.ultimo_dell_anno:
             anni_con_ultimo.add(dati.anno)
-    for anno in sorted(anni_con_ultimo):
-        avvisi.extend(_persone_assenti(registro, anno, {p for p in persone.values() if p is not None}, istante))
     righe_proposta: tuple[RigaProposta, ...] = ()
+    fuori: set[str] = set()
     if con_proposta:
         righe_proposta, mancanti_proposta, fermi_proposta = _proposta(registro, corpus, righe, valuta, istante)
-        mancanti.update(mancanti_proposta)
         if fermi_proposta:
+            # Un rapporto fermo per capienza esce dalla versione con i suoi dati mancanti e i suoi avvisi.
             fermi.extend(fermi_proposta)
             fuori = {fermo.rapporto for fermo in fermi_proposta}
             righe = [riga for riga in righe if riga.rapporto not in fuori]
             netti = [netto for netto in netti if netto.rapporto not in fuori]
+            mancanti = {chiave: dato for chiave, dato in mancanti.items() if not origini[chiave] <= fuori}
+        mancanti.update(mancanti_proposta)
+    avvisi = [avviso for rapporto, propri in avvisi_di if rapporto not in fuori for avviso in propri]
+    for anno in sorted(anni_con_ultimo):
+        avvisi.extend(_persone_assenti(registro, anno, {p for p in persone.values() if p is not None}, istante))
     return ContenutoVersione(
         valuta_prevista=valuta,
         righe=tuple(righe),
