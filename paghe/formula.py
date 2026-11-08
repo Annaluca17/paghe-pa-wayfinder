@@ -2,7 +2,11 @@
 
 Una formula è testo, non codice: viene analizzata e mai eseguita. Ammette
 `fatto.x`, `parametro.x`, `importo.x`, `base.x`, `fisco.x`, le quattro operazioni, il meno unario,
-`min`, `max` e `arrotonda(valore, decimali)`.
+`min`, `max`, `arrotonda(valore, decimali)`, `tronca(valore, decimali)` e `se(condizione, allora, altrimenti)`.
+
+`se` sceglie fra due espressioni con un solo confronto (`<`, `<=`, `>`, `>=`) fra due espressioni:
+serve alle norme a fasce con un salto, che con `min` e `max` non si scrivono (ADR 0002, ticket #93).
+Il confronto vale solo come primo argomento di `se`; si valuta soltanto il ramo scelto.
 
 Le costanti sono solo intere: un valore normativo non può stare in una formula,
 deve essere un parametro con vigenza e fonte. L'arrotondamento non è implicito:
@@ -13,7 +17,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal, DecimalException, localcontext
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal, DecimalException, localcontext
 from functools import lru_cache
 from typing import Callable
 
@@ -26,6 +30,12 @@ OPERATORI = {
     ast.Sub: lambda a, b: a - b,
     ast.Mult: lambda a, b: a * b,
     ast.Div: lambda a, b: a / b,
+}
+CONFRONTI = {
+    ast.Lt: lambda a, b: a < b,
+    ast.LtE: lambda a, b: a <= b,
+    ast.Gt: lambda a, b: a > b,
+    ast.GtE: lambda a, b: a >= b,
 }
 
 
@@ -68,13 +78,24 @@ def _controlla(nodo: ast.expr, sorgente: str) -> None:
             )
         case ast.Attribute(value=ast.Name(id=origine)) if origine in SORGENTI:
             pass
-        case ast.Call(func=ast.Name(id="arrotonda"), args=[valore, ast.Constant(value=decimali)], keywords=[]):
+        case ast.Call(func=ast.Name(id="arrotonda" | "tronca"), args=[valore, ast.Constant(value=decimali)], keywords=[]):
             if type(decimali) is not int or decimali < 0:
                 raise ErroreFormula(f"Decimali non validi in {sorgente!r}")
             _controlla(valore, sorgente)
         case ast.Call(func=ast.Name(id="min" | "max"), args=argomenti, keywords=[]) if argomenti:
             for argomento in argomenti:
                 _controlla(argomento, sorgente)
+        case ast.Call(func=ast.Name(id="se"), args=[condizione, allora, altrimenti], keywords=[]):
+            match condizione:
+                case ast.Compare(left=sinistra, ops=[op], comparators=[destra]) if type(op) in CONFRONTI:
+                    _controlla(sinistra, sorgente)
+                    _controlla(destra, sorgente)
+                case _:
+                    raise ErroreFormula(
+                        f"Condizione non ammessa in {sorgente!r}: serve un solo confronto fra <, <=, > e >="
+                    )
+            _controlla(allora, sorgente)
+            _controlla(altrimenti, sorgente)
         case _:
             raise ErroreFormula(f"Elemento non ammesso in {sorgente!r}: {ast.dump(nodo)}")
 
@@ -115,9 +136,14 @@ def _valuta(nodo: ast.expr, risolvi: Callable[[str, str], Decimal]) -> Decimal:
             return Decimal(valore)
         case ast.Attribute(value=ast.Name(id=origine), attr=nome):
             return risolvi(origine, nome)
-        case ast.Call(func=ast.Name(id="arrotonda"), args=[valore, ast.Constant(value=decimali)]):
+        case ast.Call(func=ast.Name(id="arrotonda" | "tronca" as nome), args=[valore, ast.Constant(value=decimali)]):
             passo = Decimal(1).scaleb(-decimali)
-            return _valuta(valore, risolvi).quantize(passo, rounding=ROUND_HALF_UP)
+            modo = ROUND_HALF_UP if nome == "arrotonda" else ROUND_DOWN
+            return _valuta(valore, risolvi).quantize(passo, rounding=modo)
+        case ast.Call(func=ast.Name(id="se"), args=[condizione, allora, altrimenti]):
+            sinistra, destra = condizione.left, condizione.comparators[0]
+            vero = CONFRONTI[type(condizione.ops[0])](_valuta(sinistra, risolvi), _valuta(destra, risolvi))
+            return _valuta(allora if vero else altrimenti, risolvi)
         case ast.Call(func=ast.Name(id=nome), args=argomenti):
             funzione = min if nome == "min" else max
             return funzione(_valuta(argomento, risolvi) for argomento in argomenti)

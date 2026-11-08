@@ -434,7 +434,7 @@ class DichiarazioneDeduzione:
             raise ErroreCorpus(f"Deduzione fiscale {self.istituto}: vigenza invertita")
 
 
-PERIODI_FISCALI = frozenset({"imponibile", "periodi"})
+PERIODI_FISCALI = frozenset({"imponibile", "periodi", "giorni", "giorni_anno"})
 
 
 @dataclass(frozen=True)
@@ -444,7 +444,11 @@ class RegolaRitenuta:
     Le due formule leggono parametri e due valori che dà il motore: `fisco.imponibile`, il reddito del
     periodo di paga (o dell'anno, nel conguaglio), e `fisco.periodi`, i periodi di paga dell'anno
     (12 per il mese, 1 per il conguaglio). `detrazione` si applica solo con la dichiarazione del
-    sostituito che chiede `detrazione_richiesta`. La regola copre solo le `categorie` elencate.
+    sostituito che chiede `detrazione_richiesta`. `detrazione_automatica` si applica sempre (l'ulteriore
+    detrazione che il sostituto riconosce in via automatica) e vale 0 se la regola non la dichiara.
+    `fisco.giorni` e `fisco.giorni_anno` servono a rapportare le detrazioni al periodo di lavoro: nella ritenuta
+    del mese valgono entrambi 1, nel conguaglio i giorni di servizio dell'anno e i giorni dell'anno.
+    La regola copre solo le `categorie` elencate.
     """
 
     istituto: str
@@ -456,6 +460,8 @@ class RegolaRitenuta:
     categorie: tuple[str, ...]
     detrazione_richiesta: str
     al: date | None = None
+    detrazione_automatica: str = "0"
+    categorie_detrazione_automatica: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         soggetto = f"Ritenuta {self.istituto}"
@@ -468,7 +474,7 @@ class RegolaRitenuta:
             raise ErroreCorpus(f"{soggetto}: categorie obbligatorie")
         if not self.detrazione_richiesta.strip():
             raise ErroreCorpus(f"{soggetto}: detrazione_richiesta obbligatoria")
-        for formula in (self.imposta, self.detrazione):
+        for formula in (self.imposta, self.detrazione, self.detrazione_automatica):
             letti = riferimenti(formula)
             if letti.fatti or letti.importi or letti.basi:
                 raise ErroreCorpus(f"{soggetto}: la formula legge solo parametri e fisco, non fatti, importi o basi")
@@ -478,7 +484,11 @@ class RegolaRitenuta:
 
     @property
     def parametri(self) -> frozenset[str]:
-        return riferimenti(self.imposta).parametri | riferimenti(self.detrazione).parametri
+        return (
+            riferimenti(self.imposta).parametri
+            | riferimenti(self.detrazione).parametri
+            | riferimenti(self.detrazione_automatica).parametri
+        )
 
 
 @dataclass(frozen=True)
@@ -1347,7 +1357,8 @@ class Corpus:
                 ),
                 "ritenute": sorted(
                     [r.istituto, r.versione, r.dal.isoformat(), r.al.isoformat() if r.al else "", r.riferimento,
-                     r.imposta, r.detrazione, sorted(r.categorie), r.detrazione_richiesta]
+                     r.imposta, r.detrazione, sorted(r.categorie), r.detrazione_richiesta,
+                     *([r.detrazione_automatica] if r.detrazione_automatica != "0" else [])]
                     for r in fiscale.ritenute
                 ),
                 "conguagli": sorted(
@@ -1846,6 +1857,8 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
             categorie=tuple(voce["categorie"]),
             detrazione_richiesta=voce["detrazione_richiesta"],
             al=_data(voce["al"], "al") if "al" in voce else None,
+            detrazione_automatica=voce.get("detrazione_automatica", "0"),
+            categorie_detrazione_automatica=tuple(voce.get("categorie_detrazione_automatica", ())),
         )
         for voce in dati.get("ritenuta", [])
     )

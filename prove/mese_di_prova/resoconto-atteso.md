@@ -11,9 +11,9 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 | istituti con regola | 39 | 2 | 41 |
 | basi imponibili | 6 | 0 | 6 |
 | fermi dichiarati | 24 | 0 | 24 |
-| categorie di reddito | 0 | 3 | 3 |
-| regole di ritenuta | 0 | 1 | 1 |
-| regole di conguaglio | 0 | 1 | 1 |
+| categorie di reddito | 3 | 0 | 3 |
+| regole di ritenuta | 2 | 0 | 2 |
+| regole di conguaglio | 2 | 0 | 2 |
 | dichiarazioni di pagamento fisiologico | 0 | 1 | 1 |
 | dichiarazioni di composizione | 0 | 48 | 48 |
 | mappature verso codici esterni | 0 | 20 | 20 |
@@ -44,31 +44,30 @@ Ente fittizio in una sola regione, con i fatti sull'ente della delega (codice fi
 
 | Rapporto | Marzo 2026 | Dicembre 2026 |
 |---|---|---|
-| R01 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R02 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R03 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R04 | si ferma al passo «ListaPosPA»: bozza non trasmissibile | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R01 | completo, fino all'esito versato | completo, fino al pagamento e alla ListaPosPA |
+| R02 | completo, fino all'esito versato | completo, fino al pagamento e alla ListaPosPA |
+| R03 | completo, fino all'esito versato | completo, fino al pagamento e alla ListaPosPA |
+| R04 | si ferma al passo «ListaPosPA»: bozza non trasmissibile | completo, fino al pagamento e alla ListaPosPA |
 | R05 | completo, fino all'esito versato | fuori servizio |
-| R06 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
-| R07 | completo, fino all'esito versato | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R06 | completo, fino all'esito versato | completo, fino al pagamento e alla ListaPosPA |
+| R07 | completo, fino all'esito versato | completo, fino al pagamento e alla ListaPosPA |
 | R08 | si ferma al passo «ListaPosPA»: dato mancante qualifica | si ferma al passo «Versione di proposta»: conguaglio annuo di contributo_aggiuntivo in 2026-12 |
 | R09 | si ferma al passo «ListaPosPA»: dato mancante qualifica | si ferma al passo «Versione di proposta»: conguaglio annuo di contributo_aggiuntivo in 2026-12 |
-| R10 | si ferma al passo «Lista collaboratori»: tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R10 | si ferma al passo «Lista collaboratori»: tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile | completo, fino al pagamento e alla ListaPosPA |
 | R11 | si ferma al passo «Lista collaboratori»: tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile | si ferma al passo «Versione di proposta»: manca il fatto attestazione_prestazione per <data>: l'importo resta calcolato ma non entra in una versione di proposta |
-| R12 | si ferma al passo «ListaPosPA»: bozza non trasmissibile | si ferma al passo «Delega F24EP»: debito_negativo: Il totale a debito del codice 100E e' negativo |
+| R12 | si ferma al passo «ListaPosPA»: bozza non trasmissibile | completo, fino al pagamento e alla ListaPosPA |
 
 ## Cosa manca per un mese completo
 
 I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccano e poi per quanti passi del percorso (calcolo, versione, conferma, pagamento, prospetto paga, denuncia, ListaPosPA, lista collaboratori, delega, file, ricevute, esito versato) restano chiusi, sommati su marzo e dicembre.
 
-1. **debito_negativo: Il totale a debito del codice 100E e' negativo**: 8 rapporti bloccati, 32 passi, al passo «Delega F24EP», in dicembre. Casi: R01, R02, R03, R04, R06, R07, R10, R12.
-2. **prospetto paga: dato mancante posizione**: 3 rapporti bloccati, 3 passi, al passo «Prospetto paga», in marzo. Casi: R08, R09, R11.
-3. **conguaglio annuo di contributo_aggiuntivo in 2026-12**: 2 rapporti bloccati, 22 passi, al passo «Versione di proposta», in dicembre. Casi: R08, R09.
-4. **bozza non trasmissibile**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R04, R12.
-5. **dato mancante contratto**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
-6. **dato mancante qualifica**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
-7. **tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile**: 2 rapporti bloccati, 10 passi, al passo «Lista collaboratori», in marzo. Casi: R10, R11.
-8. **manca il fatto attestazione_prestazione per <data>: l'importo resta calcolato ma non entra in una versione di proposta**: 1 rapporto bloccato, 11 passi, al passo «Versione di proposta», in dicembre. Casi: R11.
+1. **prospetto paga: dato mancante posizione**: 3 rapporti bloccati, 3 passi, al passo «Prospetto paga», in marzo. Casi: R08, R09, R11.
+2. **conguaglio annuo di contributo_aggiuntivo in 2026-12**: 2 rapporti bloccati, 22 passi, al passo «Versione di proposta», in dicembre. Casi: R08, R09.
+3. **bozza non trasmissibile**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R04, R12.
+4. **dato mancante contratto**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
+5. **dato mancante qualifica**: 2 rapporti bloccati, 12 passi, al passo «ListaPosPA», in marzo. Casi: R08, R09.
+6. **tracciato della lista collaboratori: elementi e codici non letti sul testo ufficiale e non dichiarati nel corpus: bozza non trasmissibile**: 2 rapporti bloccati, 10 passi, al passo «Lista collaboratori», in marzo. Casi: R10, R11.
+7. **manca il fatto attestazione_prestazione per <data>: l'importo resta calcolato ma non entra in una versione di proposta**: 1 rapporto bloccato, 11 passi, al passo «Versione di proposta», in dicembre. Casi: R11.
 
 ## Passaggi manuali
 
@@ -78,9 +77,9 @@ I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccan
 | Fatti ricorrenti del mese (atti, variazioni, cessazioni, 730) | 0 | 0 | 17 | 1 |
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
-| Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 14 | 9 |
-| Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 1 |
-| **Totale senza i comandi** | **166** | **3** | **48** | **14** |
+| Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 14 | 13 |
+| Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 2 |
+| **Totale senza i comandi** | **166** | **3** | **48** | **18** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
 
@@ -128,7 +127,12 @@ Dettaglio di Dicembre, escluso l'avvio:
 - [scelta] 1 x valuta prevista della versione (2026-12-18)
 - [evento] 8 x messa a disposizione del prospetto paga
 - [evento] 1 x pagamento eseguito della versione 3
+- [evento] 1 x ricevuta della delega: addebito
+- [evento] 1 x ricevuta della delega: controlli_formali
+- [evento] 1 x ricevuta della delega: controllo_crediti
+- [evento] 1 x versamento eseguito della delega
 - [comando] 1 x emissione della versione di proposta (2026-12)
+- [comando] 1 x trasmissione della delega (2026-12)
 
 Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto di cessazione: i fatti sono immutabili e il servizio di un rapporto finisce solo se si annullano i sei fatti di inquadramento aperti e si riscrivono con una fine (piu' il codice di cessazione).
 
@@ -170,19 +174,19 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - versione 2: 108 righe di composizione, valuta prevista 2026-03-27, 12 rapporti
-  - netto R01: 1942.69
-  - netto R02: 2085.69
-  - netto R03: 2111.25
-  - netto R04: 920.27
+  - netto R01: 1795.79
+  - netto R02: 1911.00
+  - netto R03: 1930.49
+  - netto R04: 716.89
   - netto R05: 841.19
-  - netto R06: 866.05
-  - netto R07: 1806.31
-  - netto R08: 4422.08
-  - netto R09: 3942.57
-  - netto R10: 2761.66
-  - netto R11: 1270.77
-  - netto R12: 775.85
-  - conguaglio fiscale sull'ultimo pagamento: R05 0.00
+  - netto R06: 667.37
+  - netto R07: 1692.60
+  - netto R08: 3325.40
+  - netto R09: 3022.72
+  - netto R10: 2243.33
+  - netto R11: 1020.13
+  - netto R12: 593.44
+  - conguaglio fiscale sull'ultimo pagamento: R05 -30.55
 - Fermi: nessuno
 - Su dati fittizi:
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
@@ -210,18 +214,18 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Prospetto paga**
 
 - Riuscito:
-  - R01: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0FZEQF, 7 righe sul netto, netto 1942.69, 3 senza effetto sul netto; consegnato, esito dichiarato 3
-  - R02: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0FZEQF, 10 righe sul netto, netto 2085.69, 3 senza effetto sul netto; consegnato, esito dichiarato 4
-  - R03: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OEESP, 7 righe sul netto, netto 2111.25, 3 senza effetto sul netto; consegnato, esito dichiarato 5
-  - R04: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OP000, 6 righe sul netto, netto 920.27, 3 senza effetto sul netto; consegnato, esito dichiarato 6
+  - R01: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0FZEQF, 7 righe sul netto, netto 1795.79, 3 senza effetto sul netto; consegnato, esito dichiarato 3
+  - R02: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0FZEQF, 10 righe sul netto, netto 1911.00, 3 senza effetto sul netto; consegnato, esito dichiarato 4
+  - R03: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OEESP, 7 righe sul netto, netto 1930.49, 3 senza effetto sul netto; consegnato, esito dichiarato 5
+  - R04: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OP000, 6 righe sul netto, netto 716.89, 3 senza effetto sul netto; consegnato, esito dichiarato 6
   - R05: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0IR000, 7 righe sul netto, netto 841.19, 3 senza effetto sul netto; consegnato, esito dichiarato 7
-  - R06: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OEESP, 6 righe sul netto, netto 866.05, 3 senza effetto sul netto; consegnato, esito dichiarato 8
-  - R07: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0IR000, 6 righe sul netto, netto 1806.31, 3 senza effetto sul netto; consegnato, esito dichiarato 9
-  - R08: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 7 righe sul netto, netto 4422.08, 3 senza effetto sul netto
-  - R09: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 7 righe sul netto, netto 3942.57, 3 senza effetto sul netto
-  - R10: prospetto del pagamento del 2026-03-27 (esito 2), posizione sindaco, 2 righe sul netto, netto 2761.66, 2 senza effetto sul netto; consegnato, esito dichiarato 10
-  - R11: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 3 righe sul netto, netto 1270.77, 2 senza effetto sul netto
-  - R12: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OP000, 6 righe sul netto, netto 775.85, 3 senza effetto sul netto; consegnato, esito dichiarato 11
+  - R06: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OEESP, 6 righe sul netto, netto 667.37, 3 senza effetto sul netto; consegnato, esito dichiarato 8
+  - R07: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0IR000, 6 righe sul netto, netto 1692.60, 3 senza effetto sul netto; consegnato, esito dichiarato 9
+  - R08: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 7 righe sul netto, netto 3325.40, 3 senza effetto sul netto
+  - R09: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 7 righe sul netto, netto 3022.72, 3 senza effetto sul netto
+  - R10: prospetto del pagamento del 2026-03-27 (esito 2), posizione sindaco, 2 righe sul netto, netto 2243.33, 2 senza effetto sul netto; consegnato, esito dichiarato 10
+  - R11: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 3 righe sul netto, netto 1020.13, 2 senza effetto sul netto
+  - R12: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OP000, 6 righe sul netto, netto 593.44, 3 senza effetto sul netto; consegnato, esito dichiarato 11
 - Fermi:
   - R08: dato mancante posizione
   - R09: dato mancante posizione
@@ -297,7 +301,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - scadenza 2026-04-16, data di versamento scelta 2026-04-16
-  - riga F 100E: debito 1108.98, credito 0.00
+  - riga F 100E: debito 5095.01, credito 0.00
   - riga R 380E: debito 2332.35, credito 0.00
   - riga S 385E: debito 3.30, credito 0.00
   - riga Q P201: debito 7554.80, credito 0.00
@@ -305,7 +309,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga Q P608: debito 584.83, credito 0.00
   - riga Q P909: debito 80.90, credito 0.00
   - riga Q ZGS1: debito 1053.96, credito 0.00
-  - saldo 13223.67
+  - saldo 17209.70
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
 - Su dati fittizi:
@@ -330,7 +334,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 13: 74 righe, 13223.67 versati il 2026-04-16
+  - esito versato 13: 77 righe, 17209.70 versati il 2026-04-16
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:
@@ -363,15 +367,15 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - versione 3: 77 righe di composizione, valuta prevista 2026-12-18, 8 rapporti
-  - netto R01: 2016.31
-  - netto R02: 2046.51
-  - netto R03: 1674.31
-  - netto R04: 941.77
-  - netto R06: 1626.83
-  - netto R07: 1988.79
-  - netto R10: 3238.34
-  - netto R12: 775.85
-  - conguaglio fiscale sull'ultimo pagamento: R01 -67.02, R02 -100.52, R03 -53.93, R04 -21.50, R06 -96.99, R07 -32.48, R10 -476.68, R12 0.00
+  - netto R01: 2163.21
+  - netto R02: 2334.91
+  - netto R03: 1855.07
+  - netto R04: 716.88
+  - netto R06: 1239.43
+  - netto R07: 2102.50
+  - netto R10: 2376.67
+  - netto R12: 593.44
+  - conguaglio fiscale sull'ultimo pagamento: R01 -360.82, R02 -535.82, R03 -382.95, R04 0.01, R06 0.00, R07 -259.90, R10 -133.34, R12 0.00
 - Fermi:
   - R08: caso non modellato, conguaglio annuo di contributo_aggiuntivo in 2026-12 (già esposto nel periodo 2026-03-01/2026-03-31)
   - R09: caso non modellato, conguaglio annuo di contributo_aggiuntivo in 2026-12 (già esposto nel periodo 2026-03-01/2026-03-31)
@@ -381,6 +385,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 - Note:
   - avviso persona_assente_dall_ultimo_pagamento: R11
   - avviso senza_dichiarazione_sostituito: R04, R06, R10, R12
+  - avviso tempo_determinato_sotto_soglia: R12
   - escluso compenso_collaborazione di R11: manca il fatto attestazione_prestazione per 2026-12-10/2026-12-10: l'importo resta calcolato ma non entra in una versione di proposta (prassi:immedia:nota:2026-11-07;10)
 
 **Conferma della Ragioneria**
@@ -402,14 +407,14 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Prospetto paga**
 
 - Riuscito:
-  - R01: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0FZEQF, 8 righe sul netto, netto 2016.31, 3 senza effetto sul netto; consegnato, esito dichiarato 15
-  - R02: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0FZEQF, 7 righe sul netto, netto 2046.51, 3 senza effetto sul netto; consegnato, esito dichiarato 16
-  - R03: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OEESP, 7 righe sul netto, netto 1674.31, 3 senza effetto sul netto; consegnato, esito dichiarato 17
-  - R04: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OP000, 7 righe sul netto, netto 941.77, 3 senza effetto sul netto; consegnato, esito dichiarato 18
-  - R06: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OEESP, 7 righe sul netto, netto 1626.83, 3 senza effetto sul netto; consegnato, esito dichiarato 19
-  - R07: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0IR000, 8 righe sul netto, netto 1988.79, 3 senza effetto sul netto; consegnato, esito dichiarato 20
-  - R10: prospetto del pagamento del 2026-12-18 (esito 14), posizione sindaco, 3 righe sul netto, netto 3238.34, 2 senza effetto sul netto; consegnato, esito dichiarato 21
-  - R12: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OP000, 7 righe sul netto, netto 775.85, 3 senza effetto sul netto; consegnato, esito dichiarato 22
+  - R01: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0FZEQF, 8 righe sul netto, netto 2163.21, 3 senza effetto sul netto; consegnato, esito dichiarato 15
+  - R02: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0FZEQF, 7 righe sul netto, netto 2334.91, 3 senza effetto sul netto; consegnato, esito dichiarato 16
+  - R03: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OEESP, 7 righe sul netto, netto 1855.07, 3 senza effetto sul netto; consegnato, esito dichiarato 17
+  - R04: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OP000, 7 righe sul netto, netto 716.88, 3 senza effetto sul netto; consegnato, esito dichiarato 18
+  - R06: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OEESP, 7 righe sul netto, netto 1239.43, 3 senza effetto sul netto; consegnato, esito dichiarato 19
+  - R07: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0IR000, 8 righe sul netto, netto 2102.50, 3 senza effetto sul netto; consegnato, esito dichiarato 20
+  - R10: prospetto del pagamento del 2026-12-18 (esito 14), posizione sindaco, 3 righe sul netto, netto 2376.67, 2 senza effetto sul netto; consegnato, esito dichiarato 21
+  - R12: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OP000, 7 righe sul netto, netto 593.44, 3 senza effetto sul netto; consegnato, esito dichiarato 22
 - Fermi: nessuno
 - Su dati fittizi:
   - la messa a disposizione e' simulata dal percorso (giorno dopo il pagamento, riferimento di canale di fantasia); la posizione di sindaco e collaboratori e la composizione sono dichiarate dal corpus fittizio
@@ -430,33 +435,45 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - scadenza 2027-01-18, data di versamento scelta 2027-01-18
-- Fermi:
-  - R01, R02, R03, R04, R06, R07, R10, R12: Il totale a debito del codice 100E e' negativo (-426.23; sezione F, riferimenti 0012/2026): i conguagli a credito superano le ritenute della delega. Il recupero dell'eccedenza non ha ancora una fonte, la delega non si trasmette
+  - riga F 100E: debito 500.37, credito 0.00
+  - riga F 150E: debito 0.00, credito 150.00
+  - riga R 380E: debito 1281.64, credito 0.00
+  - riga S 161E: debito 0.00, credito 3.30
+  - riga Q P201: debito 3943.56, credito 0.00
+  - riga Q P607: debito 450.65, credito 0.00
+  - riga Q P608: debito 129.74, credito 0.00
+  - riga Q P909: debito 42.27, credito 0.00
+  - riga Q ZGS1: debito 528.51, credito 0.00
+  - saldo 6723.44
+  - delega DELEGA-2026-12 trasmessa il 2027-01-12
+- Fermi: nessuno
 - Su dati fittizi:
   - mappatura dei codici, catalogo dei codici F24EP, scadenza e festivi del corpus fittizio
-- Note:
-  - righe costruite ma non trasmissibili: 100E -426.23, 150E -150.00, 380E 1281.64, 161E -3.30, P201 3943.56, P607 450.65, P608 129.74, P909 42.27, ZGS1 528.51
 
 **File telematico**
 
-- Riuscito: niente
-- Fermi:
-  - R01, R02, R03, R04, R06, R07, R10, R12: non eseguito, la delega del mese non e' trasmessa
+- Riuscito:
+  - file f24ep-2026-12.txt: 4 record
+- Fermi: nessuno
 - Su dati fittizi:
+  - dati dell'ente (codice fiscale, denominazione, IBAN di tesoreria) di fantasia
 
 **Ricevute della delega**
 
-- Riuscito: niente
-- Fermi:
-  - R01, R02, R03, R04, R06, R07, R10, R12: non eseguito, la delega del mese non e' trasmessa
+- Riuscito:
+  - stato della delega: addebitata
+- Fermi: nessuno
 - Su dati fittizi:
+  - le tre ricevute (controlli formali, controllo dei crediti, addebito) sono simulate, tutte positive
 
 **Esito versato**
 
-- Riuscito: niente
-- Fermi:
-  - R01, R02, R03, R04, R06, R07, R10, R12: non eseguito, la delega del mese non e' trasmessa
+- Riuscito:
+  - esito versato 24: 58 righe, 7030.04 versati il 2027-01-18
+  - righe ancora da versare nel mese: 0
+- Fermi: nessuno
 - Su dati fittizi:
+  - l'addebito e' simulato dal percorso, alla data di versamento scelta
 
 ## Difetti del nucleo trovati
 
@@ -472,4 +489,5 @@ Nessuno trovato.
 ## File prodotti
 
 - `f24ep-2026-03.txt`
+- `f24ep-2026-12.txt`
 - `lista-pos-pa-2026-03.xml`
