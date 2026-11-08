@@ -592,8 +592,8 @@ def _servizio_al(registro: Registro, corpus: Corpus, rapporto: str, giorno: date
 def _chiudi_il_mese(
     registro: Registro, corpus: Corpus, rapporto: str, mese: Mese, istante: datetime, riporto: dict[str, Importo]
 ) -> None:
-    """Un riporto aperto con il servizio finito: attende il rientro se e' sospensione, ferma se e' cessazione."""
-    if not riporto or _servizio_al(registro, corpus, rapporto, mese.ultimo_giorno, istante):
+    """Un riporto aperto con il servizio finito entro il mese: attende il rientro se e' sospensione, ferma se e' cessazione."""
+    if not riporto or _servizio_al(registro, corpus, rapporto, mese.ultimo_giorno + timedelta(days=1), istante):
         return
     ultimo, fine = _fine_del_servizio(registro, corpus, rapporto, mese.ultimo_giorno, istante)
     if fine == CESSAZIONE:

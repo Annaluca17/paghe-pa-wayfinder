@@ -526,6 +526,85 @@ def test_il_residuo_che_non_entra_nemmeno_nel_mese_dopo_continua(registro, casi,
     assert novembre.riporti == ()
 
 
+def sospeso_con_recupero(registro, casi, orologio):
+    """Servizio fino al 30/09, sospensione dal 01/10; a novembre da sospeso si recupera -200 sul pagato di settembre."""
+    assumi(registro, al=date(2026, 9, 30))
+    sospendi(registro, date(2026, 10, 1))
+    registro.registra_fatto(R, "una_tantum", "300", date(2026, 9, 5), date(2026, 9, 5))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 9)), date(2026, 9, 25))
+    orologio.vai(11, 2)
+    registro.registra_fatto(R, "una_tantum", "100", date(2026, 9, 5), date(2026, 9, 5))
+    recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 9), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero, date(2026, 11, 20))
+
+
+def rientra(registro, giorno, al=None):
+    """Il rientro e' un nuovo fatto di servizio."""
+    registro.registra_codice(R, "tipo_impiego", "1", giorno, al)
+    registro.registra_codice(R, "area", "bassa", giorno, al)
+
+
+def test_recupero_pagato_da_sospeso_non_entra_nella_denuncia_e_aspetta_il_rientro(registro, casi, orologio):
+    sospeso_con_recupero(registro, casi, orologio)
+    denuncia = calcola_denuncia(registro, casi, R, Mese(2026, 11))
+    assert denuncia.periodi == ()
+    residuo, = denuncia.riporti
+    assert (residuo.istituto, residuo.valore) == ("riporto.pens", Decimal("-200"))
+
+
+def test_recupero_da_sospeso_si_detrae_dal_primo_periodo_dopo_il_rientro(registro, casi, orologio):
+    sospeso_con_recupero(registro, casi, orologio)
+    rientra(registro, date(2026, 12, 1))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 12)), date(2026, 12, 18))
+    denuncia = calcola_denuncia(registro, casi, R, Mese(2026, 12))
+    periodo, = denuncia.periodi
+    assert periodo.base("pens").valore == Decimal("800.00")
+    assert denuncia.riporti == ()
+
+
+def test_riporto_aperto_alla_sospensione_aspetta_il_rientro(registro, casi, orologio):
+    assumi(registro, al=date(2026, 9, 30))
+    registro.registra_fatto(R, "una_tantum", "300", date(2026, 9, 5), date(2026, 9, 5))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 9)), date(2026, 9, 25))
+    orologio.vai(10, 2)
+    registro.registra_fatto(R, "una_tantum", "0", date(2026, 9, 5), date(2026, 9, 5))
+    # Il recupero e' pagato da sospeso solo dopo: qui il servizio finisce con un riporto gia' aperto.
+    registro.registra_codice(R, "tipo_impiego", "1", date(2026, 10, 1), date(2026, 10, 31))
+    registro.registra_codice(R, "area", "bassa", date(2026, 10, 1), date(2026, 10, 31))
+    sospendi(registro, date(2026, 11, 1))
+    recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 9), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero, date(2026, 10, 10))
+    ottobre = calcola_denuncia(registro, casi, R, Mese(2026, 10))
+    assert ottobre.periodi[0].base("pens").valore == Decimal("0")
+    assert ottobre.riporti[0].valore == Decimal("-300")
+    rientra(registro, date(2026, 12, 1))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 12)), date(2026, 12, 18))
+    assert calcola_denuncia(registro, casi, R, Mese(2026, 11)).riporti[0].valore == Decimal("-300")
+    dicembre = calcola_denuncia(registro, casi, R, Mese(2026, 12))
+    assert dicembre.periodi[0].base("pens").valore == Decimal("700.00")
+
+
+def test_riporto_ancora_aperto_alla_cessazione_ferma_e_nomina_il_caso(registro, casi, orologio):
+    assumi(registro, al=date(2026, 9, 30))
+    cessa(registro, date(2026, 10, 1))
+    registro.registra_fatto(R, "una_tantum", "300", date(2026, 8, 5), date(2026, 8, 5))
+    paga(registro, orologio, stipendi(registro, casi, Mese(2026, 8)), date(2026, 8, 27))
+    orologio.vai(9, 2)
+    registro.registra_fatto(R, "una_tantum", "0", date(2026, 8, 5), date(2026, 8, 5))
+    recupero = [voce.importo() for voce in differenze(registro, casi, R, Mese(2026, 8), TipoEsito.PAGATO)]
+    paga(registro, orologio, recupero, date(2026, 9, 10))
+    with pytest.raises(CasoNonModellato, match="riporto del recupero ancora aperto alla cessazione.*riporto.pens"):
+        calcola_denuncia(registro, casi, R, Mese(2026, 9))
+
+
+def test_riporto_aperto_alla_cessazione_dopo_una_sospensione_ferma(registro, casi, orologio):
+    sospeso_con_recupero(registro, casi, orologio)
+    rientra(registro, date(2026, 12, 1), date(2026, 12, 31))
+    cessa(registro, date(2027, 1, 1))
+    with pytest.raises(CasoNonModellato, match="riporto del recupero ancora aperto alla cessazione"):
+        calcola_denuncia(registro, casi, R, Mese(2026, 12))
+
+
 def test_recupero_fuori_servizio_senza_servizio_precedente_ferma(registro, casi, orologio):
     assumi(registro, dal=date(2026, 12, 1))
     registro.registra_fatto(R, "una_tantum", "-50", date(2026, 12, 1), date(2026, 12, 1))
