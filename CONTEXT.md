@@ -462,6 +462,18 @@ _Avoid_: F24 (senza dire quale), modello F24EP mensile, tracciato F24EP (che è 
 Credito del sostituto (rimborso da assistenza fiscale, trattamento integrativo e simili) che una regola ricava dagli esiti pagati, dalla natura della riga di composizione e qualunque sia il suo canale, e porta come riga a credito nella delega della stessa scadenza. Il rimborso resta una sola riga, sul netto del lavoratore. La parte non assorbita passa alla scadenza successiva come fatto con la sua origine.
 _Avoid_: Credito residuo (senza dire di quale scadenza), compensazione automatica
 
+**Acconto IRAP**:
+Istituto a carico dell'ente calcolato ogni mese sulla base IRAP dei pagamenti del mese, per regione della sede di lavoro, e versato nella delega del mese dopo. Il saldo annuale e la dichiarazione non ne fanno parte.
+_Avoid_: IRAP (quando si intende solo l'acconto del mese), IRAP retributiva
+
+**Sede di lavoro**:
+Fatto datato sul rapporto che dice dove la persona lavora e da cui l'IRAP ricava la regione. Se manca vale la regione dell'ente. Non è il domicilio fiscale, che serve alle addizionali.
+_Avoid_: Residenza, sede dell'ente (quando si intende quella della persona)
+
+**Esclusione dalla base IRAP**:
+Fatto datato sul rapporto, con il motivo (disabile, apprendista, CFL), che toglie la persona dalla base dell'acconto IRAP.
+_Avoid_: Esenzione IRAP, deduzione IK4 (che è il rigo della dichiarazione)
+
 **Data di versamento**:
 Fatto scelto dall'Ufficio personale per una delega F24EP. Il modello avvisa se cade dopo la scadenza che la regola ricava. Non è la data dell'esito versato, che viene dall'evento di ritorno.
 _Avoid_: Scadenza (che è della regola), data di pagamento (che è dei netti)

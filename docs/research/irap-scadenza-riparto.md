@@ -161,6 +161,49 @@ Regola generale. Le istruzioni AdE e la risoluzione 29/E del 2010 dicono due cos
 10. **Enti fuori dall'F24EP (codice 3858, D.M. art. 1 c. 6).** Opzioni: (a) fuori ambito, con dato dell'ente che dice quale modello usa; (b) il modello emette anche il 3858. Raccomandazione: **(a)**, perché l'ADR 0013 limita l'F24EP al target e la differenza è solo di codice.
 11. **Riferimenti normativi dal 01/01/2027.** Opzioni: (a) regola datata con due fonti: art. 32-ter DL 185/2008 e art. 4 D.Lgs. 33/2025; (b) solo la fonte nuova da subito. Raccomandazione: **(a)**, come già deciso con l'ADR 0022; l'art. 10-bis resta citato col vecchio TUIR e col nuovo da 2027, una riga di tabella.
 
+## Personale e somme escluse dalla base IRAP (metodo retributivo)
+
+Domanda: per un ente col metodo dell'art. 10-bis, quali persone o somme restano fuori dalla base, o si deducono? Fonti lette in questa sessione: art. 11 D.Lgs. 446/1997 su Normattiva (letto **in sintesi**, non parola per parola: lo strumento non restituisce il testo intero) e istruzioni IRAP 2026 **bozza** (PDF, sezione «amministrazioni pubbliche», righi IK1-IK4 e IS7), già citate sopra. Non lette: risoluzioni AdE 142/E del 2004, 64/E e 139/E del 2006 (disabili), 327/E del 2007 (avvocatura), 274/E del 2007. Il vault non è stato usato.
+
+Regola di base. L'art. 10-bis c. 1 costruisce una base di **cassa** fatta di somme erogate: righi IK1 (dipendenti), IK2 (assimilati), IK3 (lavoro autonomo occasionale). Le **deduzioni** non sono nella base: stanno nel rigo IK4 e si sottraggono dopo. Quindi «escluso» e «dedotto» sono due cose diverse nel modello: la prima non entra nel calcolo, la seconda entra e poi esce.
+
+| Categoria | Trattamento | Fonte e marcatura |
+|---|---|---|
+| **Disabili** (L. 68/1999 o L. 482/1968) | **Deducibili** le spese per il personale disabile impiegato nel periodo, per intero. Vale per le PA: l'art. 11 c. 1 lett. a n. 5 richiama espressamente chi determina la base con l'art. 10-bis c. 1, e le istruzioni lo mettono nel rigo IK4 colonna 2. La somma sta prima nella base (IK1) e poi si deduce (IK4) | Rinvio dell'art. 11 a 10-bis c. 1: **norma certa** nel contenuto, ma testo letto in sintesi. Rigo IK4: **prassi** (istruzioni 2026, bozza). Dettaglio dei limiti (risoluzioni 64/E e 139/E del 2006): **da verificare**, non lette |
+| **Apprendisti** | Deducibili per intero come i disabili, stesso rigo IK4 colonna 2 | **norma certa** (art. 11, in sintesi) + **prassi** (IK4) |
+| **Contratti di formazione e lavoro** | Deducibili, rigo IK4 colonna 3. Per una PA oggi è un caso raro | **norma certa** (in sintesi) + **prassi** (IK4) |
+| **Personale addetto a ricerca e sviluppo** | Il n. 5 prevede una deduzione per questo personale, ma il rigo IK4 delle PA **non** ha una colonna per esso (ha solo ricercatori e docenti rientrati dall'estero, art. 44 DL 78/2010, col. 1, con limiti de minimis). Non risulta applicabile alle PA | **da verificare**: letto solo il riassunto del n. 5, che lo lega ai soggetti delle lett. a-e dell'art. 3. Il testo parola per parola va riletto. Nessuna prassi favorevole alle PA trovata |
+| **Deduzione costo del lavoro a tempo indeterminato (art. 11 c. 4-octies)** | **Non vale** per il metodo retributivo. Le istruzioni (rigo IS7) la riconoscono ai soggetti degli artt. 5-9. Nel quadro IK compare solo in IK20 col. 5 e IK24 col. 4, cioè per la sezione delle attività commerciali con opzione e per l'agricoltura. Nessun cambio nel 2025-2026 trovato nel testo letto (ultima modifica: DL 73/2022) | **prassi** (IS7 e IK20) + **norma certa** (rinvio agli artt. 5-9, in sintesi). Altre deduzioni generali (c. 4-bis, 4-bis.1): per le lett. a-e dell'art. 3 e per chi ha ricavi bassi, non per la lett. e-bis: **da verificare** sul testo |
+| **Contributi INAIL** | Per la sezione IK delle PA non c'è un rigo di deduzione in IK4. Gli oneri a carico dell'ente non sono retribuzione erogata e restano fuori dalla base | Lettura del testo: **da verificare**. Il n. 1 INAIL compare solo nelle sezioni commerciali (IK20 col. 2) |
+| **Borse di studio esenti IRPEF** | **Escluse** dalla base (somme art. 50 c. 1 lett. c TUIR esenti) | **norma certa** (art. 10-bis c. 1) + **prassi** (IK2) |
+| **Borse e interventi per il diritto allo studio universitario (L. 390/1991)** | **Escluse** sempre, se erogate da regioni, province autonome, organismi regionali o università | **norma certa** + **prassi** (IK2). Per un comune è un caso raro |
+| **TFR** | **Escluso**: non è soggetto a contribuzione, e per i dipendenti conta solo l'imponibile previdenziale | **prassi** (IK1: «ad esempio T.f.r.»). L'art. 10-bis non lo dice in modo espresso |
+| **TFS, indennità premio di servizio, buonuscita** | Stessa logica del TFR (non imponibile previdenziale), quindi fuori dalla base. Nessun documento letto li nomina | **da verificare** (deduzione per analogia con la riga sul TFR) |
+| **Indennità di fine mandato (amministratori)** | **Dentro**, come assimilato, ridotta di 309,87 euro per anno di mandato (vedi tema 4) | **prassi** (risoluzione 29/E del 2010, già letta) |
+| **Indennità di trasferta e rimborsi spese** | Concorrono solo per la parte che è imponibile previdenziale. Se il rimborso è fuori dall'imponibile previdenziale (limiti di legge), resta fuori. Le istruzioni non li nominano per le PA | **da verificare**. Lettura dalla regola «imponibile ai fini previdenziali» (IK1). Per gli assimilati vale l'importo IRPEF: **da verificare** nel caso dei rimborsi |
+| **Somme non erogate** (es. giorni di sciopero, pur assoggettati a contributi) | **Fuori** dalla base: conta l'erogazione | **prassi** (IK1) |
+| **Arretrati di anni precedenti** | Il criterio è di **cassa**: conta quando sono pagati, non l'anno di competenza. Quindi un arretrato pagato nel 2026 entra nella base del 2026, per l'importo imponibile previdenziale. Nessun testo letto fa eccezioni | **prassi** (IK1: «principio di cassa») + **norma certa** («retribuzioni erogate»). Applicazione agli arretrati: **da verificare** |
+| **Personale in comando** | L'IRAP la paga chi eroga la retribuzione e chi rimborsa nel momento del rimborso: resta come regola prudente. Un testo che dica «comando = distacco» non è stato letto | **da verificare** |
+| **Personale in distacco** | Gli oneri concorrono alla base **dell'ente che impiega** il distaccato, e conta il momento in cui rimborsa il distaccante. Nel riparto, le retribuzioni del distaccato presso terzi si escludono | **prassi** (IK1; riparto già in tema 3) |
+| **Rimborsi tra enti (quota stipendio al comune ospite)** | Segue il distacco: concorre all'ente che rimborsa, nell'anno del rimborso. Il distaccante non lo conta due volte | **prassi** per il distacco; applicazione ai rimborsi di convenzione: **da verificare** |
+| **Personale interinale** | Gli oneri concorrono alla base (rigo IK1) | **prassi** |
+| **Avvocatura interna** | I compensi professionali concorrono come retribuzioni (risoluzione 327/E del 2007, citata nelle istruzioni, non letta) | **prassi** (istruzioni) |
+| **Uffici all'estero per almeno tre mesi** | Le somme **non** vanno in IK1, IK2, IK3 | **prassi** (istruzioni, già in tema 3). Qui «fuori del territorio nazionale»; per un comune è caso raro |
+| **Attività commerciale con opzione (art. 10-bis c. 2)** | Gli emolumenti si riducono della parte riferibile all'attività commerciale (importo specifico oppure quota ricavi / entrate correnti). Chi opta passa all'art. 5 per quelle attività (opzione nel quadro IS, rigo IS34). Stessa quota per le spese di IK4 | **norma certa** (art. 10-bis c. 2) + **prassi** (istruzioni). Fuori dal modello per ora |
+
+Cose da non confondere.
+
+- **Escluso non vuol dire dedotto.** Le borse di studio e il TFR non entrano nel conto. Disabili e apprendisti entrano (sono stipendi) e poi si deducono in IK4. Per il programma sono due regole diverse: un filtro sul titolo e una deduzione sul lavoratore.
+- **Il disabile conta due volte** nel flusso dati: la retribuzione va in IK1 per intero, la deduzione in IK4 per le spese relative a lui. Se la spesa deducibile supera la retribuzione, lo scoperto non è indicato dalle istruzioni PA: **da verificare**.
+- **Le istruzioni sono una bozza.** Le citazioni dei righi vengono dal file di gennaio 2026; la versione definitiva può cambiare i numeri dei righi, difficilmente la regola.
+
+### Esito per il grilling
+
+1. **Disabili, apprendisti, CFL: dedurre o no.** Opzioni: (a) il modello calcola la base lorda IK1+IK2+IK3 e mostra la deduzione IK4 se il dato del lavoratore dice «disabile» o «apprendista»; (b) ignora la deduzione; (c) segnala solo un avviso. Raccomandazione: **(a)**, perché la fonte è chiara (art. 11 c. 1 lett. a n. 5, rigo IK4) e il dato è un fatto datato sul rapporto; limiti fini (risoluzioni 64/E e 139/E) **da verificare** prima di fissare la regola.
+2. **R&D e art. 11 c. 4-octies.** Opzioni: (a) non applicarli al metodo retributivo; (b) applicarli; (c) fermo. Raccomandazione: **(a)**, perché il 4-octies è escluso dalle istruzioni (IS7) e il R&D non ha rigo nel quadro PA; segnare la rilettura del testo parola per parola dell'art. 11 come **da verificare**.
+3. **Titoli fuori base e arretrati.** Opzioni: (a) filtro sul titolo (borse esenti, TFR, TFS, somme non erogate fuori) e cassa per gli arretrati; (b) filtro e arretrati per competenza; (c) tutto in base con avviso. Raccomandazione: **(a)**, perché il principio di cassa e l'esclusione del TFR sono nelle istruzioni; TFS, trasferte e arretrati restano «prassi da verificare» nell'ADR.
+4. **Comando e rimborsi tra enti.** Opzioni: (a) IRAP a chi eroga e a chi rimborsa, come il distacco; (b) sempre all'ente di appartenenza; (c) fermo. Raccomandazione: **(a)** per coerenza con la regola scritta sul distacco, con nota «comando non letto» nell'ADR 0016.
+
 ## Fonti
 
 Fonti primarie lette.
