@@ -25,6 +25,7 @@ from .formula import valuta
 from .modello import MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, Registro
 from .denuncia import MATURAZIONI_DERIVATE
+from .denuncia_individuale import IMPIEGHI_TEMPO_DETERMINATO
 from .tempo import Periodo, in_utc
 
 PERIODI_MENSILI = 12  # periodi di paga in un anno per il mese: struttura del calendario, non un valore normativo
@@ -34,6 +35,10 @@ ULTIMO_GIORNO_CONGUAGLIO = (2, 28)  # entro il 28 febbraio (art. 23 c. 3 DPR 600
 AVVISO_SENZA_DICHIARAZIONE = "senza_dichiarazione_sostituito"
 AVVISO_PROIEZIONE = "proiezione_conguaglio"
 AVVISO_ACCONTO_SENZA_BASE = "acconto_senza_base"
+AVVISO_TEMPO_DETERMINATO = "tempo_determinato_sotto_soglia"
+# Art. 13 c. 1 lett. a TUIR: sotto questo reddito complessivo il tempo determinato ha un minimo di 1.380 euro, che il
+# modello non applica (ADR 0019, ticket #93). È la soglia di un avviso, non entra in nessun calcolo.
+SOGLIA_MINIMO_TEMPO_DETERMINATO = Decimal(15000)
 
 
 @dataclass(frozen=True)
@@ -241,6 +246,7 @@ class _Calcolo:
     imponibile: Decimal
     imposta: Decimal
     detrazione: Decimal
+    detrazione_automatica: Decimal
     dovuto: Decimal
     parametri: tuple[ParametroLetto, ...]
     fatti: tuple[Fatto, ...]
@@ -254,25 +260,46 @@ def _dichiarazione(registro: Registro, persona: str, regola: RegolaRitenuta, gio
 
 
 def _calcola(
-    corpus: Corpus, regola: RegolaRitenuta, imponibile: Decimal, periodi: int, riferimento: date, dichiarazione: Fatto | None
+    corpus: Corpus,
+    regola: RegolaRitenuta,
+    imponibile: Decimal,
+    periodi: int,
+    riferimento: date,
+    dichiarazione: Fatto | None,
+    giorni: int = 1,
+    giorni_anno: int = 1,
+    categorie: frozenset[str] = frozenset(),
 ) -> _Calcolo:
-    """Imposta, detrazione (solo con la dichiarazione) e dovuto del periodo, o dell'anno con un solo periodo."""
+    """Imposta, detrazioni e dovuto del periodo, o dell'anno con un solo periodo.
+
+    La detrazione a richiesta c'è solo con la dichiarazione, la detrazione automatica sempre. Nella ritenuta del
+    mese `giorni` e `giorni_anno` valgono 1: il rapporto è neutro e il periodo è un dodicesimo per pagamento.
+    """
     parametri: dict[str, ParametroLetto] = {}
+    valori_fisco = {
+        "imponibile": imponibile,
+        "periodi": Decimal(periodi),
+        "giorni": Decimal(giorni),
+        "giorni_anno": Decimal(giorni_anno),
+    }
 
     def risolvi(origine: str, nome: str) -> Decimal:
         if origine == "fisco":
-            return imponibile if nome == "imponibile" else Decimal(periodi)
+            return valori_fisco[nome]
         vigenza = corpus.parametro(nome).vigenza_per(Periodo(riferimento, riferimento))
         parametri[nome] = ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento)
         return vigenza.valore
 
     imposta = valuta(regola.imposta, risolvi)
     detrazione = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
+    spetta = not regola.categorie_detrazione_automatica or bool(categorie & set(regola.categorie_detrazione_automatica))
+    automatica = valuta(regola.detrazione_automatica, risolvi) if spetta else Decimal(0)
     return _Calcolo(
         imponibile,
         imposta,
         detrazione,
-        max(Decimal(0), imposta - detrazione),
+        automatica,
+        max(Decimal(0), imposta - detrazione - automatica),
         tuple(parametri[nome] for nome in sorted(parametri)),
         (dichiarazione,) if dichiarazione is not None else (),
     )
@@ -363,7 +390,10 @@ def _ritenuta(
         (riga.valore for riga in (*gia_dedotte, *deduzioni)), Decimal(0)
     )
     dichiarazione = _dichiarazione(registro, persona, regola, data_pagamento, istante)
-    calcolo = _calcola(corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione)
+    calcolo = _calcola(
+        corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione,
+        categorie=frozenset(riga.categoria_reddito for riga in (*gia_pagate, *righe)),
+    )
     operato = sum((riga.valore for riga in gia_operate), Decimal(0))
     importo = Importo(
         rapporto=rapporto,
@@ -380,7 +410,8 @@ def _ritenuta(
             formula=(
                 f"imposta del periodo = {regola.imposta}; detrazione rapportata = "
                 f"{regola.detrazione if dichiarazione is not None else 'non applicata'}; "
-                "ritenuta = imposta meno detrazione meno ritenute già operate nel periodo"
+                f"detrazione automatica = {regola.detrazione_automatica}; "
+                "ritenuta = imposta meno detrazione meno detrazione automatica meno ritenute già operate nel periodo"
             ),
             versione_corpus=corpus.versione,
             noto_al=istante,
@@ -407,6 +438,37 @@ class _Annuale:
     @property
     def valore(self) -> Decimal:
         return self.calcolo.dovuto - self.operato
+
+
+def _giorni_di_servizio(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> tuple[int, int]:
+    """Giorni di servizio della persona nell'anno d'imposta e giorni dell'anno (ADR 0019, ticket #93).
+
+    I giorni sono quelli del fatto di servizio del corpus sull'unione dei rapporti della persona, festivi compresi, e
+    nessun giorno si conta due volte. Senza fatto di servizio nel corpus la persona ha servizio tutto l'anno.
+    """
+    anno_intero = Periodo(date(anno, 1, 1), date(anno, 12, 31))
+    giorni_anno = len(anno_intero.giorni())
+    if corpus.fatto_servizio is None:
+        return giorni_anno, giorni_anno
+    in_servizio = [False] * giorni_anno
+    for rapporto in registro.rapporti_della_persona(persona, istante):
+        vigenti = registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, anno_intero, istante)
+        for indice, fatto in enumerate(vigenti):
+            if fatto is not None:
+                in_servizio[indice] = True
+    return sum(in_servizio), giorni_anno
+
+
+def _ha_tempo_determinato(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> bool:
+    """Un rapporto della persona è a tempo determinato (tipo di impiego 17 o 18) in almeno un giorno dell'anno."""
+    if corpus.fatto_servizio is None:
+        return False
+    anno_intero = Periodo(date(anno, 1, 1), date(anno, 12, 31))
+    return any(
+        fatto is not None and fatto.valore in IMPIEGHI_TEMPO_DETERMINATO
+        for rapporto in registro.rapporti_della_persona(persona, istante)
+        for fatto in registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, anno_intero, istante)
+    )
 
 
 def _annuale(
@@ -441,6 +503,7 @@ def _annuale(
     ]
     operate += list(ritenute_nuove)
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
+    giorni, giorni_anno = _giorni_di_servizio(registro, corpus, persona, anno, istante)
     calcolo = _calcola(
         corpus,
         regola_ritenuta,
@@ -448,6 +511,9 @@ def _annuale(
         1,
         riferimento,
         dichiarazione,
+        giorni,
+        giorni_anno,
+        frozenset(riga.categoria_reddito for riga in reddito),
     )
     return _Annuale(
         calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta
@@ -473,7 +539,9 @@ def _importo_conguaglio(
             formula=(
                 f"imposta dell'anno = {annuale.regola_ritenuta.imposta}; detrazione = "
                 f"{annuale.regola_ritenuta.detrazione if annuale.calcolo.fatti else 'non applicata'}; "
-                "conguaglio = imposta meno detrazione meno ritenute e conguagli già operati, con un solo periodo"
+                f"detrazione automatica = {annuale.regola_ritenuta.detrazione_automatica}; "
+                "conguaglio = imposta meno detrazione meno detrazione automatica meno ritenute e conguagli già operati, "
+                "con un solo periodo"
             ),
             versione_corpus=corpus.versione,
             noto_al=istante,
@@ -575,6 +643,20 @@ def calcola_fiscale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         conguaglio = _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
+        if annuale.calcolo.imponibile < SOGLIA_MINIMO_TEMPO_DETERMINATO and _ha_tempo_determinato(
+            registro, corpus, persona, anno, istante
+        ):
+            avvisi.append(
+                Avviso(
+                    AVVISO_TEMPO_DETERMINATO,
+                    f"Persona {persona}: rapporto a tempo determinato e imponibile {annuale.calcolo.imponibile} "
+                    f"sotto {SOGLIA_MINIMO_TEMPO_DETERMINATO}: il minimo della detrazione per il tempo determinato "
+                    "non è applicato",
+                    persona,
+                    anno,
+                    annuale.calcolo.imponibile,
+                )
+            )
         finale = corpus.regola_addizionali(riferimento) is not None and pagamento_finale(
             registro, corpus, persona, anno, data_pagamento, istante
         )

@@ -99,18 +99,16 @@ def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
         assert per_causa[f"dato mancante {dato}"]["bloccati"] == {"R08", "R09"}  # codici del tracciato non letti
     assert "part-time, riproporzionamento non modellato" not in per_causa
     assert per_causa["bozza non trasmissibile"]["bloccati"] == {"R04", "R12"}  # ListaPosPA del part-time verticale
-    # Il rimborso 730 di R07 non ferma piu' la delega di dicembre: il fermo e' il debito negativo del 100E, nominato.
-    assert not [causa for causa in per_causa if "150E" in causa]
-    (stop_debito,) = [g for causa, g in per_causa.items() if causa.startswith("debito_negativo")]
-    assert "100E" in stop_debito["causa"] and stop_debito["bloccati"] == {"R01", "R02", "R03", "R04", "R06", "R07", "R10", "R12"}
+    # Con il fisco reale (ticket #93) i conguagli a credito non superano piu' le ritenute della delega: niente debito negativo.
+    assert not [causa for causa in per_causa if "150E" in causa or causa.startswith("debito_negativo")]
 
 
 def test_il_rimborso_730_di_r07_e_sul_netto_e_credito_nella_delega_di_dicembre(esecuzione, resoconto):
     """Un esito 730-4 vero, la dichiarazione sul netto verso il beneficiario: nessun difetto del rimborso o del debito negativo."""
     assert esecuzione.difetti == []
-    assert "netto R07: 1988.79" in resoconto  # 1838.79 prima del rimborso, piu' 150.00
+    assert "netto R07: 2102.50" in resoconto  # 1952.50 prima del rimborso, piu' 150.00
     assert "R07: rimborso del 730-4: 150.00, anno dei redditi dichiarati 2025" in resoconto
-    assert "150E -150.00" in resoconto  # la riga a credito e' nella delega costruita, anche se non trasmissibile
+    assert "riga F 150E: debito 0.00, credito 150.00" in resoconto  # la riga a credito e' nella delega trasmessa
     assert "esito 730-4" in resoconto and "rimborso_irpef_730" not in resoconto
 
 
@@ -129,7 +127,7 @@ def test_il_conteggio_dei_passaggi_distingue_avvio_e_ricorrenti(esecuzione):
 
 
 def test_i_file_prodotti_sono_validi(esecuzione, uscita):
-    assert sorted(esecuzione.file_prodotti) == ["f24ep-2026-03.txt", "lista-pos-pa-2026-03.xml"]
+    assert sorted(esecuzione.file_prodotti) == ["f24ep-2026-03.txt", "f24ep-2026-12.txt", "lista-pos-pa-2026-03.xml"]
     radice = ET.parse(uscita / "lista-pos-pa-2026-03.xml").getroot()
     assert radice.tag == "DenunceMensili"
     assert len(radice.findall(".//D0_DenunciaIndividuale")) == 6
@@ -192,7 +190,7 @@ def test_la_rata_di_dicembre_non_attestata_resta_calcolata_ma_fuori_dalla_versio
     assert "R11: 1 importi, lordo 1500.00" in passi[("2026-12", "calcolo")].riuscito
     assert esecuzione.arrivi[("2026-12", "R11")] == "versione"
     assert any("escluso compenso_collaborazione di R11" in nota for nota in passi[("2026-12", "versione")].note)
-    assert esecuzione.arrivi[("2026-12", "R10")] == "delega"  # l'indennita' e la quota arrivano alla delega, ferma per il 100E
+    assert esecuzione.arrivi[("2026-12", "R10")] == "completo"  # l'indennita' e la quota arrivano alla delega e al versamento
 
 
 def test_la_lista_collaboratori_prende_solo_il_sindaco_e_il_cococo_e_la_listapospa_solo_i_dipendenti(esecuzione):

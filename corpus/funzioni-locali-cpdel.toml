@@ -2167,3 +2167,770 @@ dal = 2025-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
 piano_dei_conti = "U.1.02.01.01.001"
 origine_impegno = "automatico"
+
+# =====================================================================================================================
+# Fisco nazionale del lavoro dipendente e assimilati (ticket #93): scaglioni IRPEF, detrazioni, categorie di reddito,
+# ritenuta, conguaglio, deduzioni e parametri nazionali delle addizionali. Vigenza dal 01/01/2026 (TUIR e L. 207/2024,
+# L. 199/2025) e dal 01/01/2027 (D.Lgs. 117/2026, testo unico imposte sui redditi; D.Lgs. 33/2025 per la ritenuta).
+#
+# Ogni voce ha la sua marcatura e la sua seconda fonte, nel commento sopra:
+#   norma certa     testo letto su Normattiva con !vig=2026-11-08 e confermato da una seconda fonte
+#   prassi          criterio non scritto nel testo di legge, ma di prassi dell'Agenzia delle entrate
+#   fonte singola   valori 2027: l'unico atto indipendente dal testo del D.Lgs. 117/2026 e' il dossier del Servizio
+#                   Bilancio sull'A.G. 398, che conferma un testo compilativo senza riportare i numeri (il #82 li
+#                   rilegge con la legge di bilancio 2027 e le istruzioni AdE)
+# Restano fuori, in ticket propri: somma esente e trattamento integrativo (#95), sostitutiva 15% (#96), art. 13 c. 5 (#97),
+# art. 12 (#98), incapienza (#99). Le aliquote di comuni e regioni reali non sono qui.
+# =====================================================================================================================
+
+# --- Scaglioni IRPEF: art. 11 c. 1 TUIR (L. 199/2025 art. 1 c. 3 porta il secondo scaglione dal 35% al 33%) ---
+
+# limite del primo scaglione (23%): norma certa; seconda fonte: tema Camera «L'IRPEF» (21/07/2026) e art. 11 c. 1 D.Lgs. 117/2026
+[[parametro]]
+nome = "irpef_limite_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:legge:2025-12-30;199~art1-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# limite del secondo scaglione (33%): norma certa; seconda fonte: tema Camera «L'IRPEF» (21/07/2026) e art. 11 c. 1 D.Lgs. 117/2026
+[[parametro]]
+nome = "irpef_limite_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "50000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:legge:2025-12-30;199~art1-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "50000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# aliquota del primo scaglione: norma certa; seconda fonte: tema Camera «L'IRPEF» (21/07/2026) e art. 11 c. 1 D.Lgs. 117/2026
+[[parametro]]
+nome = "irpef_aliquota_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.23"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:legge:2025-12-30;199~art1-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "0.23"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# aliquota del secondo scaglione: norma certa; seconda fonte: tema Camera «L'IRPEF» (21/07/2026) e art. 11 c. 1 D.Lgs. 117/2026
+[[parametro]]
+nome = "irpef_aliquota_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.33"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:legge:2025-12-30;199~art1-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "0.33"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# aliquota oltre il secondo scaglione: norma certa; seconda fonte: tema Camera «L'IRPEF» (21/07/2026) e art. 11 c. 1 D.Lgs. 117/2026
+[[parametro]]
+nome = "irpef_aliquota_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.43"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:legge:2025-12-30;199~art1-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "0.43"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# --- Detrazione per lavoro dipendente: art. 13 c. 1 TUIR (dal 2027 art. 13 c. 1 TU) ---
+
+# art. 13 c. 1 lett. a): detrazione fino al limite della fascia: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_importo_a"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "1955"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "1955"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-leta"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. a): importo minimo effettivamente spettante (a tempo determinato 1.380: avviso, non applicato): norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_minimo_a"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "690"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "690"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-leta"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. a): reddito complessivo che non si supera: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_soglia_a"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-leta"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. b) e c): importo di base: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_importo_b_c"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "1910"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "1910"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-letb"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. b): quota proporzionale: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_integrazione_b"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "1190"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "1190"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-letb"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. b): reddito complessivo che non si supera: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_soglia_b"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-letb"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. b): divisore: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_divisore_b"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "13000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "13000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-letb"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. c): reddito complessivo che non si supera: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_soglia_c"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "50000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-letc"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "50000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-letc"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1 lett. c): divisore: norma certa; seconda fonte: istruzioni 770/2026, tabella 6, e tema Camera «L'IRPEF» (anno 2025 per l'AdE)
+[[parametro]]
+nome = "art13_divisore_c"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "22000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1-letc"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "22000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-letc"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# --- Aumento di 65 euro: art. 13 c. 1.1 TUIR (dal 2027 art. 13 c. 2 TU) ---
+
+# art. 13 c. 1.1 importo dell'aumento: norma certa; seconda fonte: istruzioni 770/2026, tabella 6 nota 4
+[[parametro]]
+nome = "art13_aumento"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "65"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1.1"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "65"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com2"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1.1 reddito complessivo che si deve superare: norma certa; seconda fonte: istruzioni 770/2026, tabella 6 nota 4
+[[parametro]]
+nome = "art13_aumento_da"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "25000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1.1"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "25000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com2"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# art. 13 c. 1.1 reddito complessivo che non si supera: norma certa; seconda fonte: istruzioni 770/2026, tabella 6 nota 4
+[[parametro]]
+nome = "art13_aumento_fino_a"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "35000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1.1"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "35000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com2"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# --- Ulteriore detrazione: L. 207/2024 art. 1 c. 6 (dal 2027 art. 13 c. 10 TU), riconosciuta in via automatica (c. 7) ---
+
+# ulteriore detrazione, importo: norma certa; seconda fonte: istruzioni CU 2026 punto 368 (anno 2025, stessi valori) e tema Camera «L'IRPEF»
+[[parametro]]
+nome = "ulteriore_importo"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "1000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com6"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "1000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com10"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# ulteriore detrazione, reddito complessivo che si deve superare: norma certa; seconda fonte: istruzioni CU 2026 punto 368 (anno 2025, stessi valori) e tema Camera «L'IRPEF»
+[[parametro]]
+nome = "ulteriore_soglia_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "20000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com6"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "20000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com10"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# ulteriore detrazione, limite dell'importo pieno: norma certa; seconda fonte: istruzioni CU 2026 punto 368 (anno 2025, stessi valori) e tema Camera «L'IRPEF»
+[[parametro]]
+nome = "ulteriore_soglia_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "32000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com6"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "32000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com10"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# ulteriore detrazione, limite dell'importo decrescente: norma certa; seconda fonte: istruzioni CU 2026 punto 368 (anno 2025, stessi valori) e tema Camera «L'IRPEF»
+[[parametro]]
+nome = "ulteriore_soglia_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "40000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com6"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "40000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com10"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# ulteriore detrazione, divisore dell'importo decrescente: norma certa; seconda fonte: istruzioni CU 2026 punto 368 (anno 2025, stessi valori) e tema Camera «L'IRPEF»
+[[parametro]]
+nome = "ulteriore_divisore"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "8000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com6"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "8000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com10"
+# 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# --- Categorie di reddito: cassa allargata, somme corrisposte entro il 12 gennaio all'anno prima ---
+# Norma certa: art. 51 c. 1 TUIR; per gli assimilati l'art. 52 c. 1 rinvia all'art. 51 (deroghe tassative, nessuna per c-bis e g).
+# Seconda fonte: istruzioni CU 2026 punto 45. Dal 2027 art. 53 c. 1 e art. 54 c. 1 D.Lgs. 117/2026 (fonte singola, norma certa).
+
+[[categoria_reddito]]
+nome = "lavoro_dipendente"
+[[categoria_reddito.cassa_allargata]]
+dal = 2026-01-01
+al = 2026-12-31
+vale = true
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com1"
+[[categoria_reddito.cassa_allargata]]
+dal = 2027-01-01
+vale = true
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com1"
+
+[[categoria_reddito]]
+nome = "collaborazione"
+[[categoria_reddito.cassa_allargata]]
+dal = 2026-01-01
+al = 2026-12-31
+vale = true
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art52-com1"
+[[categoria_reddito.cassa_allargata]]
+dal = 2027-01-01
+vale = true
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art54-com1"
+
+[[categoria_reddito]]
+nome = "carica_elettiva"
+[[categoria_reddito.cassa_allargata]]
+dal = 2026-01-01
+al = 2026-12-31
+vale = true
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art52-com1"
+[[categoria_reddito.cassa_allargata]]
+dal = 2027-01-01
+vale = true
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art54-com1"
+
+# --- Ritenuta e conguaglio dell'IRPEF ---
+# Il reddito della fascia e' l'imponibile del periodo per i periodi dell'anno (nel conguaglio, l'imponibile dell'anno).
+# L'imposta e' la somma dei tratti degli scaglioni ragguagliati al periodo, arrotondata al centesimo. La detrazione dell'art. 13
+# c. 1 (con l'aumento del c. 1.1) si applica solo con la dichiarazione del sostituito (art. 23 c. 2 D.P.R. 600/1973); l'ulteriore
+# detrazione si applica sempre (L. 207/2024 c. 7). Rapportate al periodo di lavoro: nel conguaglio giorni di servizio / giorni
+# dell'anno (prassi: circolare AdE 15/E 2007, istruzioni 730/2026; il testo dice solo «rapportata al periodo di lavoro»); il
+# minimo di 690 euro si applica dopo il rapporto e solo con reddito fino a 15.000. Nella ritenuta del mese i giorni non pesano.
+# Marcatura: norma certa per scaglioni e importi, prassi per il criterio dei giorni. Il minimo di 1.380 per il tempo determinato
+# non e' applicato: lo segnala un avviso.
+# I rapporti delle fasce b) e c) si troncano alle prime quattro cifre decimali (art. 13 c. 6 TUIR, c. 8 TU; troncamento:
+# prassi-interpretazione, da verificare). L'ulteriore detrazione spetta solo con reddito di lavoro dipendente (L. 207/2024 c. 6).
+
+[[ritenuta]]
+istituto = "ritenuta_irpef"
+versione = 1
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-leta + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1"
+categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
+detrazione_richiesta = "lavoro_dipendente"
+categorie_detrazione_automatica = ["lavoro_dipendente"]
+imposta = '''arrotonda(
+    (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
+     + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
+     + parametro.irpef_aliquota_3 * max(0, (fisco.imponibile * fisco.periodi) - parametro.irpef_limite_2)) / fisco.periodi, 2)'''
+detrazione = '''arrotonda(
+    se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_a,
+       max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a),
+       (se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_b,
+           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b, 4),
+           se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_c,
+              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c, 4),
+              0))
+        + se((fisco.imponibile * fisco.periodi) > parametro.art13_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
+       * fisco.giorni / fisco.giorni_anno) / fisco.periodi, 2)'''
+detrazione_automatica = '''arrotonda(
+    se((fisco.imponibile * fisco.periodi) > parametro.ulteriore_soglia_1,
+       se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_2,
+          parametro.ulteriore_importo,
+          se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_3,
+             parametro.ulteriore_importo * (parametro.ulteriore_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.ulteriore_divisore,
+             0)),
+       0) * fisco.giorni / fisco.giorni_anno / fisco.periodi, 2)'''
+
+[[conguaglio]]
+istituto = "conguaglio_irpef"
+versione = 1
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com3 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1"
+
+[[ritenuta]]
+istituto = "ritenuta_irpef"
+versione = 2
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1"
+categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
+detrazione_richiesta = "lavoro_dipendente"
+categorie_detrazione_automatica = ["lavoro_dipendente"]
+imposta = '''arrotonda(
+    (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
+     + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
+     + parametro.irpef_aliquota_3 * max(0, (fisco.imponibile * fisco.periodi) - parametro.irpef_limite_2)) / fisco.periodi, 2)'''
+detrazione = '''arrotonda(
+    se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_a,
+       max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a),
+       (se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_b,
+           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b, 4),
+           se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_c,
+              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c, 4),
+              0))
+        + se((fisco.imponibile * fisco.periodi) > parametro.art13_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
+       * fisco.giorni / fisco.giorni_anno) / fisco.periodi, 2)'''
+detrazione_automatica = '''arrotonda(
+    se((fisco.imponibile * fisco.periodi) > parametro.ulteriore_soglia_1,
+       se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_2,
+          parametro.ulteriore_importo,
+          se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_3,
+             parametro.ulteriore_importo * (parametro.ulteriore_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.ulteriore_divisore,
+             0)),
+       0) * fisco.giorni / fisco.giorni_anno / fisco.periodi, 2)'''
+
+[[conguaglio]]
+istituto = "conguaglio_irpef"
+versione = 2
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1"
+
+# --- Deduzioni fiscali: i contributi a carico del lavoratore non concorrono al reddito ---
+# Norma certa: art. 51 c. 2 lett. a) TUIR; per la gestione separata anche l'art. 52 c. 1 (collaboratori). Seconda fonte:
+# istruzioni CU 2026 punto 441 (per i contributi di legge). Dal 2027 art. 53 c. 2 lett. a) D.Lgs. 117/2026 (fonte singola).
+
+[[deduzione_fiscale]]
+istituto = "cpdel_lavoratore"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "cpdel_lavoratore"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "fondo_credito"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "fondo_credito"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "tfs_lavoratore"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "tfs_lavoratore"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "contributo_aggiuntivo"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "contributo_aggiuntivo"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com2-leta"
+
+[[deduzione_fiscale]]
+istituto = "gs_lavoratore"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art51-com2-leta + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art52-com1"
+
+[[deduzione_fiscale]]
+istituto = "gs_lavoratore"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com2-leta + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art54-com1"
+
+# --- Addizionali: parametri nazionali e regola (ADR 0029). Le aliquote di comuni e regioni sono dichiarazioni a parte. ---
+
+# Acconto comunale al 30% dell'addizionale dell'anno prima: norma certa, art. 1 c. 4 D.Lgs. 360/1998; seconda fonte: circolare AdE 15/E 2007 par. 3.4
+[[parametro]]
+nome = "addizionale_acconto_percentuale"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.30"
+riferimento = "urn:nir:stato:decreto.legislativo:1998-09-28;360~art1-com4 + prassi:ade:circolare:2007-03-16;15-E~par3.4"
+
+# Primo mese dell'acconto (marzo): norma certa, art. 1 c. 5 D.Lgs. 360/1998 (nove rate mensili dal mese di marzo); seconda fonte: circolare AdE 15/E 2007 par. 3.4
+[[parametro]]
+nome = "addizionale_mese_prima_rata_acconto"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "3"
+riferimento = "urn:nir:stato:decreto.legislativo:1998-09-28;360~art1-com5 + prassi:ade:circolare:2007-03-16;15-E~par3.4"
+
+# Ultimo mese delle rate (novembre): il testo dice «non oltre il periodo di paga per il quale le ritenute sono versate nel mese di dicembre».
+# Marcatura: prassi, il periodo di paga e' novembre. Seconda fonte: istruzioni 730/2026, quadro F colonna 7 (per analogia, rate del 730).
+[[parametro]]
+nome = "addizionale_mese_ultima_rata"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "11"
+riferimento = "urn:nir:stato:decreto.legislativo:1998-09-28;360~art1-com5 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art50-com4"
+
+# Regola delle addizionali: norma certa (art. 1 c. 4-5 D.Lgs. 360/1998, art. 50 D.Lgs. 446/1997); seconda fonte: circolare AdE 15/E 2007 par. 3.4.
+# Il D.Lgs. 117/2026 non tocca queste norme: nessuna seconda versione dal 2027.
+[[addizionale]]
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1998-09-28;360~art1-com4 + urn:nir:stato:decreto.legislativo:1998-09-28;360~art1-com5 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art50-com4 + prassi:ade:circolare:2007-03-16;15-E~par3.4"
+percentuale_acconto = "addizionale_acconto_percentuale"
+mese_prima_rata_acconto = "addizionale_mese_prima_rata_acconto"
+mese_ultima_rata = "addizionale_mese_ultima_rata"
+regionale_dovuta = "addizionale_regionale_dovuta"
+comunale_dovuta = "addizionale_comunale_dovuta"
+regionale = "addizionale_regionale"
+comunale_saldo = "addizionale_comunale_saldo"
+comunale_acconto = "addizionale_comunale_acconto"
+regionale_credito = "addizionale_regionale_credito"
+comunale_credito = "addizionale_comunale_credito"
+
+# --- Dichiarazioni di reddito: la categoria dell'istituto ---
+# Dipendente: art. 49 TUIR (dal 2027 art. 51 D.Lgs. 117/2026); compenso di collaborazione: art. 50 c. 1 lett. c-bis) (dal 2027
+# art. 52 c. 1 lett. d)); indennita' di funzione degli amministratori: art. 50 c. 1 lett. g) (dal 2027 art. 52 c. 1 lett. i)).
+# Norma certa; seconda fonte: istruzioni CU 2026 (punti 1-2 e 4). Gli istituti fittizi (performance) restano nel corpus fittizio.
+
+[[reddito]]
+istituto = "tabellare_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tabellare_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tabellare_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tabellare_operatori"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_operatori"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "comparto_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "comparto_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "comparto_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "comparto_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "comparto_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "comparto_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "comparto_operatori"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "comparto_operatori"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tabellare_dirigenti"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_dirigenti"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "posizione_dirigenti"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "posizione_dirigenti"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tabellare_segretario_a"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_segretario_a"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tabellare_segretario_b"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_segretario_b"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tabellare_segretario_c"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tabellare_segretario_c"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "posizione_segretario"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "posizione_segretario"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "compenso_collaborazione"
+categoria = "collaborazione"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art50-com1-letcbis"
+
+[[reddito]]
+istituto = "compenso_collaborazione"
+categoria = "collaborazione"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art52-com1-letd"
+
+[[reddito]]
+istituto = "indennita_funzione"
+categoria = "carica_elettiva"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art50-com1-letg"
+
+[[reddito]]
+istituto = "indennita_funzione"
+categoria = "carica_elettiva"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art52-com1-leti"
+
+[[reddito]]
+istituto = "dimezzamento_indennita"
+categoria = "carica_elettiva"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art50-com1-letg"
+
+[[reddito]]
+istituto = "dimezzamento_indennita"
+categoria = "carica_elettiva"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art52-com1-leti"
+
