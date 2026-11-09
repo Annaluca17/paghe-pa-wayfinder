@@ -30,9 +30,11 @@ def test_un_rapporto_a_tempo_indeterminato_non_ha_la_denuncia_individuale(regist
     assert denuncia_individuale(registro, corpus, R, MARZO) is None
 
 
-def in_servizio_con(registro, impiego, area="istruttori"):
+def in_servizio_con(registro, impiego, area="istruttori", qualifica_inps="impiegato"):
     assumi(registro, area=area, senza=("tipo_impiego",))
     registro.registra_codice(R, "tipo_impiego", impiego, date(2026, 1, 1))
+    if qualifica_inps is not None:  # fatto del rapporto, inserito all'assunzione (grilling del #87)
+        registro.registra_codice(R, "qualifica_inps", qualifica_inps, date(2026, 1, 1))
 
 
 @pytest.mark.parametrize("impiego", ["48", "49", "52", "53"])
@@ -187,11 +189,36 @@ def test_un_valore_senza_mappatura_nel_corpus_e_un_dato_mancante_che_la_nomina(r
     assert "mappatura Qualifica3 (termine_per_sostituzione=si)" in [d.fatto for d in vista.mancanti]
 
 
-@pytest.mark.parametrize("area", ["funzionari", "istruttori", "operatori_esperti", "operatori"])
-def test_qualifica1_e_dalla_mappatura_del_corpus_per_l_area_del_comparto(registro, orologio, corpus, area):
-    in_servizio_con(registro, "17", area)
+@pytest.mark.parametrize(("qualifica_inps", "qualifica1"), [("operaio", "1"), ("impiegato", "2"), ("dirigente", "3")])
+def test_qualifica1_e_dalla_mappatura_del_corpus_per_la_qualifica_inps_del_rapporto(
+    registro, orologio, corpus, qualifica_inps, qualifica1
+):
+    in_servizio_con(registro, "17", qualifica_inps=qualifica_inps)
     paga(registro, orologio, stipendi(registro, corpus, MARZO), date(2026, 3, 27))
-    assert denuncia_individuale(registro, corpus, R, MARZO).qualifica1 == "2"
+    assert denuncia_individuale(registro, corpus, R, MARZO).qualifica1 == qualifica1
+
+
+@pytest.mark.parametrize("area", ["funzionari", "istruttori", "operatori_esperti", "operatori"])
+def test_qualifica1_non_dipende_dall_area(registro, orologio, corpus, area):
+    in_servizio_con(registro, "17", area, qualifica_inps="operaio")
+    paga(registro, orologio, stipendi(registro, corpus, MARZO), date(2026, 3, 27))
+    assert denuncia_individuale(registro, corpus, R, MARZO).qualifica1 == "1"
+
+
+def test_senza_la_qualifica_inps_la_vista_e_una_bozza_che_la_chiede_senza_default(registro, orologio, corpus):
+    in_servizio_con(registro, "17", qualifica_inps=None)
+    paga(registro, orologio, stipendi(registro, corpus, MARZO), date(2026, 3, 27))
+    vista = denuncia_individuale(registro, corpus, R, MARZO)
+    assert "qualifica_inps" in [d.fatto for d in vista.mancanti]
+    assert vista.qualifica1 is None and not vista.trasmissibile
+
+
+def test_una_qualifica_inps_senza_mappatura_e_un_dato_mancante_che_la_nomina(registro, orologio, corpus):
+    in_servizio_con(registro, "17", qualifica_inps="quadro")  # nell'Allegato 4.33.1 esiste, ma il corpus mappa solo tre valori
+    paga(registro, orologio, stipendi(registro, corpus, MARZO), date(2026, 3, 27))
+    vista = denuncia_individuale(registro, corpus, R, MARZO)
+    assert "mappatura Qualifica1 (qualifica_inps=quadro)" in [d.fatto for d in vista.mancanti]
+    assert vista.qualifica1 is None
 
 
 @pytest.mark.parametrize(("iscrizione", "regime_post95"), [("si", "S"), ("no", "N")])
@@ -201,6 +228,13 @@ def test_regime_post95_e_dalla_mappatura_del_corpus_per_la_prima_iscrizione(
     td_pagato(registro, orologio, corpus)
     registro.registra_codice(R, "prima_iscrizione_dal_1996", iscrizione, date(2026, 1, 1))
     assert denuncia_individuale(registro, corpus, R, MARZO).regime_post95 == regime_post95
+
+
+def test_senza_la_prima_iscrizione_la_vista_e_una_bozza_che_la_chiede(registro, orologio, corpus):
+    td_pagato(registro, orologio, corpus)
+    vista = denuncia_individuale(registro, corpus, R, MARZO)
+    assert "prima_iscrizione_dal_1996" in [d.fatto for d in vista.mancanti]
+    assert vista.regime_post95 is None and not vista.trasmissibile
 
 
 def test_codice_contratto_e_il_suo_tipo_sono_nel_corpus_per_il_contratto_del_rapporto(registro, orologio, corpus):
@@ -533,3 +567,23 @@ def test_il_corpus_rifiuta_due_mappature_di_fatto_sovrapposte_e_il_riferimento_f
         Corpus.da_toml(CORPUS_PICCOLO + sovrapposta)
     with pytest.raises(ErroreCorpus, match="fittizio"):
         Corpus.da_toml(CORPUS_PICCOLO.replace("fittizio:", "prassi:inps:circolare:2026-01-30;6~par5 + fittizio:") + MAPPATURA_PROVA, reale=True)
+
+
+def test_una_qualifica_inps_che_cambia_nel_mese_ferma_la_vista(registro, orologio, corpus):
+    # Qualifica1 è un criterio di univocità: operaio fino al 15, impiegato dal 16 richiederebbe due denunce (#105).
+    in_servizio_con(registro, "17", qualifica_inps=None)
+    registro.registra_codice(R, "qualifica_inps", "operaio", date(2026, 1, 1), date(2026, 3, 15))
+    registro.registra_codice(R, "qualifica_inps", "impiegato", date(2026, 3, 16))
+    paga(registro, orologio, stipendi(registro, corpus, MARZO), date(2026, 3, 27))
+    vista = denuncia_individuale(registro, corpus, R, MARZO)
+    assert any("qualifica_inps" in f.motivo and "cambia nel mese" in f.motivo for f in vista.fermi)
+    assert not vista.trasmissibile
+
+
+def test_una_qualifica_inps_inserita_dopo_l_inizio_del_mese_non_vale_per_tutto_il_mese(registro, orologio, corpus):
+    # Il fatto manca nei primi giorni del mese: niente default, la vista non si trasmette.
+    in_servizio_con(registro, "17", qualifica_inps=None)
+    registro.registra_codice(R, "qualifica_inps", "impiegato", date(2026, 3, 10))
+    paga(registro, orologio, stipendi(registro, corpus, MARZO), date(2026, 3, 27))
+    vista = denuncia_individuale(registro, corpus, R, MARZO)
+    assert not vista.trasmissibile
