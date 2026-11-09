@@ -1,4 +1,4 @@
-"""Materiale dei test del blocco dei pagamenti 48-bis (ADR 0034). Dati esclusivamente fittizi.
+"""Materiale dei test del blocco dei pagamenti 48-bis (ADR 0036). Dati esclusivamente fittizi.
 
 Stipendio mensile X, con il corpus di `materiale_proposta`: contributo del lavoratore 8%, ritenuta 20% su
 X meno 1000 di franchigia mensile (netto = X - 0,08 X - 0,20 (X - 1000)). Il netto della soglia e' quindi:

@@ -1,4 +1,4 @@
-"""Casi limite della somma sospesa 48-bis (ADR 0034): tetto, recuperi fiscali, altri titoli. Dati fittizi."""
+"""Casi limite della somma sospesa 48-bis (ADR 0036): tetto, recuperi fiscali, altri titoli. Dati fittizi."""
 
 from decimal import Decimal
 from types import SimpleNamespace

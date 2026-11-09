@@ -1,4 +1,4 @@
-"""Blocco dei pagamenti 48-bis: verifica prima di pagare e somma sospesa (ADR 0034). Dati fittizi."""
+"""Blocco dei pagamenti 48-bis: verifica prima di pagare e somma sospesa (ADR 0036). Dati fittizi."""
 
 from datetime import date
 from decimal import Decimal

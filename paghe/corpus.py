@@ -839,7 +839,7 @@ class CondizioneDiProposta:
 
 @dataclass(frozen=True)
 class SogliaVerifica:
-    """Soglia del netto di un pagamento oltre la quale l'ente verifica l'inadempimento presso AdER (ADR 0034).
+    """Soglia del netto di un pagamento oltre la quale l'ente verifica l'inadempimento presso AdER (ADR 0036).
 
     Per titolo (categoria di reddito, oppure `*` per tutti gli altri) e periodo. Senza `soglia` la verifica non
     si fa nel periodo (stipendi prima del 2026). `esclusi` sono gli istituti che non concorrono al netto della
@@ -875,7 +875,7 @@ class FasciaSommaSospesa:
 
 @dataclass(frozen=True)
 class RegolaSommaSospesa:
-    """Come si sospende e si rilascia la somma dopo un esito inadempiente (ADR 0034), con date e fonte.
+    """Come si sospende e si rilascia la somma dopo un esito inadempiente (ADR 0036), con date e fonte.
 
     La fascia si sceglie sul netto e si applica a tutto il netto; `tetto` e' la quota del netto che la somma
     sospesa e le trattenute a terzi non superano insieme. I giorni sono quelli del DM 40/2008: risposta entro

@@ -1,4 +1,4 @@
-"""Blocco dei pagamenti (art. 48-bis DPR 602/1973, poi art. 144 D.Lgs. 33/2025): verifica e somma sospesa (ADR 0034).
+"""Blocco dei pagamenti (art. 48-bis DPR 602/1973, poi art. 144 D.Lgs. 33/2025): verifica e somma sospesa (ADR 0036).
 
 Prima di pagare un netto sopra soglia l'ente verifica presso AdER se il beneficiario ha cartelle non pagate. La
 richiesta di verifica e l'esito sono eventi di ritorno della persona (ADR 0025). Questo modulo legge il registro e
@@ -33,7 +33,7 @@ NATURA_SOMMA_SOSPESA = "somma_sospesa_48bis"
 DESTINATARIO_ENTE = "ente"
 CANALE_ACCANTONAMENTO = "accantonamento"
 
-# Nature che concorrono al netto della soglia: lordo meno ritenute fiscali e contributi del lavoratore (ADR 0034).
+# Nature che concorrono al netto della soglia: lordo meno ritenute fiscali e contributi del lavoratore (ADR 0036).
 # Restano fuori rimborsi 730, crediti, rate e trattenute a terzi; le trasferte le dichiara il corpus (`esclusi`).
 NATURE_DEL_NETTO = frozenset({"retribuzione", "ritenuta", "addizionale", "contributo_lavoratore"})
 
@@ -170,7 +170,7 @@ def verifica_del_pagamento(
 
 
 def importo_sospeso(regola: RegolaSommaSospesa, netto: Decimal, trattenute_a_terzi: Decimal, debito: Decimal) -> Decimal:
-    """Il minore tra il debito, la fascia sul netto e quanto resta sotto il tetto dopo le trattenute a terzi (ADR 0034).
+    """Il minore tra il debito, la fascia sul netto e quanto resta sotto il tetto dopo le trattenute a terzi (ADR 0036).
 
     Le trattenute a terzi notificate prima hanno la precedenza: la somma sospesa cede (artt. 2 e 68 DPR 180/1950).
     Il tetto e' arrotondato per difetto al centesimo, come la fascia.
@@ -225,7 +225,7 @@ def voci_del_blocco(
     """Le righe da aggiungere alla composizione del rapporto: la somma sospesa e i rilasci pagabili. Puo' fermare il rapporto.
 
     I rilasci sono le somme sospese di pagamenti precedenti che, alla valuta, tornano pagabili al dipendente: entrano
-    nel primo pagamento utile come riga verso il beneficiario, senza nuova tassazione (ADR 0034).
+    nel primo pagamento utile come riga verso il beneficiario, senza nuova tassazione (ADR 0036).
     """
     voci: list[VoceDelBlocco] = []
     esito = verifica_del_pagamento(registro, corpus, rapporto, persona, righe, categorie, valuta, istante)

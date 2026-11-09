@@ -544,7 +544,7 @@ _NETTO_DA_COMUNICARE = re.compile(r"Rapporto (\S+): verifica 48-bis mancante, ne
 
 
 def _verifiche_48bis(c: _Contesto, tag: str, valuta: date, elenco: list, passo) -> None:
-    """Prima dell'invio l'ufficio chiede la verifica per i netti sopra soglia; AdER risponde non inadempiente (ADR 0034)."""
+    """Prima dell'invio l'ufficio chiede la verifica per i netti sopra soglia; AdER risponde non inadempiente (ADR 0036)."""
     bozza = _costruisci(c.registro, c.corpus, valuta, tuple(elenco), (), c.registro.adesso(), con_proposta=False)
     persone = {r.id: r.persona for r in S.RAPPORTI}
     for fermo in bozza.fermi:

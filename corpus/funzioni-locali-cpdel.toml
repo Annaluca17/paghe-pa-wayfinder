@@ -3590,7 +3590,7 @@ dal = 2027-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art52-com1-leti"
 
 
-# Blocco dei pagamenti, art. 48-bis DPR 602/1973 e poi art. 144 D.Lgs. 33/2025 (ADR 0034).
+# Blocco dei pagamenti, art. 48-bis DPR 602/1973 e poi art. 144 D.Lgs. 33/2025 (ADR 0036).
 # La soglia si misura sul netto del singolo pagamento: lordo meno ritenute fiscali e contributi.
 
 [[soglia_verifica]]

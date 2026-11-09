@@ -530,7 +530,7 @@ Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, pe
 _Avoid_: Trattenuta (senza dire quale), ritenuta (che è fiscale), quinto (che è solo uno dei limiti)
 
 **Verifica 48-bis**:
-Controllo presso l'agente della riscossione prima di pagare un netto sopra soglia (2.500 euro per i dipendenti, 5.000 per gli altri titoli), sul singolo pagamento. Richiesta ed esito sono fatti datati della persona; senza esito il rapporto è fermo (ADR 0034).
+Controllo presso l'agente della riscossione prima di pagare un netto sopra soglia (2.500 euro per i dipendenti, 5.000 per gli altri titoli), sul singolo pagamento. Richiesta ed esito sono fatti datati della persona; senza esito il rapporto è fermo (ADR 0036).
 _Avoid_: Blocco (che è solo l'effetto), trattenuta 48-bis (non è una trattenuta)
 
 **Somma sospesa 48-bis**:

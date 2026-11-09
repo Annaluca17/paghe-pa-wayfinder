@@ -62,4 +62,4 @@ class ClassificazioneMancante(ErrorePaghe):
 
 
 class VerificaMancante(ErroreCalcolo):
-    """Un netto sopra soglia non ha l'esito della verifica 48-bis: il rapporto resta fermo, gli altri proseguono (ADR 0034)."""
+    """Un netto sopra soglia non ha l'esito della verifica 48-bis: il rapporto resta fermo, gli altri proseguono (ADR 0036)."""
