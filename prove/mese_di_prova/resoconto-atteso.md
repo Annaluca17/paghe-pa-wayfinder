@@ -16,9 +16,9 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 | regole di conguaglio | 2 | 0 | 2 |
 | dichiarazioni di pagamento fisiologico | 0 | 1 | 1 |
 | dichiarazioni di composizione | 4 | 48 | 52 |
-| mappature verso codici esterni | 4 | 20 | 24 |
-| codici nel catalogo F24EP | 0 | 16 | 16 |
-| regole di scadenza F24EP | 0 | 2 | 2 |
+| mappature verso codici esterni | 5 | 17 | 22 |
+| codici nel catalogo F24EP | 0 | 17 | 17 |
+| regole di scadenza F24EP | 1 | 2 | 3 |
 | calendari dei festivi | 0 | 2 | 2 |
 
 ## Scenario
@@ -186,7 +186,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - netto R10: 2243.33
   - netto R11: 1120.13
   - netto R12: 749.75
-  - righe di proposta (11): U.1.01.01.01.002 01.01 imp 2026/1 9951.65; U.1.01.01.01.002 01.02 imp 2026/2 12323.33; U.1.01.01.01.004 01.02 imp 2026/4 600.00; U.1.01.02.01.001 01.01 imp 2026/5 2945.33; U.1.01.02.01.001 01.02 imp 2026/6 3732.56; U.1.01.02.01.003 01.01 imp 2026/7 495.55; U.1.01.02.01.003 01.02 imp 2026/8 89.28; U.1.02.01.01.001 01.01 imp 2026/9 1118.15; U.1.02.01.01.001 01.02 imp 2026/10 1214.20; U.1.03.02.01.001 01.01 imp 2026/11 3000.00; U.1.03.02.12.003 01.02 imp 2026/14 1500.00
+  - righe di proposta (11): U.1.01.01.01.002 01.01 imp 2026/1 9951.65; U.1.01.01.01.002 01.02 imp 2026/2 12323.33; U.1.01.01.01.004 01.02 imp 2026/4 600.00; U.1.01.02.01.001 01.01 imp 2026/5 2945.33; U.1.01.02.01.001 01.02 imp 2026/6 3732.56; U.1.01.02.01.003 01.01 imp 2026/7 495.55; U.1.01.02.01.003 01.02 imp 2026/8 89.28; U.1.02.01.01.001 01.01 imp 2026/9 1118.15; U.1.02.01.01.001 01.02 imp 2026/10 1229.09; U.1.03.02.01.001 01.01 imp 2026/11 3000.00; U.1.03.02.12.003 01.02 imp 2026/14 1500.00
   - conguaglio fiscale sull'ultimo pagamento: R05 -30.55
 - Fermi: nessuno
 - Su dati fittizi:
@@ -306,14 +306,14 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga F 100E: debito 5065.33, credito 0.00
   - riga F 170E: debito 0.00, credito 500.00
   - riga F 175E: debito 0.00, credito 1014.98
-  - riga R 380E: debito 2332.35, credito 0.00
+  - riga R 380E: debito 2347.24, credito 0.00
   - riga S 385E: debito 3.30, credito 0.00
+  - riga Q CXX: debito 1053.96, credito 0.00
   - riga Q P201: debito 7554.80, credito 0.00
   - riga Q P607: debito 504.55, credito 0.00
   - riga Q P608: debito 584.83, credito 0.00
   - riga Q P909: debito 80.90, credito 0.00
-  - riga Q ZGS1: debito 1053.96, credito 0.00
-  - saldo 15665.04
+  - saldo 15679.93
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
 - Su dati fittizi:
@@ -338,7 +338,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 13: 94 righe, 18695.00 versati il 2026-04-16
+  - esito versato 13: 94 righe, 18709.89 versati il 2026-04-16
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:
@@ -447,11 +447,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga F 175E: debito 0.00, credito 1046.38
   - riga R 380E: debito 1281.64, credito 0.00
   - riga S 161E: debito 0.00, credito 3.30
+  - riga Q CXX: debito 528.51, credito 0.00
   - riga Q P201: debito 3943.56, credito 0.00
   - riga Q P607: debito 450.65, credito 0.00
   - riga Q P608: debito 129.74, credito 0.00
   - riga Q P909: debito 42.27, credito 0.00
-  - riga Q ZGS1: debito 528.51, credito 0.00
   - saldo 5769.24
   - delega DELEGA-2026-12 trasmessa il 2027-01-12
 - Fermi: nessuno
@@ -492,7 +492,7 @@ Nessuno trovato.
 - La tredicesima non e' un istituto del corpus: il pagamento di dicembre non la contiene, anche se il tabellare annuo del corpus e' per dodici mensilita' piu' la tredicesima.
 - Le addizionali regionale e comunale sono calcolate al conguaglio di dicembre sul domicilio fiscale delle persone (comune e regione di fantasia) e trattenute a rate dal 2027: nel mese di prova si vede solo l'acconto comunale di R01, che ha il reddito 2025 dalla CU (le rate del saldo, la cessazione e la restituzione a credito sono nei test). Per le altre persone, senza conguaglio 2025 ne' CU, niente acconto e un avviso. 381E, 384E, 385E, 160E e 161E hanno nel catalogo fittizio una forma assunta, da verificare.
 - Il contributo aggiuntivo dell'1% scatta in almeno un quadro, e non ha una causale nel catalogo.
-- L'acconto IRAP e' calcolato all'8,5% sulla base di ogni pagamento e versato col 380E, una riga per regione. Nessun rapporto del mese ha una sede di lavoro: vale la regione dell'ente, un fatto dell'ente. Il codice regione e' del corpus reale, da riscontrare sulla tabella AdE. Comando e convenzione non sono modellati (la convenzione di segreteria ferma gia' il calcolo del rapporto).
+- L'acconto IRAP e' calcolato all'8,5% sulla base di ogni pagamento e versato col 380E, una riga per regione. Nessun rapporto del mese ha una sede di lavoro: vale la regione dell'ente, un fatto dell'ente. Il codice regione e' del corpus reale, da riscontrare sulla tabella AdE. Comando e convenzione: l'IRAP segue l'ente che utilizza il dipendente, sul rimborso versato; i rimborsi tra enti non sono modellati (la convenzione di segreteria ferma gia' il calcolo del rapporto).
 
 ## File prodotti
 

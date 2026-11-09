@@ -47,6 +47,12 @@ SISTEMA_REGIONE_F24EP = "f24ep.codice_regione"
 ELEMENTO_REGIONE_F24EP = "codice_regione"
 TIPO_SEDE_DI_LAVORO = "sede_lavoro"
 
+# Causale della gestione separata (ticket #104): il codice dipende dalla posizione previdenziale del rapporto, non dall'istituto.
+SISTEMA_CAUSALE_GS_F24EP = "f24ep.causale_gestione_separata"
+ELEMENTO_CAUSALE_GS_F24EP = "causale"
+TIPO_POSIZIONE_PREVIDENZIALE = "posizione_previdenziale"
+ISTITUTI_PER_POSIZIONE = frozenset({"gs_lavoratore", "gs_ente"})
+
 AVVISO_CAMBIO_SEDE_RECENTE = "cambio_sede_recente"
 AVVISO_SCADENZA_PER_PRASSI = "scadenza_per_prassi"
 AVVISO_PROROGA_SU_FESTIVO = "proroga_su_festivo"
@@ -246,6 +252,8 @@ def _formato(formato: str, importo: Importo, pagamento: date) -> str:
         return ""
     if formato == "mese_pagamento":
         return f"00{pagamento.month:02d}"
+    if formato == "mese_anno_pagamento":
+        return f"{pagamento.month:02d}{pagamento.year:04d}"
     if formato == "anno_pagamento":
         return f"{pagamento.year:04d}"
     if formato == "anno_imposta":
@@ -474,6 +482,7 @@ def costruisci_delega(
     mancanti_regione: dict[str, DatoMancante] = {}
     avvisi_sede: dict[str, AvvisoDelega] = {}
     mancanti_domicilio: dict[str, DatoMancante] = {}
+    mancanti_posizione: dict[str, DatoMancante] = {}
 
     for riga, riferimento, pagamento in _righe_candidate(registro, mese_pagamento, istante):
         if riferimento in versate:
@@ -486,7 +495,32 @@ def costruisci_delega(
         if importo.valore == 0:
             # Un importo nullo (es. acconto IRAP di una persona esclusa) non versa nulla: nessuna riga da 0,00 (#81).
             continue
-        mappatura = corpus.mappatura(istituto, SISTEMA_F24EP, pagamento, importo.anno_imposta)
+        if istituto in ISTITUTI_PER_POSIZIONE:
+            posizioni = registro.fatti_noti(riga.rapporto, TIPO_POSIZIONE_PREVIDENZIALE, istante)
+            attuale = next((f for f in reversed(posizioni) if f.copre(importo.periodo.dal)), None)
+            if attuale is None:
+                mancanti_posizione.setdefault(
+                    riga.rapporto,
+                    DatoMancante(
+                        TIPO_POSIZIONE_PREVIDENZIALE, riga.rapporto,
+                        f"manca la posizione previdenziale del rapporto {riga.rapporto} al {importo.periodo.dal}: "
+                        f"serve alla causale della gestione separata ({istituto})",
+                    ),
+                )
+                continue
+            mappatura = corpus.mappatura_di_fatto(
+                SISTEMA_CAUSALE_GS_F24EP, ELEMENTO_CAUSALE_GS_F24EP, TIPO_POSIZIONE_PREVIDENZIALE, str(attuale.valore), pagamento
+            )
+            if mappatura is None:
+                ferma(
+                    "causale_non_mappata",
+                    riga.rapporto,
+                    f"Rapporto {riga.rapporto}: la posizione previdenziale {attuale.valore} non ha una causale F24EP "
+                    f"nel corpus per un pagamento del {pagamento}",
+                )
+                continue
+        else:
+            mappatura = corpus.mappatura(istituto, SISTEMA_F24EP, pagamento, importo.anno_imposta)
         if mappatura is None:
             ferma(
                 "mappatura_mancante",
@@ -647,7 +681,7 @@ def costruisci_delega(
             f"La delega ha {len(righe)} righe e un modulo ne porta {RIGHE_PER_MODULO}: dividere i crediti "
             "tra più moduli non è modellato",
         )
-    mancanti = [*mancanti_regione.values(), *mancanti_domicilio.values()]
+    mancanti = [*mancanti_regione.values(), *mancanti_domicilio.values(), *mancanti_posizione.values()]
     obbligatori = (*TIPI_DATI_ENTE, *(("sigla_provincia",) if serve_provincia else ()))
     for tipo in obbligatori:
         if getattr(ente, tipo) is None:

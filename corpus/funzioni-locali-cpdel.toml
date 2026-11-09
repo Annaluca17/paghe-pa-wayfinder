@@ -389,7 +389,8 @@ valore = "33.00"
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par1"
 
 # Pensionati o iscritti ad altra forma obbligatoria: IVS al 24% (art. 1 c. 79 L. 247/2007, Circ. INPS 8/2026 par. 1) piu' le
-# aggiuntive. Se la DIS-COLL si applichi a chi ha altra copertura e' da verificare (nota di prassi 10): qui non e' applicata.
+# aggiuntive. DIS-COLL non dovuta a pensionati e altra cassa: norma certa (circ. INPS 122/2017 e 8/2026), qui non applicata. Il totale
+# 24,00% (testo letterale) contro 24,72% resta aperto finche' non c'e' una seconda fonte indipendente (ADR 0003, ticket #104).
 [[parametro]]
 nome = "aliquota_gs_ivs_ridotta"
 [[parametro.vigenza]]
@@ -1032,7 +1033,7 @@ istituto = "irap_acconto"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art30-com5 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art16-com2"
-formula = "arrotonda(max(base.irap - importo.gs_lavoratore, 0) * parametro.aliquota_irap / 100, 2)"
+formula = "arrotonda(base.irap * parametro.aliquota_irap / 100, 2)"
 maturazione = "periodo"
 
 # Concorsi: tabellare e comparto entrano per intero in entrambe le basi.
@@ -1571,8 +1572,9 @@ misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 
-# Co.co.co.: il compenso concorre alla base IRAP (art. 10-bis c. 1); la quota di gestione separata a carico del collaboratore
-# si toglie nella regola irap_acconto (scelta di Luca, ADR 0028: la fonte non e' leggibile, da verificare).
+# Co.co.co.: il compenso concorre alla base IRAP (art. 10-bis c. 1) per l'intero compenso lordo erogato. La quota di gestione
+# separata a carico del collaboratore non si toglie; quella a carico dell'ente non entra. Fonte: ris. AdE 121/E/2009 (prassi,
+# testo non riletto, da verificare; la data non e' nel corpus, ADR 0032).
 [[concorso]]
 istituto = "compenso_collaborazione"
 basi = ["irap"]
@@ -2157,6 +2159,16 @@ dal = 2025-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
 piano_dei_conti = "U.1.02.01.01.001"
 origine_impegno = "automatico"
+
+# Scadenza di versamento dell'F24EP (ticket #107): il giorno 16 del mese successivo (art. 32-ter c. 1-bis D.L. 185/2008, norma
+# certa fino al 2026, ADR 0032). La proroga di agosto (dal 1 al 20, spostata al 20) vale per prassi ma ne manca la fonte, quindi
+# non e' dichiarata. Dal 2027 l'art. 32-ter e' abrogato dal D.Lgs. 33/2025 e l'articolo del testo unico non e' riletto: nessuna
+# regola 2027, da verificare (il calcolo si ferma).
+[[scadenza_f24ep]]
+dal = 2026-01-01
+al = 2026-12-31
+giorno = 16
+riferimento = "urn:nir:stato:decreto.legge:2008-11-29;185~art32ter-com1bis"
 
 # =====================================================================================================================
 # Fisco nazionale del lavoro dipendente e assimilati (ticket #93): scaglioni IRPEF, detrazioni, categorie di reddito,
@@ -3509,6 +3521,46 @@ sistema = "codice_tributo_f24ep"
 codice = "170E"
 dal = 2026-01-01
 riferimento = "prassi:ade:risoluzione:2020-06-26;35-E"
+
+# Causale F24EP della gestione separata (ticket #104): PRASSI PER ANALOGIA. Il testo che dice quale causale vada con quale aliquota
+# (circ. INPS 88/2023 sez. 10.1.1) riguarda il lavoro sportivo, non i collaboratori delle PA. C10 per pensionati e altra cassa, CXX
+# per chi non ha altra copertura e per gli amministratori locali tipo 04 (onere art. 86, nessuna altra cassa). Riferimento A: mese e
+# anno di pagamento del compenso (circ. INPS 23/2013 par. 2.2). Aperti: la lettura del messaggio INPS 8460/2013 e della tabella AdE
+# dopo il 01/04/2020.
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "gestione_separata"
+codice = "CXX"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "pensionato"
+codice = "C10"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "altra_cassa"
+codice = "C10"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura]]
+istituto = "onere_art86"
+sistema = "codice_tributo_f24ep"
+codice = "CXX"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
 
 # --- Addizionali: parametri nazionali e regola (ADR 0029). Le aliquote di comuni e regioni sono dichiarazioni a parte. ---
 

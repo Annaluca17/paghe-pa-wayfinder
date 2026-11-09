@@ -32,7 +32,7 @@ def test_un_esclusione_finita_prima_del_pagamento_non_toglie_nulla(registro, rea
 
 
 def test_un_cococo_escluso_non_ha_un_acconto_negativo(registro, reale, orologio):
-    """Base zero meno la quota di gestione separata: l'acconto non scende sotto zero."""
+    """Base zero: l'acconto non e' negativo."""
     registro.registra_codice("RAPPORTO-1", "esclusione_base_irap", "disabile", date(2026, 1, 1))
     collabora(registro, orologio, reale)
     v = valori(registro, reale)

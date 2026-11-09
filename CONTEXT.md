@@ -227,7 +227,7 @@ Elemento retributivo o trattenuta definito da norma o contratto, con riferimento
 _Avoid_: Voce, codice voce
 
 **Mappatura esterna**:
-Corrispondenza datata, nel corpus e con riferimento, tra un istituto e un codice di un sistema esterno (codice tributo, causale, SICO, punto CU). Più istituti possono avere lo stesso codice; se un istituto dovrebbe avere due codici, sono due istituti. Se manca, si ferma l'invio dell'output, non il calcolo.
+Corrispondenza datata, nel corpus e con riferimento, tra un istituto e un codice di un sistema esterno (codice tributo, causale, SICO, punto CU). Più istituti possono avere lo stesso codice; se un istituto dovrebbe avere due codici, sono due istituti. Se manca, si ferma l'invio dell'output, non il calcolo. Eccezione: la causale F24EP della gestione separata (C10 o CXX) si sceglie per la posizione previdenziale del rapporto, con una mappatura di fatto (ticket #104); il riferimento A di quelle causali è mese e anno di pagamento (`MMAAAA`), non la competenza.
 _Avoid_: Tabella codici, codice dell'istituto
 
 **Fatto**:
