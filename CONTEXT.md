@@ -283,7 +283,7 @@ Trattamento fiscale di un importo: ordinario, separato o sostitutivo. Il separat
 _Avoid_: Tassazione dell'istituto, categoria (quando si intende il trattamento)
 
 **Sostitutiva sull'accessorio**:
-Imposta del 15% che nel 2026 sostituisce IRPEF e addizionali sugli importi degli istituti accessori del personale non dirigenziale, fino a 800 euro per persona nell'anno e con reddito di lavoro dipendente fino a 50.000 euro (L. 199/2025 c. 237, ADR 0034). Si calcola nella ritenuta del pagamento e si ricalcola al conguaglio. L'importo così tassato esce dall'imponibile fiscale ordinario. Non si applica dopo la rinuncia della persona.
+Imposta del 15% che nel 2026 sostituisce IRPEF e addizionali sugli importi degli istituti accessori del personale non dirigenziale, fino a 800 euro per persona nell'anno e con reddito di lavoro dipendente fino a 50.000 euro (L. 199/2025 c. 237, ADR 0035). Si calcola nella ritenuta del pagamento e si ricalcola al conguaglio. L'importo così tassato esce dall'imponibile fiscale ordinario. Non si applica dopo la rinuncia della persona.
 _Avoid_: Detassazione, flat tax sull'accessorio
 
 **Rinuncia alla sostitutiva**:
