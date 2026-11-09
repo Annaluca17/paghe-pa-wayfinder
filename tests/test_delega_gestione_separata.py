@@ -116,3 +116,12 @@ def test_una_posizione_senza_causale_nel_corpus_ferma_l_invio_e_nomina_il_rappor
     (fermo,) = d.fermi
     assert fermo.caso == "causale_non_mappata" and R in fermo.motivo and "inventata" in fermo.motivo
     assert d.righe == ()
+
+
+def test_la_causale_segue_la_posizione_della_competenza_non_quella_del_pagamento(registro, corpus, orologio, ente):
+    # Caso limite: il collaboratore va in pensione dal 1° novembre; il compenso di ottobre pagato a novembre resta CXX.
+    posizione(registro, R, "gestione_separata")
+    registro.registra_codice(R, "posizione_previdenziale", "pensionato", date(2026, 11, 1))
+    d = delega_gs(registro, corpus, orologio, [("gs_lavoratore", R, "100.00")])
+    (riga,) = d.righe
+    assert (riga.tributo, riga.rif_a) == ("CXX", "112026")
