@@ -39,8 +39,11 @@ PIANO_DEI_CONTI = re.compile(r"[UE]\.\d\.\d{2}\.\d{2}\.\d{2}\.\d{3}")
 # Dichiarazione di composizione (ADR 0025): valori ammessi.
 NATURE = frozenset({
     "retribuzione", "ritenuta", "addizionale", "contributo_lavoratore", "contributo_ente",
-    "rata_730", "rimborso_730", "credito_sostituto", "trattenuta_terzi", "irap",
+    "rata_730", "rimborso_730", "credito_sostituto", "trattenuta_terzi", "irap", "imponibile_sostitutivo",
 })
+# Quota di reddito tassata con un'imposta sostitutiva (ADR 0035): resta nell'esito pagato, perché il conguaglio la legge,
+# ma non muove denaro: nessun effetto sul netto, nessun destinatario, nessun canale.
+NATURA_IMPONIBILE_SOSTITUTIVO = "imponibile_sostitutivo"
 EFFETTI = frozenset({"piu", "meno", "nessuno"})
 DESTINATARI = frozenset({"beneficiario", "terzo"})
 CANALI = frozenset({"accredito", "f24ep", "bonifico"})
@@ -836,6 +839,10 @@ class DichiarazioneComposizione:
         if self.intermedio:
             if any(valore is not None for valore, _ in campi.values()):
                 raise ErroreCorpus(f"{soggetto}: un istituto intermedio non dichiara natura, effetto, destinatario o canale")
+            return
+        if self.natura == NATURA_IMPONIBILE_SOSTITUTIVO:
+            if self.effetto != "nessuno" or self.destinatario is not None or self.canale is not None:
+                raise ErroreCorpus(f"{soggetto}: un imponibile sostitutivo ha effetto nessuno, senza destinatario né canale")
             return
         for nome, (valore, ammessi) in campi.items():
             if valore not in ammessi:

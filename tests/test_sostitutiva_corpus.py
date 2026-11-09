@@ -85,7 +85,7 @@ def test_nel_corpus_reale_la_regola_ha_i_valori_della_legge_e_nessun_istituto_e_
     assert reale.regola_sostitutiva(date(2027, 1, 1)) is None
     assert reale.fiscale.accessori == ()
     assert reale.composizione("sostitutiva_accessorio", date(2026, 6, 1)).canale == "f24ep"
-    assert reale.composizione("sostitutiva_accessorio_base", date(2026, 6, 1)).intermedio
+    assert reale.composizione("sostitutiva_accessorio_base", date(2026, 6, 1)).natura == "imponibile_sostitutivo"
 
 
 # Funzioni pure

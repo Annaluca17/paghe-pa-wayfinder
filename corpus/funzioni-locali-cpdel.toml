@@ -3642,14 +3642,15 @@ limite = "sostitutiva_accessorio_limite"
 istituto = "sostitutiva_accessorio"
 istituto_base = "sostitutiva_accessorio_base"
 
-# La quota a sostitutiva non e' nel netto: e' un totale che esce dall'imponibile ordinario (intermedio). L'imposta e' una trattenuta
+# La quota a sostitutiva non e' nel netto: e' un totale che esce dall'imponibile ordinario (imponibile sostitutivo, nell'esito pagato ma senza effetto sul netto). L'imposta e' una trattenuta
 # versata con 179E.
 [[composizione]]
 istituto = "sostitutiva_accessorio_base"
 dal = 2026-01-01
 al = 2026-12-31
 riferimento = "urn:nir:stato:legge:2025-12-30;199~art1-com237"
-intermedio = true
+natura = "imponibile_sostitutivo"
+effetto = "nessuno"
 
 [[composizione]]
 istituto = "sostitutiva_accessorio"

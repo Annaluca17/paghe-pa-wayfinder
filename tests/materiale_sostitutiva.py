@@ -86,7 +86,8 @@ COMPOSIZIONE_SOSTITUTIVA = """
 istituto = "sostitutiva_accessorio_base"
 dal = 2020-01-01
 riferimento = "fittizio:comp-sostitutiva-base"
-intermedio = true
+natura = "imponibile_sostitutivo"
+effetto = "nessuno"
 
 [[composizione]]
 istituto = "sostitutiva_accessorio"
