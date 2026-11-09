@@ -21,6 +21,7 @@ from .lista_pos_pa import TIPI_PART_TIME, DatoMancante, QuadroFermo
 from .modello import (
     FATTO_PART_TIME,
     FATTO_PRIMA_ISCRIZIONE_DAL_1996,
+    FATTO_QUALIFICA_INPS,
     FATTO_TERMINE_PER_SOSTITUZIONE,
     FATTO_TIPO_PART_TIME,
     Importo,
@@ -400,7 +401,7 @@ def _vista_e_righe(
         )
         return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),)), ()
     vista = _Vista(registro, corpus, rapporto, mese, istante, giorni)
-    qualifica1 = vista.codice("Qualifica1", "area")
+    qualifica1 = vista.codice("Qualifica1", FATTO_QUALIFICA_INPS)
     qualifica3 = vista.codice("Qualifica3", FATTO_TERMINE_PER_SOSTITUZIONE)
     regime_post95 = vista.codice("RegimePost95", FATTO_PRIMA_ISCRIZIONE_DAL_1996)
     codice_contratto = vista.codice("CodiceContratto", "contratto")
