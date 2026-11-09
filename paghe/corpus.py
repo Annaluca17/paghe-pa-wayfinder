@@ -11,6 +11,7 @@ from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
+from .calendario import lunedi_dell_angelo
 from .errori import ErroreCorpus, ParametroMancante, ValiditaNonUniforme
 from .formula import riferimenti
 from .modello import FATTO_PART_TIME, FATTO_TIPO_PART_TIME
@@ -48,7 +49,7 @@ CANALI = frozenset({"accredito", "f24ep", "bonifico"})
 SEZIONI_F24EP = frozenset({"F", "I", "R", "S", "N", "Q", "W", "G", "P", "5"})
 CODICE_CAMPO_F24EP = frozenset({"nessuno", "regione", "catastale", "provincia"})
 ESTREMI_F24EP = frozenset({"nessuno", "facoltativo"})
-RIF_A_F24EP = frozenset({"nessuno", "mese_pagamento", "periodo_inizio"})
+RIF_A_F24EP = frozenset({"nessuno", "mese_pagamento", "periodo_inizio", "mese_anno_pagamento"})
 RIF_B_F24EP = frozenset({"nessuno", "anno_pagamento", "anno_imposta", "periodo_fine"})
 MODALITA_F24EP = frozenset({"debito", "debito_credito"})
 LIMITI_CREDITO_F24EP = frozenset({"nessuno", "non_modellato"})
@@ -1024,19 +1025,37 @@ class RegolaScadenzaF24EP:
 
 @dataclass(frozen=True)
 class CalendarioFestivi:
-    """Giorni festivi infrasettimanali di un anno, dichiarati: un anno senza calendario non ha festivi noti."""
+    """Festivi nazionali di un anno, dichiarati con il riferimento di legge (ticket #106).
+
+    `feste` sono le feste fisse come MM-GG; `lunedi_dell_angelo` aggiunge il lunedì dopo la Pasqua, calcolata.
+    Un anno senza calendario non ha festivi noti. Il patrono della sede non è qui: è un fatto del rapporto.
+    """
 
     anno: int
-    giorni: tuple[date, ...]
+    feste: tuple[str, ...]
+    lunedi_dell_angelo: bool
     riferimento: str
 
     def __post_init__(self) -> None:
         soggetto = f"Calendario dei festivi {self.anno}"
         _riferimento_obbligatorio(self.riferimento, soggetto)
-        if any(giorno.year != self.anno for giorno in self.giorni):
-            raise ErroreCorpus(f"{soggetto}: un giorno non cade nell'anno {self.anno}")
-        if len(set(self.giorni)) != len(self.giorni):
-            raise ErroreCorpus(f"{soggetto}: giorni ripetuti")
+        if type(self.anno) is not int:
+            raise ErroreCorpus(f"{soggetto}: anno non valido")
+        for festa in self.feste:
+            if not re.fullmatch(r"\d{2}-\d{2}", str(festa)):
+                raise ErroreCorpus(f"{soggetto}: festa {festa!r} non valida, serve MM-GG")
+            try:
+                date(self.anno, int(festa[:2]), int(festa[3:]))
+            except ValueError:
+                raise ErroreCorpus(f"{soggetto}: festa {festa} inesistente nell'anno {self.anno}") from None
+        if len(set(self.feste)) != len(self.feste):
+            raise ErroreCorpus(f"{soggetto}: feste ripetute")
+
+    @property
+    def giorni(self) -> tuple[date, ...]:
+        """Le date dei festivi nazionali dell'anno: le feste fisse e, se dichiarato, il lunedì dell'Angelo."""
+        fisse = tuple(date(self.anno, int(festa[:2]), int(festa[3:])) for festa in self.feste)
+        return fisse + ((lunedi_dell_angelo(self.anno),) if self.lunedi_dell_angelo else ())
 
 
 class Corpus:
@@ -1061,6 +1080,7 @@ class Corpus:
         codici_f24ep: tuple[CodiceF24EP, ...] = (),
         scadenze_f24ep: tuple[RegolaScadenzaF24EP, ...] = (),
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
+        riferimento_patrono: str | None = None,
         trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
         condizioni_di_proposta: tuple[CondizioneDiProposta, ...] = (),
         output: tuple[DichiarazioneOutput, ...] = (),
@@ -1076,6 +1096,7 @@ class Corpus:
         self._trattamenti_part_time = tuple(trattamenti_part_time)
         self._scadenze_f24ep = tuple(scadenze_f24ep)
         self._calendari_festivi = tuple(calendari_festivi)
+        self.riferimento_patrono = riferimento_patrono  # voce [patrono]: obbligatoria solo se un rapporto ha il patrono
         self._codici_f24ep = tuple(codici_f24ep)
         self._composizioni = tuple(composizioni)
         self._classificazioni = tuple(classificazioni)
@@ -1148,6 +1169,8 @@ class Corpus:
         elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
         elenco += [("Proroga della scadenza F24EP", r.proroga.riferimento) for r in self._scadenze_f24ep if r.proroga]
         elenco += [(f"Calendario dei festivi {c.anno}", c.riferimento) for c in self._calendari_festivi]
+        if self.riferimento_patrono is not None:
+            elenco.append(("Patrono della sede di lavoro", self.riferimento_patrono))
         return elenco
 
     def _rifiuta_fittizi(self) -> None:
@@ -1590,8 +1613,10 @@ class Corpus:
             )
         if self._calendari_festivi:
             contenuto["calendari_festivi"] = sorted(
-                [c.anno, sorted(g.isoformat() for g in c.giorni), c.riferimento] for c in self._calendari_festivi
+                [c.anno, sorted(c.feste), c.lunedi_dell_angelo, c.riferimento] for c in self._calendari_festivi
             )
+        if self.riferimento_patrono is not None:
+            contenuto["patrono"] = self.riferimento_patrono
         testo = json.dumps(contenuto, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(testo.encode("utf-8")).hexdigest()[:16]
 
@@ -1837,11 +1862,16 @@ class Corpus:
             calendari_festivi = tuple(
                 CalendarioFestivi(
                     voce["anno"],
-                    tuple(_data(giorno, "giorni") for giorno in voce["giorni"]),
+                    tuple(voce["feste"]),
+                    voce.get("lunedi_dell_angelo", False),
                     voce["riferimento"],
                 )
                 for voce in dati.get("calendario_festivi", [])
             )
+            patrono = dati.get("patrono")
+            riferimento_patrono = patrono["riferimento"] if patrono is not None else None
+            if riferimento_patrono is not None:
+                _riferimento_obbligatorio(riferimento_patrono, "Patrono della sede di lavoro")
         except (tomllib.TOMLDecodeError, KeyError, TypeError, AttributeError) as errore:
             raise ErroreCorpus(f"Corpus TOML non valido: {errore!r}") from errore
         periodo = dati.get("periodo_dichiarato", {})
@@ -1863,6 +1893,7 @@ class Corpus:
             codici_f24ep=codici_f24ep,
             scadenze_f24ep=scadenze_f24ep,
             calendari_festivi=calendari_festivi,
+            riferimento_patrono=riferimento_patrono,
             trattamenti_part_time=trattamenti_part_time,
             condizioni_di_proposta=condizioni_di_proposta,
             output=output,

@@ -33,7 +33,7 @@ Sigle delle fonti lette in questa ricerca:
 
 ---
 
-## 1. Causale F24EP della gestione separata (oggi `ZGS1`, fittizia)
+## 1. Causale F24EP della gestione separata (ticket #104: C10/CXX per posizione, `ZGS1` tolto)
 
 **Stato: prassi** per la mappa aliquota-causale. **Norma certa** che le causali siano C10 e CXX.
 
@@ -92,6 +92,9 @@ sul file CNEL); (2) codice `Contratto`/`Qualifica` dei flussi come **fatto del r
 Per ora nessun valore reale nel corpus finché l'Appendice G non è letta.
 
 **Aperto.** Leggere l'Appendice G ufficiale; dire se la dirigenza dell'Area usa `RALN` o un codice proprio dopo il 2023.
+
+**Deciso (#87, 09/11/2026):** i riferimenti CNEL dell'Area dirigenziale (dirigenti e segretari) sono `ccnl:S125:`, quelli del comparto
+restano `ccnl:S105:` (file CNEL `ccnl-settore-pubblico.xlsx`); nei flussi il `Contratto` resta il fatto del rapporto `RALN`, mai un codice CNEL.
 
 ---
 
@@ -225,6 +228,10 @@ riletta), quindi «soggetto a regime contributivo» potrebbe voler dire anche qu
 
 **Aperto.** Domanda al servizio di assistenza INPS (tempi determinati privatistici delle PA): valore di `Qualifica1` per le categorie del
 comparto e significato esatto di `RegimePost95`. Verifica con il Software di controllo UniEmens.
+
+**Deciso (#87, 09/11/2026):** `Qualifica1` non deriva dall'area ma dal fatto del rapporto `qualifica_inps` (`operaio`, `impiegato`,
+`dirigente` -> `1`, `2`, `3`, i soli codici letti nell'Allegato tecnico 4.33.1 p. 108), inserito all'assunzione, senza default: se manca la
+vista lo chiede. `RegimePost95` confermato da Luca: `S` se prima iscrizione dal 1996, altrimenti `N` (prassi-interpretazione, L. 335/1995 art. 1 c. 6).
 
 ---
 

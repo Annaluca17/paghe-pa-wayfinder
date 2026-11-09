@@ -16,8 +16,8 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 | regole di conguaglio | 2 | 0 | 2 |
 | dichiarazioni di pagamento fisiologico | 0 | 1 | 1 |
 | dichiarazioni di composizione | 4 | 48 | 52 |
-| mappature verso codici esterni | 4 | 20 | 24 |
-| codici nel catalogo F24EP | 0 | 16 | 16 |
+| mappature verso codici esterni | 5 | 17 | 22 |
+| codici nel catalogo F24EP | 0 | 17 | 17 |
 | regole di scadenza F24EP | 1 | 2 | 3 |
 | calendari dei festivi | 0 | 2 | 2 |
 
@@ -73,17 +73,17 @@ I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccan
 
 | Categoria | Avvio | Preparazione di febbraio | Marzo | Dicembre |
 |---|---:|---:|---:|---:|
-| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 178 | 0 | 15 | 0 |
+| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 179 | 0 | 15 | 0 |
 | Fatti ricorrenti del mese (atti, variazioni, cessazioni, 730) | 0 | 0 | 17 | 1 |
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
 | Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 14 | 13 |
 | Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 2 |
-| **Totale senza i comandi** | **178** | **3** | **49** | **18** |
+| **Totale senza i comandi** | **179** | **3** | **49** | **18** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
 
-Fatti di avvio per soggetto: R01 18, R02 16, R03 16, R04 18, R05 16, R07 16, R08 15, R09 16, R10 11, R11 10, R12 20, ente 6.
+Fatti di avvio per soggetto: R01 18, R02 16, R03 16, R04 18, R05 16, R07 16, R08 15, R09 16, R10 11, R11 10, R12 21, ente 6.
 Assunzione di marzo (avvio di un rapporto nuovo): R06 15.
 
 Dettaglio di Marzo, escluso l'avvio:
@@ -143,7 +143,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Fatti**
 
 - Riuscito:
-  - 193 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
+  - 194 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
   - 17 fatti del mese: performance, progressione, cessazione
 - Fermi: nessuno
 - Su dati fittizi:
@@ -308,11 +308,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga F 175E: debito 0.00, credito 1014.98
   - riga R 380E: debito 2347.24, credito 0.00
   - riga S 385E: debito 3.30, credito 0.00
+  - riga Q CXX: debito 1053.96, credito 0.00
   - riga Q P201: debito 7554.80, credito 0.00
   - riga Q P607: debito 504.55, credito 0.00
   - riga Q P608: debito 584.83, credito 0.00
   - riga Q P909: debito 80.90, credito 0.00
-  - riga Q ZGS1: debito 1053.96, credito 0.00
   - saldo 15679.93
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
@@ -447,11 +447,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga F 175E: debito 0.00, credito 1046.38
   - riga R 380E: debito 1281.64, credito 0.00
   - riga S 161E: debito 0.00, credito 3.30
+  - riga Q CXX: debito 528.51, credito 0.00
   - riga Q P201: debito 3943.56, credito 0.00
   - riga Q P607: debito 450.65, credito 0.00
   - riga Q P608: debito 129.74, credito 0.00
   - riga Q P909: debito 42.27, credito 0.00
-  - riga Q ZGS1: debito 528.51, credito 0.00
   - saldo 5769.24
   - delega DELEGA-2026-12 trasmessa il 2027-01-12
 - Fermi: nessuno

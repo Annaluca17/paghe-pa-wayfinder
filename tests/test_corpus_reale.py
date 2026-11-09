@@ -226,3 +226,15 @@ def test_la_scadenza_f24ep_2026_vale_fino_all_ultimo_giorno_dell_anno(reale):
     """Caso limite (#107): il 31/12/2026 la regola del 32-ter vale ancora, il giorno dopo non c'è regola."""
     assert reale.regola_scadenza_f24ep(date(2026, 12, 31)).giorno == 16
     assert reale.regola_scadenza_f24ep(date(2026, 1, 1)).giorno == 16
+
+
+@pytest.mark.parametrize("posizione, causale", [("gestione_separata", "CXX"), ("pensionato", "C10"), ("altra_cassa", "C10")])
+def test_il_corpus_reale_mappa_la_causale_della_gestione_separata_per_posizione(reale, posizione, causale):
+    mappata = reale.mappatura_di_fatto(
+        "f24ep.causale_gestione_separata", "causale", "posizione_previdenziale", posizione, date(2026, 11, 27)
+    )
+    assert mappata is not None and mappata.codice == causale
+
+
+def test_il_corpus_reale_mappa_l_onere_art86_su_cxx(reale):
+    assert reale.mappatura("onere_art86", "codice_tributo_f24ep", date(2026, 11, 27), None).codice == "CXX"
