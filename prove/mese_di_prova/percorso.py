@@ -162,6 +162,10 @@ class Ufficio:
         self._conta_fatto(f"persona {persona}: dichiarazione del sostituito")
         return self.registro.registra_dichiarazione_sostituito(persona, detrazioni, dal, None, atto)
 
+    def familiare_a_carico(self, persona, relazione, codice_fiscale, nascita, percentuale, dal, atto):
+        self._conta_fatto(f"persona {persona}: familiare a carico")
+        return self.registro.registra_familiare_a_carico(persona, relazione, codice_fiscale, nascita, percentuale, dal, None, atto)
+
     def domicilio_fiscale(self, persona, comune, regione, dal, atto):
         self._conta_fatto(f"persona {persona}: domicilio fiscale")
         return self.registro.registra_domicilio_fiscale(persona, comune, regione, dal, atto=atto)
@@ -384,6 +388,11 @@ def _registra_rapporto(c: _Contesto, r: S.Rapporto) -> dict[str, object]:
         u.reddito_anno_precedente(r.persona, 2025, S.REDDITO_2025_P01, S.ATTO_CU_2025)
     if r.dipendente and r.detrazioni:
         u.dichiarazione_sostituito(r.persona, "lavoro_dipendente", date(2026, 1, 1), S.ATTO_DETRAZIONI)
+        if r.id == "R01":
+            u.familiare_a_carico(
+                r.persona, "figlio", S.CF_FIGLIO_R01, S.NASCITA_FIGLIO_R01, S.PERCENTUALE_FIGLIO_R01,
+                date(2026, 1, 1), S.ATTO_FAMILIARE,
+            )
     u.collega(r.id, r.persona, r.dal)
     u.programma(r.id, S.PROGRAMMA_PER_TITOLO[r.titolo], r.dal)
     fatti: dict[str, object] = {}

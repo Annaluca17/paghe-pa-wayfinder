@@ -445,6 +445,10 @@ _Avoid_: Ritenuta progressiva, trattenuta IRPEF (la trattenuta a terzi è un'alt
 Fatto della persona, con validità e documento di origine, che chiede le detrazioni a richiesta e ne dà le condizioni, e che può indicare un'aliquota più alta o redditi di altri sostituti da conguagliare. Senza dichiarazione le detrazioni a richiesta non si applicano e il modello lo segnala, senza fermarsi; la detrazione automatica si applica comunque.
 _Avoid_: Modulo detrazioni, carichi di famiglia (che sono solo una parte)
 
+**Familiare a carico**:
+Fatto della persona, uno per familiare (chiave: il suo codice fiscale), con relazione, data di nascita, percentuale, validità e documento di origine: è la richiesta delle detrazioni dell'art. 12 per quel familiare, senza passare dalla dichiarazione del sostituito. La detrazione si applica a mese, un dodicesimo della formula annua per ogni familiare a carico nel mese di paga; per i figli l'età si ricava dalla data di nascita e fuori fascia il familiare resta registrato con un avviso. Una variazione è un nuovo fatto datato (ADR 0032).
+_Avoid_: Carico, dichiarazione dei carichi
+
 **Detrazione a richiesta**:
 Detrazione che si applica solo se la persona la chiede con la dichiarazione del sostituito, come quella per lavoro dipendente.
 _Avoid_: Detrazione d'ufficio

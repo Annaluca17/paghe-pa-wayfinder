@@ -6,14 +6,17 @@ Il tempo di registrazione viene dall'orologio del registro, mai dal chiamante.
 
 from __future__ import annotations
 
+import calendar
 import json
 import re
 import sqlite3
 from contextlib import contextmanager, nullcontext
 from datetime import UTC, date, datetime
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Callable, Iterable
 
+from .codice_fiscale import codice_fiscale_valido
 from .errori import ErroreRegistro, ValiditaNonUniforme
 from .modello import Atto, Esito, Evento, Fatto, Importo, TipoEsito
 from .riferimento import data_atto, motivo_rifiuto
@@ -83,6 +86,11 @@ TIPO_DATA_PAGAMENTO = "data_pagamento"
 TIPO_PERSONA = "persona"
 TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
 TIPO_IBAN = "iban"
+# Carichi di famiglia (ticket #98, ADR 0032): un fatto della persona per ogni familiare, valore JSON con relazione,
+# codice fiscale, data di nascita e percentuale. La chiave del familiare è il suo codice fiscale.
+TIPO_FAMILIARE_A_CARICO = "familiare_a_carico"
+RELAZIONI_FAMILIARE = ("coniuge", "figlio", "figlio_disabile", "ascendente", "figlio_in_luogo_del_coniuge")
+PERCENTUALI_FIGLIO = (100, 50)
 # Esito 730-4 minimo: fatto della persona, valore JSON con il rimborso e l'anno dei redditi dichiarati.
 TIPO_ESITO_730_4 = "esito_730_4"
 # Addizionali (ticket #85, ADR 0029): domicilio fiscale della persona (valore JSON con comune e regione) e reddito
@@ -112,6 +120,21 @@ TIPI_ENTE_CODICE = frozenset(
     {"codice_fiscale", "denominazione", "email", "iban_tesoreria", "sigla_provincia", TIPO_REGIONE_ENTE, TIPO_CREDITO_RIPORTATO}
 )
 TIPI_ENTE_NUMERICI = frozenset({TIPO_ULTIMO_PAGAMENTO, TIPO_DATA_VERSAMENTO})
+
+
+@dataclass(frozen=True)
+class Familiare:
+    """I dati di un fatto `familiare_a_carico`."""
+
+    relazione: str
+    codice_fiscale: str
+    data_nascita: date
+    percentuale: int
+
+
+def leggi_familiare(fatto: Fatto) -> Familiare:
+    dati = json.loads(str(fatto.valore))
+    return Familiare(dati["relazione"], dati["codice_fiscale"], date.fromisoformat(dati["data_nascita"]), int(dati["percentuale"]))
 
 
 def _trigger_immutabilita(tabella: str) -> str:
@@ -327,6 +350,62 @@ class Registro:
         if atto is None:
             raise ErroreRegistro("La dichiarazione del sostituito vuole il documento di origine")
         return self.registra_codice_persona(persona, TIPO_DICHIARAZIONE_SOSTITUITO, detrazioni, valido_dal, valido_al, atto)
+
+    def registra_familiare_a_carico(
+        self,
+        persona: str,
+        relazione: str,
+        codice_fiscale: str,
+        data_nascita: date,
+        percentuale: int,
+        valido_dal: date,
+        valido_al: date | None,
+        atto: Atto | None,
+    ) -> Fatto:
+        """Familiare a carico (ADR 0032): la richiesta della persona delle detrazioni dell'art. 12, un fatto per familiare.
+
+        Percentuale: 100 o 50 per i figli (anche con disabilità), solo 100 per il coniuge e per il figlio in luogo del
+        coniuge, un intero da 1 a 100 per l'ascendente (in parti uguali tra gli aventi diritto). Una variazione è un
+        nuovo fatto con lo stesso codice fiscale e sostituisce il precedente per quel familiare.
+        """
+        if atto is None:
+            raise ErroreRegistro("Il familiare a carico vuole il documento di origine")
+        if not codice_fiscale_valido(codice_fiscale):
+            raise ErroreRegistro(f"Familiare a carico: codice fiscale non valido, {codice_fiscale!r}")
+        if relazione not in RELAZIONI_FAMILIARE:
+            raise ErroreRegistro(f"Familiare a carico: relazione {relazione!r} non ammessa; ammesse {list(RELAZIONI_FAMILIARE)}")
+        if not isinstance(data_nascita, date) or isinstance(data_nascita, datetime):
+            raise ErroreRegistro(f"Familiare a carico: la data di nascita è una data, {data_nascita!r}")
+        if not isinstance(percentuale, int) or isinstance(percentuale, bool):
+            raise ErroreRegistro(f"Familiare a carico: la percentuale è un numero intero, {percentuale!r}")
+        if relazione in ("coniuge", "figlio_in_luogo_del_coniuge"):
+            ammessa = percentuale == 100
+        elif relazione == "ascendente":
+            ammessa = 1 <= percentuale <= 100
+        else:
+            ammessa = percentuale in PERCENTUALI_FIGLIO
+        if not ammessa:
+            raise ErroreRegistro(f"Familiare a carico: percentuale {percentuale} non ammessa per {relazione}")
+        valore = json.dumps(
+            {
+                "codice_fiscale": codice_fiscale,
+                "data_nascita": data_nascita.isoformat(),
+                "percentuale": percentuale,
+                "relazione": relazione,
+            },
+            sort_keys=True,
+        )
+        return self.registra_codice_persona(persona, TIPO_FAMILIARE_A_CARICO, valore, valido_dal, valido_al, atto)
+
+    def familiari_a_carico_del_mese(self, persona: str, anno: int, mese: int, noto_al: datetime) -> list[Fatto]:
+        """Un fatto per familiare che copre almeno un giorno del mese: per lo stesso codice fiscale, l'ultimo registrato."""
+        primo = date(anno, mese, 1)
+        ultimo = date(anno, mese, calendar.monthrange(anno, mese)[1])
+        scelti: dict[str, Fatto] = {}
+        for fatto in self.fatti_persona_noti(persona, TIPO_FAMILIARE_A_CARICO, noto_al):
+            if fatto.valido_dal <= ultimo and (fatto.valido_al is None or fatto.valido_al >= primo):
+                scelti[leggi_familiare(fatto).codice_fiscale] = fatto
+        return sorted(scelti.values(), key=lambda fatto: fatto.id)
 
     def registra_esito_730_4(
         self, persona: str, rimborso: Decimal, anno_redditi: int, valido_dal: date, atto: Atto | None
