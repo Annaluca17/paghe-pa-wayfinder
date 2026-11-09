@@ -693,17 +693,18 @@ riferimento = "fittizio:codice-p909"
 
 # --- Scadenza F24EP e festivi (calendario dichiarato per anno) ---
 
+# Il 2026 e' nel corpus reale (art. 32-ter c. 1-bis D.L. 185/2008, ticket #107): qui resta solo il 2025.
 [[scadenza_f24ep]]
 dal = 2025-01-01
-al = 2026-12-31
+al = 2025-12-31
 giorno = 16
-riferimento = "fittizio:scadenza-2026"
+riferimento = "fittizio:scadenza-2025"
 [scadenza_f24ep.proroga]
 mese = 8
 dal_giorno = 1
 al_giorno = 20
 fonte = "prassi"
-riferimento = "fittizio:proroga-agosto-2026"
+riferimento = "fittizio:proroga-agosto-2025"
 
 [[scadenza_f24ep]]
 dal = 2027-01-01

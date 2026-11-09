@@ -211,3 +211,18 @@ def test_recupero_su_cessato_per_cessazione_retroattiva(registro, reale, orologi
 def test_il_corpus_reale_classifica_le_spese_di_personale_con_l_origine_automatica(reale, istituto, codice):
     dichiarazione = reale.classificazione(istituto, date(2026, 3, 31))
     assert (dichiarazione.piano_dei_conti, dichiarazione.origine_impegno) == (codice, "automatico")
+
+
+def test_il_corpus_reale_ha_la_scadenza_f24ep_2026_senza_proroga_e_nessuna_dal_2027(reale):
+    regola = reale.regola_scadenza_f24ep(date(2026, 6, 1))
+    assert regola is not None
+    assert regola.giorno == 16
+    assert regola.riferimento == "urn:nir:stato:decreto.legge:2008-11-29;185~art32ter-com1bis"
+    assert regola.proroga is None
+    assert reale.regola_scadenza_f24ep(date(2027, 1, 1)) is None
+
+
+def test_la_scadenza_f24ep_2026_vale_fino_all_ultimo_giorno_dell_anno(reale):
+    """Caso limite (#107): il 31/12/2026 la regola del 32-ter vale ancora, il giorno dopo non c'è regola."""
+    assert reale.regola_scadenza_f24ep(date(2026, 12, 31)).giorno == 16
+    assert reale.regola_scadenza_f24ep(date(2026, 1, 1)).giorno == 16

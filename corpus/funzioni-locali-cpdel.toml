@@ -1032,7 +1032,7 @@ istituto = "irap_acconto"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art30-com5 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art16-com2"
-formula = "arrotonda(max(base.irap - importo.gs_lavoratore, 0) * parametro.aliquota_irap / 100, 2)"
+formula = "arrotonda(base.irap * parametro.aliquota_irap / 100, 2)"
 maturazione = "periodo"
 
 # Concorsi: tabellare e comparto entrano per intero in entrambe le basi.
@@ -1571,8 +1571,9 @@ misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 
-# Co.co.co.: il compenso concorre alla base IRAP (art. 10-bis c. 1); la quota di gestione separata a carico del collaboratore
-# si toglie nella regola irap_acconto (scelta di Luca, ADR 0028: la fonte non e' leggibile, da verificare).
+# Co.co.co.: il compenso concorre alla base IRAP (art. 10-bis c. 1) per l'intero compenso lordo erogato. La quota di gestione
+# separata a carico del collaboratore non si toglie; quella a carico dell'ente non entra. Fonte: ris. AdE 121/E/2009 (prassi,
+# testo non riletto, da verificare; la data non e' nel corpus, ADR 0032).
 [[concorso]]
 istituto = "compenso_collaborazione"
 basi = ["irap"]
@@ -2167,6 +2168,16 @@ dal = 2025-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
 piano_dei_conti = "U.1.02.01.01.001"
 origine_impegno = "automatico"
+
+# Scadenza di versamento dell'F24EP (ticket #107): il giorno 16 del mese successivo (art. 32-ter c. 1-bis D.L. 185/2008, norma
+# certa fino al 2026, ADR 0032). La proroga di agosto (dal 1 al 20, spostata al 20) vale per prassi ma ne manca la fonte, quindi
+# non e' dichiarata. Dal 2027 l'art. 32-ter e' abrogato dal D.Lgs. 33/2025 e l'articolo del testo unico non e' riletto: nessuna
+# regola 2027, da verificare (il calcolo si ferma).
+[[scadenza_f24ep]]
+dal = 2026-01-01
+al = 2026-12-31
+giorno = 16
+riferimento = "urn:nir:stato:decreto.legge:2008-11-29;185~art32ter-com1bis"
 
 # =====================================================================================================================
 # Fisco nazionale del lavoro dipendente e assimilati (ticket #93): scaglioni IRPEF, detrazioni, categorie di reddito,
