@@ -22,7 +22,7 @@ from . import addizionali, benefici
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
-from .modello import MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
+from .modello import MATURAZIONE_NON_TRATTENUTO, MATURAZIONE_RESTO_DA_DIFFERIRE, MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, TIPO_ONERI_DETRAIBILI, Registro, leggi_familiare
 from .denuncia import MATURAZIONI_DERIVATE
 from .denuncia_individuale import IMPIEGHI_TEMPO_DETERMINATO
@@ -665,6 +665,20 @@ def _annuale(
         and pagata.riga.anno_imposta == anno
     ]
     operate += list(ritenute_nuove)
+    # Ciò che l'incapienza di un conguaglio pagato ha già deciso (non trattenuto, o resto da differire) non è dovuto di nuovo:
+    # è nella derivazione di quel conguaglio, non tra le righe, perché il resto trattenuto dopo è già dentro la decisione (ADR 0034).
+    decisi = sum(
+        (
+            importo.valore
+            for pagata in _pagati(registro, persona, istante)
+            if pagata.riga.derivazione.maturazione == "conguaglio"
+            and pagata.riga.istituto == regola.istituto
+            and pagata.riga.anno_imposta == anno
+            for importo in pagata.riga.derivazione.importi
+            if importo.derivazione.maturazione in (MATURAZIONE_NON_TRATTENUTO, MATURAZIONE_RESTO_DA_DIFFERIRE)
+        ),
+        Decimal(0),
+    )
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
     giorni, giorni_anno = _giorni_di_servizio(registro, corpus, persona, anno, istante)
     carichi = tuple(
@@ -684,7 +698,7 @@ def _annuale(
         carichi,
     )
     return _Annuale(
-        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta,
+        calcolo, sum((riga.valore for riga in operate), Decimal(0)) + decisi, (*reddito, *deduzioni, *operate), regola, regola_ritenuta,
         tuple(reddito), tuple(deduzioni), giorni, giorni_anno,
     )
 

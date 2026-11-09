@@ -295,6 +295,26 @@ effetto = "meno"
 destinatario = "terzo"
 canale = "f24ep"
 
+# Incapienza del conguaglio (ticket #99): il resto differito trattenuto nei pagamenti successivi.
+[[composizione]]
+istituto = "conguaglio_irpef_resto"
+dal = 2025-01-01
+riferimento = "fittizio:comp-conguaglio-irpef-resto"
+natura = "ritenuta"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+# Incapienza del conguaglio (ticket #99): l'interesse sul resto differito, importo a se.
+[[composizione]]
+istituto = "conguaglio_irpef_interesse"
+dal = 2025-01-01
+riferimento = "fittizio:comp-conguaglio-irpef-interesse"
+natura = "ritenuta"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
 [[composizione]]
 istituto = "cpdel_lavoratore"
 dal = 2025-01-01
@@ -512,6 +532,14 @@ sistema = "codice_tributo_f24ep"
 codice = "100E"
 dal = 2025-01-01
 riferimento = "fittizio:mappatura-conguaglio-irpef"
+
+# Il resto differito versa sul codice del conguaglio. L'interesse non ha qui nessun codice tributo: non si inventa (ticket #99).
+[[mappatura]]
+istituto = "conguaglio_irpef_resto"
+sistema = "codice_tributo_f24ep"
+codice = "100E"
+dal = 2025-01-01
+riferimento = "fittizio:mappatura-conguaglio-irpef-resto"
 
 [[mappatura]]
 istituto = "cpdel_lavoratore"

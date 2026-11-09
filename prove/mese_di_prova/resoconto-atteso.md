@@ -15,8 +15,8 @@ Il resoconto e' generato da `python -m prove.mese_di_prova` e fissato da `tests/
 | regole di ritenuta | 2 | 0 | 2 |
 | regole di conguaglio | 2 | 0 | 2 |
 | dichiarazioni di pagamento fisiologico | 0 | 1 | 1 |
-| dichiarazioni di composizione | 4 | 48 | 52 |
-| mappature verso codici esterni | 4 | 20 | 24 |
+| dichiarazioni di composizione | 4 | 50 | 54 |
+| mappature verso codici esterni | 4 | 21 | 25 |
 | codici nel catalogo F24EP | 0 | 16 | 16 |
 | regole di scadenza F24EP | 0 | 2 | 2 |
 | calendari dei festivi | 0 | 2 | 2 |
