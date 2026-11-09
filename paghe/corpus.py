@@ -451,7 +451,7 @@ class RegolaRitenuta:
     detrazione che il sostituto riconosce in via automatica) e vale 0 se la regola non la dichiara.
     `fisco.giorni` e `fisco.giorni_anno` servono a rapportare le detrazioni al periodo di lavoro: nella ritenuta
     del mese valgono entrambi 1, nel conguaglio i giorni di servizio dell'anno e i giorni dell'anno.
-    Carichi di famiglia (ADR 0032): `carichi_coniuge`, `carichi_figlio` e `carichi_ascendente` sono la detrazione ANNUA
+    Carichi di famiglia (ADR 0033): `carichi_coniuge`, `carichi_figlio` e `carichi_ascendente` sono la detrazione ANNUA
     per un familiare a carico al 100%, nelle stesse variabili, più `fisco.figli`, il numero dei figli che danno diritto
     nello stesso mese (aumenta la soglia dei figli). Il coniuge vale anche per il figlio in luogo del coniuge. Il motore
     le applica per mese, per percentuale e per familiare, un dodicesimo ciascuna, senza la dichiarazione del sostituito.
@@ -640,6 +640,79 @@ class RegolaAddizionali:
         return tuple(getattr(self, nome) for nome in PARAMETRI_ADDIZIONALE)
 
 
+# Nomi che le formule dei benefici leggono dal fisco della persona (ticket #95): il reddito annuo stimato (nel conguaglio il
+# reddito vero), il reddito di lavoro dipendente del periodo, imposta lorda e detrazione dell'art. 13 del periodo, gli oneri
+# detraibili comunicati (annui), i periodi e i giorni di servizio come nella ritenuta.
+FISCO_BENEFICI = frozenset(
+    {"reddito_stimato", "reddito_dipendente", "reddito_fascia", "imposta", "detrazione", "carichi", "oneri", "periodi", "giorni", "giorni_anno"}
+)
+ISTITUTI_BENEFICI = (
+    "istituto_somma_esente", "istituto_trattamento_integrativo", "recupero_somma_esente", "recupero_trattamento_integrativo",
+)
+PARAMETRI_BENEFICI = ("soglia_recupero", "rate_somma_esente", "rate_trattamento_integrativo")
+
+
+@dataclass(frozen=True)
+class RegolaBenefici:
+    """Somma esente e trattamento integrativo (ticket #95, ADR 0019): due importi a favore della persona, non reddito.
+
+    `somma_esente` e `trattamento_integrativo` sono formule dell'importo del periodo di paga (o dell'anno, nel conguaglio
+    con un solo periodo): leggono parametri e i valori `fisco.*` di `FISCO_BENEFICI`. Le categorie dicono a quali redditi
+    spetta ciascun istituto. I quattro istituti sono i riconosciuti e i loro recuperi; `soglia_recupero` e le rate sono
+    parametri datati: sotto la soglia il recupero e' in unica soluzione, sopra in `rate_*` rate dai pagamenti dopo il conguaglio.
+    """
+
+    versione: int
+    dal: date
+    riferimento: str
+    somma_esente: str
+    trattamento_integrativo: str
+    categorie_somma_esente: tuple[str, ...]
+    categorie_trattamento_integrativo: tuple[str, ...]
+    istituto_somma_esente: str
+    istituto_trattamento_integrativo: str
+    recupero_somma_esente: str
+    recupero_trattamento_integrativo: str
+    soglia_recupero: str
+    rate_somma_esente: str
+    rate_trattamento_integrativo: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = "Benefici della persona"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if type(self.versione) is not int or self.versione < 1:
+            raise ErroreCorpus(f"{soggetto}: versione non valida")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        for campo in (*ISTITUTI_BENEFICI, *PARAMETRI_BENEFICI):
+            if not isinstance(getattr(self, campo), str) or not getattr(self, campo).strip():
+                raise ErroreCorpus(f"{soggetto}: {campo} obbligatorio")
+        if len(set(self.istituti)) != len(ISTITUTI_BENEFICI):
+            raise ErroreCorpus(f"{soggetto}: ogni ruolo ha un istituto diverso")
+        if not self.categorie_somma_esente or not self.categorie_trattamento_integrativo:
+            raise ErroreCorpus(f"{soggetto}: categorie obbligatorie")
+        for formula in (self.somma_esente, self.trattamento_integrativo):
+            letti = riferimenti(formula)
+            if letti.fatti or letti.importi or letti.basi:
+                raise ErroreCorpus(f"{soggetto}: la formula legge solo parametri e fisco, non fatti, importi o basi")
+            ignoti = letti.fisco - FISCO_BENEFICI
+            if ignoti:
+                raise ErroreCorpus(f"{soggetto}: fisco ignoto {sorted(ignoti)}; ammessi {sorted(FISCO_BENEFICI)}")
+
+    @property
+    def istituti(self) -> tuple[str, ...]:
+        return tuple(getattr(self, ruolo) for ruolo in ISTITUTI_BENEFICI)
+
+    @property
+    def parametri(self) -> frozenset[str]:
+        return (
+            riferimenti(self.somma_esente).parametri
+            | riferimenti(self.trattamento_integrativo).parametri
+            | {getattr(self, nome) for nome in PARAMETRI_BENEFICI}
+        )
+
+
 @dataclass(frozen=True)
 class RegoleFiscali:
     categorie: tuple[CategoriaReddito, ...] = ()
@@ -650,6 +723,7 @@ class RegoleFiscali:
     deduzioni: tuple[DichiarazioneDeduzione, ...] = ()
     aliquote: tuple[AliquotaAddizionale, ...] = ()
     addizionali: tuple[RegolaAddizionali, ...] = ()
+    benefici: tuple[RegolaBenefici, ...] = ()
 
     def __bool__(self) -> bool:
         return bool(
@@ -661,6 +735,7 @@ class RegoleFiscali:
             or self.deduzioni
             or self.aliquote
             or self.addizionali
+            or self.benefici
         )
 
 
@@ -1057,6 +1132,7 @@ class Corpus:
         elenco += [(f"Ritenuta {r.istituto}", r.riferimento) for r in fiscale.ritenute]
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [("Addizionali", a.riferimento) for a in fiscale.addizionali]
+        elenco += [("Benefici della persona", b.riferimento) for b in fiscale.benefici]
         elenco += [(f"Aliquota addizionale {a.ente} {a.codice} {a.anno}", a.riferimento) for a in fiscale.aliquote]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Classificazione {c.istituto}", c.riferimento) for c in self._classificazioni]
@@ -1098,7 +1174,8 @@ class Corpus:
         """Istituti con una regola, o con la ritenuta e il conguaglio fiscale."""
         fiscale = self.fiscale
         noti = set(self._regole) | {r.istituto for r in fiscale.ritenute} | {c.istituto for c in fiscale.conguagli}
-        return noti | {i for regola in fiscale.addizionali for i in regola.istituti}
+        noti |= {i for regola in fiscale.addizionali for i in regola.istituti}
+        return noti | {i for regola in fiscale.benefici for i in regola.istituti}
 
     def _convalida_composizione(self) -> None:
         noti = self._istituti_noti()
@@ -1194,6 +1271,21 @@ class Corpus:
                 raise ErroreCorpus(f"Addizionali {gia[0]}: lo stesso istituto ha anche una regola")
             for altra in fiscale.addizionali[indice + 1 :]:
                 _vigenze_sovrapposte([regola, altra], "Addizionali")
+        for indice, regola in enumerate(fiscale.benefici):
+            soggetto = "Benefici della persona"
+            if not fiscale.ritenute:
+                raise ErroreCorpus(f"{soggetto}: leggono imposta e detrazione della ritenuta, manca [[ritenuta]]")
+            ignoti = regola.parametri - self._parametri.keys()
+            if ignoti:
+                raise ErroreCorpus(f"{soggetto}: parametri ignoti {sorted(ignoti)}")
+            for categoria in (*regola.categorie_somma_esente, *regola.categorie_trattamento_integrativo):
+                if categoria not in nomi:
+                    raise ErroreCorpus(f"{soggetto}: categoria ignota {categoria}")
+            gia = [i for i in regola.istituti if i in self._regole]
+            if gia:
+                raise ErroreCorpus(f"{soggetto} {gia[0]}: lo stesso istituto ha anche una regola")
+            for altra in fiscale.benefici[indice + 1 :]:
+                _vigenze_sovrapposte([regola, altra], soggetto)
         for indice, dichiarazione in enumerate(fiscale.fisiologici):
             soggetto = f"Pagamento fisiologico {dichiarazione.istituto}"
             if dichiarazione.istituto not in self._regole:
@@ -1422,6 +1514,13 @@ class Corpus:
                      *a.parametri, *a.istituti]
                     for a in fiscale.addizionali
                 )
+            if fiscale.benefici:
+                contenuto["fiscale"]["benefici"] = sorted(
+                    [b.versione, b.dal.isoformat(), b.al.isoformat() if b.al else "", b.riferimento,
+                     b.somma_esente, b.trattamento_integrativo, sorted(b.categorie_somma_esente),
+                     sorted(b.categorie_trattamento_integrativo), *b.istituti, *(getattr(b, n) for n in PARAMETRI_BENEFICI)]
+                    for b in fiscale.benefici
+                )
             if fiscale.aliquote:
                 contenuto["fiscale"]["aliquote"] = sorted(
                     [a.ente, a.codice, a.anno, str(a.soglia), a.riferimento,
@@ -1546,6 +1645,10 @@ class Corpus:
     def regola_addizionali(self, giorno: date) -> RegolaAddizionali | None:
         """Regola delle addizionali vigente alla data; None se il corpus non le calcola."""
         return _vigente(self.fiscale.addizionali, giorno)
+
+    def regola_benefici(self, giorno: date) -> RegolaBenefici | None:
+        """Regola di somma esente e trattamento integrativo vigente alla data; None se il corpus non li calcola."""
+        return _vigente(self.fiscale.benefici, giorno)
 
     def regola_ritenuta(self, giorno: date) -> RegolaRitenuta | None:
         return _vigente(self.fiscale.ritenute, giorno)
@@ -1986,7 +2089,21 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
         )
         for voce in dati.get("addizionale", [])
     )
-    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote, addizionali)
+    benefici = tuple(
+        RegolaBenefici(
+            versione=voce["versione"],
+            dal=_data(voce["dal"], "dal"),
+            riferimento=voce["riferimento"],
+            al=_data(voce["al"], "al") if "al" in voce else None,
+            somma_esente=voce["somma_esente"],
+            trattamento_integrativo=voce["trattamento_integrativo"],
+            categorie_somma_esente=tuple(voce["categorie_somma_esente"]),
+            categorie_trattamento_integrativo=tuple(voce["categorie_trattamento_integrativo"]),
+            **{campo: voce[campo] for campo in (*ISTITUTI_BENEFICI, *PARAMETRI_BENEFICI)},
+        )
+        for voce in dati.get("beneficio", [])
+    )
+    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote, addizionali, benefici)
 
 
 def _concorsi_da_toml(voce: dict) -> list[Concorso]:

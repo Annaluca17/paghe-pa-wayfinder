@@ -136,6 +136,10 @@ class Derivazione:
 
 # Importi calcolati sul pagato, non sulla competenza: ritenuta e conguaglio fiscale (ADR 0019).
 MATURAZIONI_FISCALI = frozenset({"ritenuta", "conguaglio"})
+# Somma esente, trattamento integrativo e i loro recuperi: a favore o a carico della persona, non sono reddito (ticket #95).
+# `da_recuperare` e' il recupero a rate deciso dal conguaglio: vive solo nella derivazione del conguaglio, non e' una riga.
+MATURAZIONE_BENEFICIO = "beneficio"
+MATURAZIONE_DA_RECUPERARE = "da_recuperare"
 
 
 @dataclass(frozen=True)

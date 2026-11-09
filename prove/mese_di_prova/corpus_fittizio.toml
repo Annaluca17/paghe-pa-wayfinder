@@ -613,6 +613,29 @@ modalita = "debito_credito"
 dal = 2025-01-01
 riferimento = "fittizio:codice-150e"
 
+# 170E e 175E: forma confermata dalla ricerca del ticket #95 (ris. AdE 35/E/2020 e 9/E/2025): sezione Erario, A = mese, B = anno.
+[[codice_f24ep]]
+codice = "170E"
+sezione = "F"
+codice_campo = "nessuno"
+estremi = "nessuno"
+rif_a = "mese_pagamento"
+rif_b = "anno_pagamento"
+modalita = "debito_credito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-170e"
+
+[[codice_f24ep]]
+codice = "175E"
+sezione = "F"
+codice_campo = "nessuno"
+estremi = "nessuno"
+rif_a = "mese_pagamento"
+rif_b = "anno_pagamento"
+modalita = "debito_credito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-175e"
+
 [[codice_f24ep]]
 codice = "P201"
 sezione = "Q"

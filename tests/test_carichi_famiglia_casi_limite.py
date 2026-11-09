@@ -1,6 +1,8 @@
-"""Casi limite dei carichi di famiglia (ADR 0032, ticket #98), scritti nella rilettura. Dati di fantasia."""
+"""Casi limite dei carichi di famiglia (ADR 0033, ticket #98), scritti nella rilettura. Dati di fantasia."""
 
 from datetime import date
+
+import pytest
 from decimal import Decimal
 
 from paghe import Mese
@@ -49,3 +51,22 @@ def test_il_figlio_che_compie_30_anni_esce_dal_mese_del_compleanno(registro, oro
     assert ritenute[6].ritenuta.valore - ritenute[5].ritenuta.valore == D("50.00")
     assert ritenute[6].avvisi_di("familiare_fuori_eta")
     assert not ritenute[5].avvisi_di("familiare_fuori_eta")
+
+
+@pytest.mark.parametrize("anno", [2026, 2027])
+def test_i_carichi_entrano_nel_trattamento_integrativo_tra_15000_e_28000(anno):
+    """D.L. 3/2020 art. 1 c. 1, secondo periodo (elenco da verificare): la somma delle detrazioni comprende quelle dell'art. 12."""
+    from paghe import Corpus
+    from paghe.benefici import Contesto, _valuta
+    from test_carichi_famiglia import CORPUS_REALE
+
+    reale = Corpus.carica(CORPUS_REALE, reale=True)
+    regola = reale.regola_benefici(date(anno, 6, 1))
+
+    def integrativo(carichi):
+        contesto = Contesto(D("20000"), "prova", D("1600"), D("20000"), D("300"), D("280"), D("0"), 12, 1, 1, (), (), D(carichi))
+        return _valuta(reale, regola.trattamento_integrativo, contesto, date(anno, 6, 1))[0]
+
+    assert integrativo("0") == D("0.00")  # detrazioni 280 sotto l'imposta 300
+    assert integrativo("50") == D("30.00")  # 280 + 50 - 300
+    assert integrativo("500") == D("100.00")  # al massimo 1.200 / 12

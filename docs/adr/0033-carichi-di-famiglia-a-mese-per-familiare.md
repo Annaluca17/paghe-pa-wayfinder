@@ -24,3 +24,4 @@ Scelto da Luca il 09/11/2026 nel grilling del ticket #98, domande 1-7. Precisa l
 
 - Restano fuori, con un ticket proprio se servono: l'esclusione dei familiari residenti all'estero per chi non è cittadino italiano, UE o SEE (c. 2-bis); la richiesta di fruire dei carichi per l'intero anno con un rapporto più breve (codice AC della CU); i campi della CU.
 - Restano **da verificare**: il criterio di 1/12 per mese, il troncamento del rapporto alla quarta cifra decimale (si usa lo stesso dell'art. 13), le detrazioni sulle mensilità aggiuntive.
+- **Trattamento integrativo.** Tra 15.000 e 28.000 euro il trattamento integrativo (ADR del ticket #95) confronta con l'imposta lorda la somma delle detrazioni, che comprende quelle dell'art. 12 (D.L. 3/2020 art. 1 c. 1, secondo periodo: elenco degli articoli **da verificare** sul testo, non riletto in questo ticket). La formula del corpus legge i carichi dello stesso periodo come `fisco.carichi`.

@@ -86,7 +86,7 @@ TIPO_DATA_PAGAMENTO = "data_pagamento"
 TIPO_PERSONA = "persona"
 TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
 TIPO_IBAN = "iban"
-# Carichi di famiglia (ticket #98, ADR 0032): un fatto della persona per ogni familiare, valore JSON con relazione,
+# Carichi di famiglia (ticket #98, ADR 0033): un fatto della persona per ogni familiare, valore JSON con relazione,
 # codice fiscale, data di nascita e percentuale. La chiave del familiare è il suo codice fiscale.
 TIPO_FAMILIARE_A_CARICO = "familiare_a_carico"
 RELAZIONI_FAMILIARE = ("coniuge", "figlio", "figlio_disabile", "ascendente", "figlio_in_luogo_del_coniuge")
@@ -97,6 +97,9 @@ TIPO_ESITO_730_4 = "esito_730_4"
 # dell'anno prima preso dalla CU, per l'acconto quando il modello non ha il conguaglio di quell'anno.
 TIPO_DOMICILIO_FISCALE = "domicilio_fiscale"
 TIPO_REDDITO_ANNO_PRECEDENTE = "reddito_anno_precedente"
+# Fatto della persona (ticket #95): la detrazione annua per oneri che la persona comunica nella dichiarazione del
+# sostituito, in euro; la legge il trattamento integrativo tra 15.000 e 28.000 euro di reddito. Senza il fatto vale zero.
+TIPO_ONERI_DETRAIBILI = "oneri_detraibili"
 # Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
 # Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
 TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
@@ -362,7 +365,7 @@ class Registro:
         valido_al: date | None,
         atto: Atto | None,
     ) -> Fatto:
-        """Familiare a carico (ADR 0032): la richiesta della persona delle detrazioni dell'art. 12, un fatto per familiare.
+        """Familiare a carico (ADR 0033): la richiesta della persona delle detrazioni dell'art. 12, un fatto per familiare.
 
         Percentuale: 100 o 50 per i figli (anche con disabilità), solo 100 per il coniuge e per il figlio in luogo del
         coniuge, un intero da 1 a 100 per l'ascendente (in parti uguali tra gli aventi diritto). Una variazione è un
