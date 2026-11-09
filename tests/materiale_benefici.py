@@ -31,9 +31,10 @@ PARAMETRI_BENEFICI = {
 }
 
 SOMMA_ESENTE = """arrotonda(
-    se(fisco.reddito_stimato <= parametro.se_soglia_1, parametro.se_percentuale_1,
-       se(fisco.reddito_stimato <= parametro.se_soglia_2, parametro.se_percentuale_2,
-          se(fisco.reddito_stimato <= parametro.se_soglia_3, parametro.se_percentuale_3, 0))) * fisco.reddito_dipendente, 2)"""
+    se(fisco.reddito_stimato <= parametro.se_soglia_3,
+       se(fisco.reddito_fascia <= parametro.se_soglia_1, parametro.se_percentuale_1,
+          se(fisco.reddito_fascia <= parametro.se_soglia_2, parametro.se_percentuale_2, parametro.se_percentuale_3)), 0)
+    * fisco.reddito_dipendente, 2)"""
 
 INTEGRATIVO = """arrotonda(
     se(fisco.reddito_stimato <= parametro.ti_soglia_1,

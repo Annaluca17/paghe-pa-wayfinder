@@ -2851,9 +2851,10 @@ riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stat
 categorie_somma_esente = ["lavoro_dipendente"]
 categorie_trattamento_integrativo = ["lavoro_dipendente", "collaborazione"]
 somma_esente = '''arrotonda(
-    se(fisco.reddito_stimato <= parametro.somma_esente_soglia_1, parametro.somma_esente_percentuale_1,
-       se(fisco.reddito_stimato <= parametro.somma_esente_soglia_2, parametro.somma_esente_percentuale_2,
-          se(fisco.reddito_stimato <= parametro.somma_esente_soglia_3, parametro.somma_esente_percentuale_3, 0)))
+    se(fisco.reddito_stimato <= parametro.somma_esente_soglia_3,
+       se(fisco.reddito_fascia <= parametro.somma_esente_soglia_1, parametro.somma_esente_percentuale_1,
+          se(fisco.reddito_fascia <= parametro.somma_esente_soglia_2, parametro.somma_esente_percentuale_2,
+             parametro.somma_esente_percentuale_3)), 0)
     * fisco.reddito_dipendente, 2)'''
 trattamento_integrativo = '''arrotonda(
     se(fisco.reddito_stimato <= parametro.integrativo_soglia_1,
@@ -2877,9 +2878,10 @@ riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stat
 categorie_somma_esente = ["lavoro_dipendente"]
 categorie_trattamento_integrativo = ["lavoro_dipendente", "collaborazione"]
 somma_esente = '''arrotonda(
-    se(fisco.reddito_stimato <= parametro.somma_esente_soglia_1, parametro.somma_esente_percentuale_1,
-       se(fisco.reddito_stimato <= parametro.somma_esente_soglia_2, parametro.somma_esente_percentuale_2,
-          se(fisco.reddito_stimato <= parametro.somma_esente_soglia_3, parametro.somma_esente_percentuale_3, 0)))
+    se(fisco.reddito_stimato <= parametro.somma_esente_soglia_3,
+       se(fisco.reddito_fascia <= parametro.somma_esente_soglia_1, parametro.somma_esente_percentuale_1,
+          se(fisco.reddito_fascia <= parametro.somma_esente_soglia_2, parametro.somma_esente_percentuale_2,
+             parametro.somma_esente_percentuale_3)), 0)
     * fisco.reddito_dipendente, 2)'''
 trattamento_integrativo = '''arrotonda(
     se(fisco.reddito_stimato <= parametro.integrativo_soglia_1,

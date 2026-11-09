@@ -631,7 +631,7 @@ class RegolaAddizionali:
 # reddito vero), il reddito di lavoro dipendente del periodo, imposta lorda e detrazione dell'art. 13 del periodo, gli oneri
 # detraibili comunicati (annui), i periodi e i giorni di servizio come nella ritenuta.
 FISCO_BENEFICI = frozenset(
-    {"reddito_stimato", "reddito_dipendente", "imposta", "detrazione", "oneri", "periodi", "giorni", "giorni_anno"}
+    {"reddito_stimato", "reddito_dipendente", "reddito_fascia", "imposta", "detrazione", "oneri", "periodi", "giorni", "giorni_anno"}
 )
 ISTITUTI_BENEFICI = (
     "istituto_somma_esente", "istituto_trattamento_integrativo", "recupero_somma_esente", "recupero_trattamento_integrativo",

@@ -51,7 +51,11 @@ def test_il_riconosciuto_in_piu_e_un_recupero_a_rate_oltre_la_soglia(registro, o
     assumi(registro)
     esito, fiscale = anno_con_premio(registro, orologio, corpus)
     assert del_beneficio(fiscale, "somma_esente").valore == D("0.00")
-    assert [i.istituto for i in fiscale.benefici if i.istituto.endswith("_recupero")] == []
+    # la prima rata sta nel pagamento del conguaglio (D.L. 3/2020 art. 1 c. 3; L. 207/2024 art. 1 c. 7)
+    assert {i.istituto: i.valore for i in fiscale.benefici if i.istituto.endswith("_recupero")} == {
+        "somma_esente_recupero": D("55.00"),
+        "trattamento_integrativo_recupero": D("137.50"),
+    }
     decisioni = [i for i in fiscale.conguaglio.derivazione.importi if i.derivazione.maturazione == "da_recuperare"]
     assert {(i.istituto, i.valore) for i in decisioni} == {
         ("somma_esente_recupero", D("550.00")),
@@ -60,17 +64,17 @@ def test_il_riconosciuto_in_piu_e_un_recupero_a_rate_oltre_la_soglia(registro, o
     assert "10 rate" in next(i for i in decisioni if i.istituto == "somma_esente_recupero").derivazione.formula
 
 
-def test_le_rate_partono_dal_pagamento_dopo_il_conguaglio_con_la_derivazione_che_risale_al_conguaglio(registro, orologio):
+def test_le_rate_dopo_il_conguaglio_continuano_con_la_derivazione_che_risale_al_conguaglio(registro, orologio):
     corpus = corpus_benefici()
     assumi(registro)
     anno_con_premio(registro, orologio, corpus)
     _, fiscale = mese_pagato(registro, orologio, corpus, 1, anno=2027)
     ti = del_beneficio(fiscale, "trattamento_integrativo_recupero")
     se = del_beneficio(fiscale, "somma_esente_recupero")
-    assert (ti.valore, se.valore) == (D("137.50"), D("55.00"))  # 1100 / 8 e 550 / 10
+    assert (ti.valore, se.valore) == (D("137.50"), D("55.00"))  # 962,50 / 7 e 495 / 9
     assert ti.anno_imposta == 2026
     assert ti.derivazione.importi[0].derivazione.maturazione == "conguaglio"
-    assert "rate rimaste (8 di 8)" in ti.derivazione.formula
+    assert "rate rimaste (7 di 8)" in ti.derivazione.formula
 
 
 def test_il_recupero_a_rate_finisce_dopo_otto_e_dieci_rate(registro, orologio):
@@ -83,7 +87,8 @@ def test_il_recupero_a_rate_finisce_dopo_otto_e_dieci_rate(registro, orologio):
         for importo in fiscale.benefici:
             if importo.istituto in totale:
                 totale[importo.istituto] += importo.valore
-    assert totale == {"trattamento_integrativo_recupero": D("1100.00"), "somma_esente_recupero": D("550.00")}
+    # la prima rata era nel conguaglio di dicembre
+    assert totale == {"trattamento_integrativo_recupero": D("962.50"), "somma_esente_recupero": D("495.00")}
     assert [i.istituto for i in fiscale.benefici if i.istituto.endswith("_recupero")] == []
 
 
@@ -105,8 +110,10 @@ def test_fino_alla_soglia_il_recupero_e_in_unica_soluzione(registro, orologio):
     somma = del_beneficio(fiscale, "somma_esente_recupero")
     assert somma.valore == D("550.00") and somma.anno_imposta == 2026
     assert "unica soluzione" in somma.derivazione.formula
-    # l'integrativo (1100,00) supera la soglia di 600,00: ha le sue rate, la soglia e' per beneficio
-    assert [i.istituto for i in fiscale.benefici if i.istituto == "trattamento_integrativo_recupero"] == []
+    # l'integrativo (1100,00) supera la soglia di 600,00: ha le sue rate, la prima nel conguaglio; la soglia
+    # dell'integrativo non si cumula con quella della somma esente
+    integrativo = del_beneficio(fiscale, "trattamento_integrativo_recupero")
+    assert integrativo.valore == D("137.50") and "prima rata" in integrativo.derivazione.formula
 
 
 # Pagamento finale: il recupero e' sempre in unica soluzione
@@ -133,9 +140,9 @@ def test_alla_cessazione_il_residuo_delle_rate_in_corso_si_trattiene_tutto(regis
     mese_pagato(registro, orologio, corpus, 2, anno=2027)
     _, fiscale = mese_pagato(registro, orologio, corpus, 3, anno=2027, ultimo=True)
     residui = {i.istituto: i for i in fiscale.benefici if i.istituto.endswith("_recupero") and i.anno_imposta == 2026}
-    # due rate gia' trattenute: 1100 - 2 * 137,50 e 550 - 2 * 55,00
-    assert residui["trattamento_integrativo_recupero"].valore == D("825.00")
-    assert residui["somma_esente_recupero"].valore == D("440.00")
+    # tre rate gia' trattenute (dicembre, gennaio, febbraio): 1100 - 3 * 137,50 e 550 - 3 * 55,00
+    assert residui["trattamento_integrativo_recupero"].valore == D("687.50")
+    assert residui["somma_esente_recupero"].valore == D("385.00")
     assert "alla cessazione" in residui["somma_esente_recupero"].derivazione.formula
 
 

@@ -36,6 +36,7 @@ class Contesto:
     reddito_stimato: Decimal
     origine_stimato: str
     reddito_dipendente: Decimal
+    reddito_fascia: Decimal
     imposta: Decimal
     detrazione: Decimal
     oneri: Decimal
@@ -91,6 +92,7 @@ def _valuta(corpus: Corpus, formula: str, contesto: Contesto, giorno: date) -> t
     valori = {
         "reddito_stimato": contesto.reddito_stimato,
         "reddito_dipendente": contesto.reddito_dipendente,
+        "reddito_fascia": contesto.reddito_fascia,
         "imposta": contesto.imposta,
         "detrazione": contesto.detrazione,
         "oneri": contesto.oneri,
@@ -118,7 +120,8 @@ def _parametro(corpus: Corpus, nome: str, giorno: date) -> ParametroLetto:
 def _letture(contesto: Contesto) -> str:
     return (
         f"reddito annuo stimato = {contesto.reddito_stimato} ({contesto.origine_stimato}); "
-        f"reddito di lavoro dipendente = {contesto.reddito_dipendente}; imposta lorda = {contesto.imposta}; "
+        f"reddito di lavoro dipendente = {contesto.reddito_dipendente}; "
+        f"reddito per la percentuale della somma esente = {contesto.reddito_fascia}; imposta lorda = {contesto.imposta}; "
         f"detrazione dell'art. 13 = {contesto.detrazione} (calcolata anche senza dichiarazione del sostituito); "
         f"oneri detraibili comunicati = {contesto.oneri}"
     )
@@ -265,12 +268,20 @@ def al_conguaglio(
             )
             continue
         rate = _parametro(corpus, beneficio.rate, riferimento)
-        piani.append(
+        piano = _importo(
+            corpus, regola, beneficio.recupero, rapporto, anno, _anno(anno), da_recuperare,
+            f"recupero a rate = {base}; oltre {soglia.valore}, {rate.valore} rate di pari ammontare dal pagamento "
+            "del conguaglio",
+            (soglia, rate), (*gia, *contesto.importi), (), istante, MATURAZIONE_DA_RECUPERARE,
+        )
+        piani.append(piano)
+        # La prima rata sta nel pagamento del conguaglio: «dalla retribuzione che sconta gli effetti del conguaglio»
+        # (D.L. 3/2020 art. 1 c. 3; L. 207/2024 art. 1 c. 7, «dalla prima retribuzione su cui incide il conguaglio»).
+        importi.append(
             _importo(
-                corpus, regola, beneficio.recupero, rapporto, anno, _anno(anno), da_recuperare,
-                f"recupero a rate = {base}; oltre {soglia.valore}, {rate.valore} rate di pari ammontare dai pagamenti "
-                "dopo il conguaglio",
-                (soglia, rate), (*gia, *contesto.importi), (), istante, MATURAZIONE_DA_RECUPERARE,
+                corpus, regola, beneficio.recupero, rapporto, anno, _anno(anno), _rata(da_recuperare, int(rate.valore)),
+                f"prima rata = recupero ({da_recuperare}) diviso {rate.valore} rate, nel pagamento del conguaglio",
+                (soglia, rate), (piano,), (), istante,
             )
         )
     return tuple(importi), tuple(piani)

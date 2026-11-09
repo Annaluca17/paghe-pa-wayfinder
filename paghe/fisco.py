@@ -778,6 +778,11 @@ def _benefici_del_pagamento(
             reddito_stimato=annuale.calcolo.imponibile,
             origine_stimato="reddito vero dell'anno",
             reddito_dipendente=benefici.reddito_idoneo(redditi, dedotte, regola.categorie_somma_esente),
+            # L. 207/2024 art. 1 c. 5: per la percentuale il reddito di lavoro dipendente è rapportato all'intero anno;
+            # il limite dei 20.000 euro resta sul reddito complessivo vero.
+            reddito_fascia=benefici.reddito_annuo_stimato(
+                benefici.reddito_idoneo(redditi, dedotte, regola.categorie_somma_esente), annuale.giorni
+            ),
             imposta=annuale.calcolo.imposta,
             detrazione=_detrazione_teorica(
                 corpus, regola_ritenuta, annuale.calcolo.imponibile, 1, riferimento, annuale.giorni, annuale.giorni_anno
@@ -799,6 +804,7 @@ def _benefici_del_pagamento(
             origine_stimato=f"imponibile fiscale pagato dall'inizio dell'anno {pagato} diviso {giorni} giorni di servizio per "
             f"{benefici.GIORNI_REDDITO_ANNUO}",
             reddito_dipendente=benefici.reddito_idoneo(redditi, dedotte, regola.categorie_somma_esente),
+            reddito_fascia=benefici.reddito_annuo_stimato(pagato, giorni),
             imposta=calcolo_ritenuta.calcolo.imposta,
             detrazione=_detrazione_teorica(
                 corpus, regola_ritenuta, calcolo_ritenuta.calcolo.imponibile, PERIODI_MENSILI, riferimento, 1, 1

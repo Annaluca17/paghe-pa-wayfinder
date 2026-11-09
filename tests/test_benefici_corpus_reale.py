@@ -19,9 +19,13 @@ def reale():
     return Corpus.carica(CORPUS_REALE, reale=True)
 
 
-def contesto(stimato="10000", dipendente="1000", imposta="0", detrazione="0", oneri="0", periodi=12, giorni=1, giorni_anno=1):
+def contesto(
+    stimato="10000", dipendente="1000", imposta="0", detrazione="0", oneri="0", periodi=12, giorni=1, giorni_anno=1,
+    fascia=None,
+):
     return Contesto(
-        D(stimato), "prova", D(dipendente), D(imposta), D(detrazione), D(oneri), periodi, giorni, giorni_anno, importi=()
+        D(stimato), "prova", D(dipendente), D(fascia if fascia is not None else stimato), D(imposta), D(detrazione),
+        D(oneri), periodi, giorni, giorni_anno, importi=(),
     )
 
 
