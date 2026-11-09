@@ -44,7 +44,26 @@ INTEGRATIVO = """arrotonda(
               max(0, fisco.detrazione + fisco.oneri / fisco.periodi - fisco.imposta)), 0)), 2)"""
 
 
-def parametri_benefici() -> str:
+# Ulteriore detrazione di prova, come la norma reale: 1000 da 20000 a 32000, poi decrescente fino a 40000. Per la soglia cumulata.
+PARAMETRI_ULTERIORE = {
+    "ulteriore_importo": "1000",
+    "ulteriore_soglia_1": "20000",
+    "ulteriore_soglia_2": "32000",
+    "ulteriore_soglia_3": "40000",
+    "ulteriore_divisore": "8000",
+}
+ULTERIORE = """arrotonda(
+    se((fisco.imponibile * fisco.periodi) > parametro.ulteriore_soglia_1,
+       se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_2,
+          parametro.ulteriore_importo,
+          se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_3,
+             parametro.ulteriore_importo * (parametro.ulteriore_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.ulteriore_divisore,
+             0)),
+       0) * fisco.giorni / fisco.giorni_anno / fisco.periodi, 2)"""
+
+
+def parametri_benefici(sovrascrivi=None) -> str:
+    valori = {**PARAMETRI_BENEFICI, **PARAMETRI_ULTERIORE, **(sovrascrivi or {})}
     return "".join(
         f'''
 [[parametro]]
@@ -54,7 +73,7 @@ dal = 2020-01-01
 valore = "{valore}"
 riferimento = "fittizio:{nome.replace('_', '-')}"
 '''
-        for nome, valore in PARAMETRI_BENEFICI.items()
+        for nome, valore in valori.items()
     )
 
 
@@ -115,8 +134,14 @@ riferimento = "fittizio:mappatura-{nome}"
 TESTO_BENEFICI = TESTO + parametri_benefici() + beneficio()
 
 
-def corpus_benefici(**modifiche) -> Corpus:
-    return Corpus.da_toml(TESTO + parametri_benefici() + beneficio(**modifiche))
+def con_ulteriore_detrazione(testo: str) -> str:
+    marca = 'detrazione_richiesta = "lavoro_dipendente"\n'
+    assert marca in testo
+    return testo.replace(marca, marca + "detrazione_automatica = '''" + ULTERIORE + "'''\n")
+
+
+def corpus_benefici(parametri=None, **modifiche) -> Corpus:
+    return Corpus.da_toml(con_ulteriore_detrazione(TESTO) + parametri_benefici(parametri) + beneficio(**modifiche))
 
 
 
@@ -152,3 +177,13 @@ def del_beneficio(fiscale, istituto):
     trovati = [i for i in fiscale.benefici if i.istituto == istituto]
     assert len(trovati) == 1, [i.istituto for i in fiscale.benefici]
     return trovati[0]
+
+
+def assumi_fino_al(registro, al, rapporto=R, persona="PERSONA-1", dal=date(2026, 1, 1)):
+    """Un rapporto con il servizio dal `dal` fino al `al` compreso: dopo, la persona e' cessata."""
+    from test_fiscale import CF
+
+    if not registro.fatti_persona_noti(persona, "codice_fiscale", registro.adesso()):
+        registro.registra_codice_persona(persona, "codice_fiscale", CF, date(1980, 1, 1))
+    registro.collega_rapporto(rapporto, persona, dal)
+    registro.registra_codice(rapporto, "tipo_impiego", "1", dal, al)

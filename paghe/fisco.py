@@ -815,7 +815,7 @@ def _benefici_del_pagamento(
     if conguaglio:
         importi, piani = benefici.al_conguaglio(
             corpus, regola, rapporto, anno, data_pagamento, riferimento, contesto, categorie, dell_anno, finale,
-            Decimal(0), istante,
+            _ulteriore_in_piu(registro, corpus, persona, anno, data_pagamento, calcolo_ritenuta, annuale, istante), istante,
         )
     else:
         importi, piani = benefici.riconosciuti_del_mese(
@@ -823,6 +823,45 @@ def _benefici_del_pagamento(
         ), ()
     rate = benefici.rate_del_mese(corpus, regola, rapporto, data_pagamento, finale, pagate, istante)
     return (*importi, *rate), piani
+
+
+def _ulteriore_in_piu(
+    registro: Registro,
+    corpus: Corpus,
+    persona: str,
+    anno: int,
+    data_pagamento: date,
+    calcolo_ritenuta: _Ritenuta,
+    annuale: _Annuale,
+    istante: datetime,
+) -> Decimal:
+    """L'ulteriore detrazione spettante nell'anno oltre quella già applicata nelle ritenute dei mesi (non sotto zero).
+
+    Serve alla soglia cumulata del recupero della somma esente. L'applicata si ricalcola mese per mese sull'imponibile
+    di ogni mese, come la ritenuta; il mese di questo pagamento è quello della sua ritenuta.
+    """
+    regola = calcolo_ritenuta.regola
+    mese = (data_pagamento.year, data_pagamento.month)
+    mesi: dict[tuple[int, int], list[Decimal]] = {}
+    categorie: dict[tuple[int, int], set[str]] = {}
+    for pagata in _pagati(registro, persona, istante):
+        giorno = pagata.data or pagata.valuta
+        chiave = (giorno.year, giorno.month)
+        if chiave == mese:
+            continue
+        if _e_reddito(pagata.riga) and pagata.riga.anno_imposta == anno:
+            mesi.setdefault(chiave, []).append(pagata.riga.valore)
+            categorie.setdefault(chiave, set()).add(pagata.riga.categoria_reddito)
+        elif _e_deduzione(corpus, pagata.riga, giorno) and _anno_della_deduzione(pagata) == anno:
+            mesi.setdefault(chiave, []).append(-pagata.riga.valore)
+    applicata = calcolo_ritenuta.calcolo.detrazione_automatica
+    for chiave, valori in mesi.items():
+        calcolo = _calcola(
+            corpus, regola, sum(valori, Decimal(0)), PERIODI_MENSILI, calcolo_ritenuta.riferimento, None,
+            categorie=frozenset(categorie.get(chiave, ())),
+        )
+        applicata += calcolo.detrazione_automatica
+    return max(Decimal(0), annuale.calcolo.detrazione_automatica - applicata)
 
 
 def _rate_delle_addizionali(

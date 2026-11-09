@@ -13,7 +13,7 @@ Questo modulo legge e non scrive: il chiamante (fisco) dà i valori del fisco de
 from __future__ import annotations
 
 import calendar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -317,6 +317,11 @@ def _piani(regola: RegolaBenefici, pagate: list[Pagata]) -> list[_Piano]:
     return piani
 
 
+def _senza_derivazione(riga: Importo) -> Importo:
+    """La rata già pagata come riferimento, senza la sua derivazione: ogni rata cita le precedenti e l'albero raddoppierebbe."""
+    return replace(riga, derivazione=replace(riga.derivazione, importi=()))
+
+
 def _rata(residuo: Decimal, rate_rimaste: int) -> Decimal:
     """Il residuo diviso le rate rimaste, al centesimo: la differenza di centesimi resta per l'ultima rata."""
     if rate_rimaste <= 1:
@@ -364,8 +369,8 @@ def rate_del_mese(
         importi.append(
             _importo(
                 corpus, regola, istituto, rapporto, anno, _anno(anno), valore, testo,
-                tuple(p for p in piano.decisione.derivazione.parametri), (piano.conguaglio, *(riga for riga, _ in piano.rate_pagate)),
-                (), istante,
+                piano.decisione.derivazione.parametri,
+                (piano.conguaglio, *(_senza_derivazione(riga) for riga, _ in piano.rate_pagate)), (), istante,
             )
         )
     return tuple(importi)
