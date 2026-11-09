@@ -8,7 +8,7 @@ import re
 import tomllib
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
 from .errori import ErroreCorpus, ParametroMancante, ValiditaNonUniforme
@@ -837,6 +837,85 @@ class CondizioneDiProposta:
 
 
 @dataclass(frozen=True)
+class SogliaVerifica:
+    """Soglia del netto di un pagamento oltre la quale l'ente verifica l'inadempimento presso AdER (ADR 0034).
+
+    Per titolo (categoria di reddito, oppure `*` per tutti gli altri) e periodo. Senza `soglia` la verifica non
+    si fa nel periodo (stipendi prima del 2026). `esclusi` sono gli istituti che non concorrono al netto della
+    soglia, oltre ai rimborsi 730 (per esempio le trasferte documentate).
+    """
+
+    categoria: str
+    dal: date
+    riferimento: str
+    soglia: Decimal | None = None
+    al: date | None = None
+    esclusi: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        soggetto = f"Soglia di verifica {self.categoria}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if self.soglia is not None and self.soglia <= 0:
+            raise ErroreCorpus(f"{soggetto}: la soglia è un importo positivo")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
+class FasciaSommaSospesa:
+    """Fascia sul netto: fino a `fino_a` (senza limite se None) si sospende 1/`divisore` di tutto il netto."""
+
+    divisore: Decimal
+    fino_a: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class RegolaSommaSospesa:
+    """Come si sospende e si rilascia la somma dopo un esito inadempiente (ADR 0034), con date e fonte.
+
+    La fascia si sceglie sul netto e si applica a tutto il netto; `tetto` e' la quota del netto che la somma
+    sospesa e le trattenute a terzi non superano insieme. I giorni sono quelli del DM 40/2008: risposta entro
+    `giorni_risposta` feriali, sospensione di `giorni_sospensione` dalla comunicazione dell'esito.
+    """
+
+    dal: date
+    riferimento: str
+    fasce: tuple[FasciaSommaSospesa, ...]
+    tetto: Decimal
+    giorni_risposta: int
+    giorni_sospensione: int
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = "Somma sospesa 48-bis"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if not self.fasce or self.fasce[-1].fino_a is not None:
+            raise ErroreCorpus(f"{soggetto}: l'ultima fascia non ha limite")
+        limiti = [fascia.fino_a for fascia in self.fasce[:-1]]
+        if any(limite is None for limite in limiti) or limiti != sorted(limiti):
+            raise ErroreCorpus(f"{soggetto}: le fasce crescono e solo l'ultima è senza limite")
+        if any(fascia.divisore <= 0 for fascia in self.fasce):
+            raise ErroreCorpus(f"{soggetto}: il divisore di una fascia è positivo")
+        if not Decimal(0) < self.tetto <= 1:
+            raise ErroreCorpus(f"{soggetto}: il tetto è una frazione del netto tra 0 e 1")
+        if self.giorni_risposta < 0 or self.giorni_sospensione < 0:
+            raise ErroreCorpus(f"{soggetto}: i giorni non sono negativi")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+    def quota_sul_netto(self, netto: Decimal) -> Decimal:
+        """La fascia del netto, applicata a tutto il netto e arrotondata per difetto al centesimo."""
+        fascia = next(f for f in self.fasce if f.fino_a is None or netto <= f.fino_a)
+        return (netto / fascia.divisore).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+
+
+@dataclass(frozen=True)
 class DichiarazioneOutput:
     """Il regime assegna a una vista i rapporti che hanno un importo pagato in certe basi o di certi istituti (ADR 0015).
 
@@ -1063,6 +1142,8 @@ class Corpus:
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
         trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
         condizioni_di_proposta: tuple[CondizioneDiProposta, ...] = (),
+        soglie_di_verifica: tuple[SogliaVerifica, ...] = (),
+        regole_somma_sospesa: tuple[RegolaSommaSospesa, ...] = (),
         output: tuple[DichiarazioneOutput, ...] = (),
         fatto_cessazione: str | None = None,
         fatto_sospensione: str | None = None,
@@ -1073,6 +1154,8 @@ class Corpus:
         self.fatto_sospensione = fatto_sospensione
         self._output = tuple(output)
         self._condizioni_di_proposta = tuple(condizioni_di_proposta)
+        self._soglie_di_verifica = tuple(soglie_di_verifica)
+        self._regole_somma_sospesa = tuple(regole_somma_sospesa)
         self._trattamenti_part_time = tuple(trattamenti_part_time)
         self._scadenze_f24ep = tuple(scadenze_f24ep)
         self._calendari_festivi = tuple(calendari_festivi)
@@ -1111,6 +1194,7 @@ class Corpus:
         self._convalida_part_time()
         self._convalida_massimali_di_base()
         self._convalida_condizioni_di_proposta()
+        self._convalida_blocco_pagamenti()
         self._convalida_output()
         self._convalida_mappature_di_fatto()
         self._convalida_catalogo_f24ep()
@@ -1143,6 +1227,8 @@ class Corpus:
         ]
         elenco += [(f"Part-time {t.istituto}", t.riferimento) for t in self._trattamenti_part_time]
         elenco += [(f"Condizione di proposta {c.istituto}", c.riferimento) for c in self._condizioni_di_proposta]
+        elenco += [(f"Soglia di verifica {t.categoria}", t.riferimento) for t in self._soglie_di_verifica]
+        elenco += [("Somma sospesa 48-bis", r.riferimento) for r in self._regole_somma_sospesa]
         elenco += [(f"Output {o.vista}", o.riferimento) for o in self._output]
         elenco += [(f"Codice F24EP {c.codice}", c.riferimento) for c in self._codici_f24ep]
         elenco += [("Scadenza F24EP", r.riferimento) for r in self._scadenze_f24ep]
@@ -1217,6 +1303,13 @@ class Corpus:
             for altra in self._condizioni_di_proposta[indice + 1 :]:
                 if altra.istituto == condizione.istituto:
                     _vigenze_sovrapposte([condizione, altra], f"Condizione di proposta {condizione.istituto}")
+
+    def _convalida_blocco_pagamenti(self) -> None:
+        for indice, soglia in enumerate(self._soglie_di_verifica):
+            for altra in self._soglie_di_verifica[indice + 1 :]:
+                if altra.categoria == soglia.categoria:
+                    _vigenze_sovrapposte([soglia, altra], f"Soglia di verifica {soglia.categoria}")
+        _vigenze_sovrapposte(self._regole_somma_sospesa, "Somma sospesa 48-bis")
 
     def _convalida_mappature_di_fatto(self) -> None:
         for indice, mappatura in enumerate(self._mappature_di_fatto):
@@ -1565,6 +1658,19 @@ class Corpus:
                 [c.istituto, c.fatto, c.dal.isoformat(), c.al.isoformat() if c.al else "", c.riferimento]
                 for c in self._condizioni_di_proposta
             )
+        if self._soglie_di_verifica:
+            contenuto["soglie_di_verifica"] = sorted(
+                [t.categoria, str(t.soglia) if t.soglia is not None else "", t.dal.isoformat(),
+                 t.al.isoformat() if t.al else "", sorted(t.esclusi), t.riferimento]
+                for t in self._soglie_di_verifica
+            )
+        if self._regole_somma_sospesa:
+            contenuto["somma_sospesa"] = sorted(
+                [r.dal.isoformat(), r.al.isoformat() if r.al else "",
+                 [[str(f.divisore), str(f.fino_a) if f.fino_a is not None else ""] for f in r.fasce],
+                 str(r.tetto), r.giorni_risposta, r.giorni_sospensione, r.riferimento]
+                for r in self._regole_somma_sospesa
+            )
         if self._mappature:
             contenuto["mappature"] = sorted(
                 [m.istituto, m.sistema, m.codice, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento]
@@ -1675,6 +1781,15 @@ class Corpus:
     def condizione_di_proposta(self, istituto: str, giorno: date) -> CondizioneDiProposta | None:
         """Condizione vigente alla data della valuta; None se l'istituto non ne richiede."""
         return _vigente([c for c in self._condizioni_di_proposta if c.istituto == istituto], giorno)
+
+    def soglia_verifica(self, categoria: str, giorno: date) -> SogliaVerifica | None:
+        """Soglia della verifica 48-bis per il titolo alla data del pagamento; il titolo senza regola propria usa `*`."""
+        propria = _vigente([t for t in self._soglie_di_verifica if t.categoria == categoria], giorno)
+        return propria or _vigente([t for t in self._soglie_di_verifica if t.categoria == "*"], giorno)
+
+    def regola_somma_sospesa(self, giorno: date) -> RegolaSommaSospesa | None:
+        """Regola della somma sospesa vigente alla data; None se il corpus non blocca i pagamenti."""
+        return _vigente(self._regole_somma_sospesa, giorno)
 
     def trattamento_part_time(self, istituto: str, giorno: date) -> DichiarazioneTrattamentoPartTime | None:
         """Trattamento nel part-time vigente alla data; None se l'istituto non lo dichiara."""
@@ -1818,6 +1933,35 @@ class Corpus:
                 )
                 for voce in dati.get("condizione_di_proposta", [])
             )
+            soglie_di_verifica = tuple(
+                SogliaVerifica(
+                    categoria=voce["categoria"],
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    soglia=_decimale(voce["soglia"], "Soglia di verifica") if "soglia" in voce else None,
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                    esclusi=tuple(voce.get("esclusi", ())),
+                )
+                for voce in dati.get("soglia_verifica", [])
+            )
+            regole_somma_sospesa = tuple(
+                RegolaSommaSospesa(
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    fasce=tuple(
+                        FasciaSommaSospesa(
+                            _decimale(fascia["divisore"], "Fascia della somma sospesa"),
+                            _decimale(fascia["fino_a"], "Fascia della somma sospesa") if "fino_a" in fascia else None,
+                        )
+                        for fascia in voce["fasce"]
+                    ),
+                    tetto=_decimale(voce["tetto"], "Tetto della somma sospesa"),
+                    giorni_risposta=voce["giorni_risposta"],
+                    giorni_sospensione=voce["giorni_sospensione"],
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                )
+                for voce in dati.get("somma_sospesa", [])
+            )
             output = tuple(
                 DichiarazioneOutput(
                     vista=voce["vista"],
@@ -1865,6 +2009,8 @@ class Corpus:
             calendari_festivi=calendari_festivi,
             trattamenti_part_time=trattamenti_part_time,
             condizioni_di_proposta=condizioni_di_proposta,
+            soglie_di_verifica=soglie_di_verifica,
+            regole_somma_sospesa=regole_somma_sospesa,
             output=output,
             fatto_cessazione=periodo.get("cessazione"),
             fatto_sospensione=periodo.get("sospensione"),
