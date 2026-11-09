@@ -2477,6 +2477,310 @@ valore = "8000"
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com10"
 # 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
 
+# --- Detrazioni per carichi di famiglia (art. 12 c. 1 TUIR; dal 2027 art. 12 c. 1 D.Lgs. 117/2026) ---
+# Importi 2026 e 2027 identici (confronto numerico dei due testi). Per il 2027 la fonte è singola: nessuna istruzione AdE.
+# Il rapporto si tronca alle prime quattro cifre decimali come nell'art. 13 (c. 4, il testo non dice se troncare o
+# arrotondare: prassi-interpretazione, da verificare). Il testo dei commi sul rapporto è l'art. 12 c. 4 TUIR, c. 5 del testo unico.
+
+# coniuge, importo base fino a 15.000 (lett. a n. 1): norma certa; seconda fonte: istruzioni 730/2026, tabella 3
+[[parametro]]
+nome = "carichi_coniuge_importo_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "800"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "800"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, importo che si toglie in proporzione al reddito fino a 15.000 (lett. a n. 1): norma certa; seconda fonte: istruzioni 730/2026, tabella 3
+[[parametro]]
+nome = "carichi_coniuge_riduzione"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "110"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "110"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, fine della prima fascia e divisore del suo rapporto (lett. a n. 1): norma certa; seconda fonte: istruzioni 730/2026, tabella 3
+[[parametro]]
+nome = "carichi_coniuge_soglia_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, importo da 15.000 a 40.000 e base della terza fascia (lett. a nn. 2 e 3): norma certa; seconda fonte: istruzioni 730/2026, tabella 3
+[[parametro]]
+nome = "carichi_coniuge_importo_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "690"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "690"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, fine della seconda fascia (lett. a n. 2): norma certa; seconda fonte: istruzioni 730/2026, tabella 3
+[[parametro]]
+nome = "carichi_coniuge_soglia_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "40000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "40000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, reddito oltre il quale non compete (lett. a n. 3): norma certa; seconda fonte: istruzioni 730/2026, tabella 3
+[[parametro]]
+nome = "carichi_coniuge_soglia_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "80000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "80000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, divisore del rapporto della terza fascia (lett. a n. 3): norma certa; seconda fonte: istruzioni 730/2026, tabella 3
+[[parametro]]
+nome = "carichi_coniuge_divisore_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "40000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "40000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro); estremo inferiore escluso, superiore incluso
+[[parametro]]
+nome = "carichi_coniuge_magg_estremo_0"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "29000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "29000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro); estremo inferiore escluso, superiore incluso
+[[parametro]]
+nome = "carichi_coniuge_magg_estremo_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "29200"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "29200"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro); estremo inferiore escluso, superiore incluso
+[[parametro]]
+nome = "carichi_coniuge_magg_estremo_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "34700"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "34700"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro); estremo inferiore escluso, superiore incluso
+[[parametro]]
+nome = "carichi_coniuge_magg_estremo_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "35000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "35000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro); estremo inferiore escluso, superiore incluso
+[[parametro]]
+nome = "carichi_coniuge_magg_estremo_4"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "35100"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "35100"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro); estremo inferiore escluso, superiore incluso
+[[parametro]]
+nome = "carichi_coniuge_magg_estremo_5"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "35200"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "35200"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro)
+[[parametro]]
+nome = "carichi_coniuge_magg_importo_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "10"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "10"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro)
+[[parametro]]
+nome = "carichi_coniuge_magg_importo_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "20"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "20"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro)
+[[parametro]]
+nome = "carichi_coniuge_magg_importo_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "30"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "30"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro)
+[[parametro]]
+nome = "carichi_coniuge_magg_importo_4"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "20"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "20"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# coniuge, maggiorazione (lett. b): norma certa; seconda fonte: istruzioni 730/2026, tabella 3 (700, 710, 720, 710, 700 euro)
+[[parametro]]
+nome = "carichi_coniuge_magg_importo_5"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "10"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "10"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# figlio da 21 a meno di 30 anni, o disabile, importo per figlio (lett. c): norma certa; seconda fonte: istruzioni 730/2026, tabella 4
+[[parametro]]
+nome = "carichi_figlio_importo"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "950"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letc"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "950"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# figlio, reddito oltre il quale non compete e divisore del rapporto (lett. c): norma certa; seconda fonte: assente, le istruzioni AdE non riportano la formula
+[[parametro]]
+nome = "carichi_figlio_soglia"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "95000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letc"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "95000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# figlio, aumento della soglia per ogni figlio dopo il primo che dà diritto (lett. c): norma certa; seconda fonte: assente, le istruzioni AdE non riportano la formula
+[[parametro]]
+nome = "carichi_figlio_aumento"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letc"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# ascendente convivente, importo (lett. d): norma certa; seconda fonte: istruzioni 730/2026, tabella 5
+[[parametro]]
+nome = "carichi_ascendente_importo"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "750"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letd"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "750"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
+# ascendente convivente, reddito oltre il quale non compete e divisore del rapporto (lett. d): norma certa; seconda fonte: istruzioni 730/2026, tabella 5
+[[parametro]]
+nome = "carichi_ascendente_soglia"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "80000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1-letd"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "80000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
+# 2027: fonte singola, stessi valori del 2026
+
 # --- Categorie di reddito: cassa allargata, somme corrisposte entro il 12 gennaio all'anno prima ---
 # Norma certa: art. 51 c. 1 TUIR; per gli assimilati l'art. 52 c. 1 rinvia all'art. 51 (deroghe tassative, nessuna per c-bis e g).
 # Seconda fonte: istruzioni CU 2026 punto 45. Dal 2027 art. 53 c. 1 e art. 54 c. 1 D.Lgs. 117/2026 (fonte singola, norma certa).
@@ -2534,10 +2838,40 @@ istituto = "ritenuta_irpef"
 versione = 1
 dal = 2026-01-01
 al = 2026-12-31
-riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-leta + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-leta + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art11-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com1 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art12-com1"
 categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
 detrazione_richiesta = "lavoro_dipendente"
 categorie_detrazione_automatica = ["lavoro_dipendente"]
+# Carichi di famiglia: detrazione annua di un familiare al 100%, per relazione (ADR 0033). Il figlio in luogo del
+# coniuge usa quella del coniuge. R è lo stesso reddito dell'art. 13; `fisco.figli` è il numero dei figli che danno
+# diritto nello stesso mese. Rapporti dell'art. 12 c. 4: coniuge, fascia 1 con rapporto 1 -> 690; rapporti delle
+# fasce 1 e 3 pari a zero -> zero; figli e ascendenti, rapporto zero, negativo o uguale a uno -> zero.
+carichi_coniuge = '''(se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_1,
+       se(tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4) <= 0,
+          0,
+          parametro.carichi_coniuge_importo_1 - parametro.carichi_coniuge_riduzione * tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4)),
+       se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_2,
+          parametro.carichi_coniuge_importo_2,
+          se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_3,
+             parametro.carichi_coniuge_importo_2 * max(0, tronca((parametro.carichi_coniuge_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.carichi_coniuge_divisore_3, 4)),
+             0)))
+    + se((fisco.imponibile * fisco.periodi) > parametro.carichi_coniuge_magg_estremo_0,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_1, parametro.carichi_coniuge_magg_importo_1,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_2, parametro.carichi_coniuge_magg_importo_2,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_3, parametro.carichi_coniuge_magg_importo_3,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_4, parametro.carichi_coniuge_magg_importo_4,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_5, parametro.carichi_coniuge_magg_importo_5, 0))))),
+         0))'''
+carichi_figlio = '''se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) <= 0,
+   0,
+   se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) >= 1,
+      0,
+      parametro.carichi_figlio_importo * tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4)))'''
+carichi_ascendente = '''se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) <= 0,
+   0,
+   se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) >= 1,
+      0,
+      parametro.carichi_ascendente_importo * tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4)))'''
 imposta = '''arrotonda(
     (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
      + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
@@ -2572,10 +2906,40 @@ riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;
 istituto = "ritenuta_irpef"
 versione = 2
 dal = 2027-01-01
-riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1"
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art12-com1"
 categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
 detrazione_richiesta = "lavoro_dipendente"
 categorie_detrazione_automatica = ["lavoro_dipendente"]
+# Carichi di famiglia: detrazione annua di un familiare al 100%, per relazione (ADR 0033). Il figlio in luogo del
+# coniuge usa quella del coniuge. R è lo stesso reddito dell'art. 13; `fisco.figli` è il numero dei figli che danno
+# diritto nello stesso mese. Rapporti dell'art. 12 c. 4: coniuge, fascia 1 con rapporto 1 -> 690; rapporti delle
+# fasce 1 e 3 pari a zero -> zero; figli e ascendenti, rapporto zero, negativo o uguale a uno -> zero.
+carichi_coniuge = '''(se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_1,
+       se(tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4) <= 0,
+          0,
+          parametro.carichi_coniuge_importo_1 - parametro.carichi_coniuge_riduzione * tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4)),
+       se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_2,
+          parametro.carichi_coniuge_importo_2,
+          se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_3,
+             parametro.carichi_coniuge_importo_2 * max(0, tronca((parametro.carichi_coniuge_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.carichi_coniuge_divisore_3, 4)),
+             0)))
+    + se((fisco.imponibile * fisco.periodi) > parametro.carichi_coniuge_magg_estremo_0,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_1, parametro.carichi_coniuge_magg_importo_1,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_2, parametro.carichi_coniuge_magg_importo_2,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_3, parametro.carichi_coniuge_magg_importo_3,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_4, parametro.carichi_coniuge_magg_importo_4,
+         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_5, parametro.carichi_coniuge_magg_importo_5, 0))))),
+         0))'''
+carichi_figlio = '''se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) <= 0,
+   0,
+   se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) >= 1,
+      0,
+      parametro.carichi_figlio_importo * tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4)))'''
+carichi_ascendente = '''se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) <= 0,
+   0,
+   se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) >= 1,
+      0,
+      parametro.carichi_ascendente_importo * tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4)))'''
 imposta = '''arrotonda(
     (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
      + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
@@ -2841,7 +3205,7 @@ riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com7 + urn:nir:stato:decr
 # Il trattamento integrativo spetta al lavoro dipendente e agli assimilati dell'art. 50 c. 1 lett. c-bis) TUIR (collaborazione), non alla
 # carica elettiva; la somma esente al solo lavoro dipendente. Il reddito annuo stimato e' il pagato dall'inizio dell'anno diviso i giorni
 # di servizio per 365 (prassi, circ. AdE 4/E/2025): lo calcola il motore. Il trattamento integrativo tra 15.000 e 28.000 euro conta le
-# detrazioni note (art. 13 c. 1 e c. 1.1) e gli oneri comunicati dalla persona. Il corpus non porta ancora le condizioni sugli oneri
+# detrazioni note (art. 13 c. 1 e c. 1.1, carichi di famiglia dell'art. 12, ticket #98) e gli oneri comunicati dalla persona. Il corpus non porta ancora le condizioni sugli oneri
 # «sostenuti fino al 31 dicembre 2021» (da verificare).
 [[beneficio]]
 versione = 1
@@ -2862,7 +3226,7 @@ trattamento_integrativo = '''arrotonda(
           parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi, 0),
        se(fisco.reddito_stimato <= parametro.integrativo_soglia_2,
           min(parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi,
-              max(0, fisco.detrazione + fisco.oneri / fisco.periodi - fisco.imposta)), 0)), 2)'''
+              max(0, fisco.detrazione + fisco.carichi + fisco.oneri / fisco.periodi - fisco.imposta)), 0)), 2)'''
 istituto_somma_esente = "somma_esente"
 istituto_trattamento_integrativo = "trattamento_integrativo"
 recupero_somma_esente = "somma_esente_recupero"
@@ -2889,7 +3253,7 @@ trattamento_integrativo = '''arrotonda(
           parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi, 0),
        se(fisco.reddito_stimato <= parametro.integrativo_soglia_2,
           min(parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi,
-              max(0, fisco.detrazione + fisco.oneri / fisco.periodi - fisco.imposta)), 0)), 2)'''
+              max(0, fisco.detrazione + fisco.carichi + fisco.oneri / fisco.periodi - fisco.imposta)), 0)), 2)'''
 istituto_somma_esente = "somma_esente"
 istituto_trattamento_integrativo = "trattamento_integrativo"
 recupero_somma_esente = "somma_esente_recupero"

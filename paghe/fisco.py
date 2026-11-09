@@ -16,14 +16,14 @@ from __future__ import annotations
 import calendar
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from . import addizionali, benefici
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
 from .modello import MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
-from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, TIPO_ONERI_DETRAIBILI, Registro
+from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, TIPO_ONERI_DETRAIBILI, Registro, leggi_familiare
 from .denuncia import MATURAZIONI_DERIVATE
 from .denuncia_individuale import IMPIEGHI_TEMPO_DETERMINATO
 from .tempo import Periodo, in_utc
@@ -36,6 +36,21 @@ AVVISO_SENZA_DICHIARAZIONE = "senza_dichiarazione_sostituito"
 AVVISO_PROIEZIONE = "proiezione_conguaglio"
 AVVISO_ACCONTO_SENZA_BASE = "acconto_senza_base"
 AVVISO_TEMPO_DETERMINATO = "tempo_determinato_sotto_soglia"
+AVVISO_FAMILIARE_FUORI_ETA = "familiare_fuori_eta"
+# Carichi di famiglia (ADR 0033): la regola di ritenuta ha una formula annua per gruppo di relazioni. Il figlio in luogo
+# del coniuge usa quella del coniuge ma conta tra i figli dell'aumento della soglia.
+FORMULA_PER_RELAZIONE = {
+    "coniuge": "carichi_coniuge",
+    "figlio_in_luogo_del_coniuge": "carichi_coniuge",
+    "figlio": "carichi_figlio",
+    "figlio_disabile": "carichi_figlio",
+    "ascendente": "carichi_ascendente",
+}
+RELAZIONI_FIGLIO = frozenset({"figlio", "figlio_disabile", "figlio_in_luogo_del_coniuge"})
+# Art. 12 c. 1 lett. c) TUIR (stessa lettera nel testo unico dal 2027): i figli danno diritto dal compimento del 21° anno,
+# senza limite se disabili, altrimenti fino al mese prima del 30° compleanno (prassi: circ. AdE 4/E 2025, § 1.3).
+ETA_INIZIO_FIGLI = 21
+ETA_FINE_FIGLI = 30
 # Art. 13 c. 1 lett. a TUIR: sotto questo reddito complessivo il tempo determinato ha un minimo di 1.380 euro, che il
 # modello non applica (ADR 0019, ticket #93). È la soglia di un avviso, non entra in nessun calcolo.
 SOGLIA_MINIMO_TEMPO_DETERMINATO = Decimal(15000)
@@ -258,6 +273,24 @@ def imponibile_fiscale(
 
 
 @dataclass(frozen=True)
+class _Voce:
+    """Un familiare a carico in un mese: la formula annua del suo gruppo di relazioni e la quota."""
+
+    gruppo: str
+    formula: str
+    percentuale: int
+    fatto: Fatto | None
+
+
+@dataclass(frozen=True)
+class _CaricoMese:
+    """I familiari che danno detrazione in un mese e il numero dei figli che danno diritto nello stesso mese."""
+
+    figli: int
+    voci: tuple[_Voce, ...]
+
+
+@dataclass(frozen=True)
 class _Calcolo:
     imponibile: Decimal
     imposta: Decimal
@@ -266,6 +299,41 @@ class _Calcolo:
     dovuto: Decimal
     parametri: tuple[ParametroLetto, ...]
     fatti: tuple[Fatto, ...]
+    carichi: Decimal = Decimal(0)
+    dichiarata: bool = False
+    testo_carichi: str = ""
+
+
+def _mese_assoluto(anno: int, mese: int) -> int:
+    return anno * 12 + mese - 1
+
+
+def _da_diritto(relazione: str, nascita: date, anno: int, mese: int) -> bool:
+    """Il familiare dà detrazione nel mese di paga: l'età conta per i figli, per mese e non per giorno (art. 12 c. 3)."""
+    if relazione not in RELAZIONI_FIGLIO:
+        return True
+    corrente = _mese_assoluto(anno, mese)
+    if corrente < _mese_assoluto(nascita.year + ETA_INIZIO_FIGLI, nascita.month):
+        return False
+    return relazione == "figlio_disabile" or corrente < _mese_assoluto(nascita.year + ETA_FINE_FIGLI, nascita.month)
+
+
+def _carichi_del_mese(
+    registro: Registro, regola: RegolaRitenuta, persona: str, anno: int, mese: int, istante: datetime
+) -> tuple[_CaricoMese, tuple[Fatto, ...]]:
+    """Familiari del mese che danno detrazione, e quelli registrati che non la danno per l'età (con un avviso)."""
+    voci, fuori_eta, figli = [], [], 0
+    for fatto in registro.familiari_a_carico_del_mese(persona, anno, mese, istante):
+        familiare = leggi_familiare(fatto)
+        if not _da_diritto(familiare.relazione, familiare.data_nascita, anno, mese):
+            fuori_eta.append(fatto)
+            continue
+        figli += familiare.relazione in RELAZIONI_FIGLIO
+        gruppo = FORMULA_PER_RELAZIONE[familiare.relazione]
+        formula = getattr(regola, gruppo)
+        if formula != "0":
+            voci.append(_Voce(gruppo, formula, familiare.percentuale, fatto))
+    return _CaricoMese(figli, tuple(voci)), tuple(fuori_eta)
 
 
 def _dichiarazione(registro: Registro, persona: str, regola: RegolaRitenuta, giorno: date, istante: datetime) -> Fatto | None:
@@ -285,11 +353,14 @@ def _calcola(
     giorni: int = 1,
     giorni_anno: int = 1,
     categorie: frozenset[str] = frozenset(),
+    carichi: tuple[_CaricoMese, ...] = (),
 ) -> _Calcolo:
     """Imposta, detrazioni e dovuto del periodo, o dell'anno con un solo periodo.
 
     La detrazione a richiesta c'è solo con la dichiarazione, la detrazione automatica sempre. Nella ritenuta del
     mese `giorni` e `giorni_anno` valgono 1: il rapporto è neutro e il periodo è un dodicesimo per pagamento.
+    I `carichi` sono i mesi con familiari a carico: la ritenuta ne ha uno, il conguaglio fino a dodici (ADR 0033).
+    Ogni familiare dà la formula annua per la sua quota, un dodicesimo per mese; i carichi non seguono i giorni di servizio.
     """
     parametri: dict[str, ParametroLetto] = {}
     valori_fisco = {
@@ -297,6 +368,7 @@ def _calcola(
         "periodi": Decimal(periodi),
         "giorni": Decimal(giorni),
         "giorni_anno": Decimal(giorni_anno),
+        "figli": Decimal(0),
     }
 
     def risolvi(origine: str, nome: str) -> Decimal:
@@ -310,14 +382,28 @@ def _calcola(
     detrazione = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
     spetta = not regola.categorie_detrazione_automatica or bool(categorie & set(regola.categorie_detrazione_automatica))
     automatica = valuta(regola.detrazione_automatica, risolvi) if spetta else Decimal(0)
+    somma_carichi = Decimal(0)
+    usati: dict[int, Fatto] = {}
+    formule: set[str] = set()
+    for mese in carichi:
+        valori_fisco["figli"] = Decimal(mese.figli)
+        for voce in mese.voci:
+            somma_carichi += valuta(voce.formula, risolvi) * voce.percentuale / 100
+            formule.add(f"{voce.gruppo.removeprefix('carichi_')}: {voce.formula}")
+            if voce.fatto is not None:
+                usati[voce.fatto.id] = voce.fatto
+    detrazione_carichi = (somma_carichi / PERIODI_MENSILI).quantize(Decimal("0.01"), ROUND_HALF_UP)
     return _Calcolo(
         imponibile,
         imposta,
         detrazione,
         automatica,
-        max(Decimal(0), imposta - detrazione - automatica),
+        max(Decimal(0), imposta - detrazione - automatica - detrazione_carichi),
         tuple(parametri[nome] for nome in sorted(parametri)),
-        (dichiarazione,) if dichiarazione is not None else (),
+        ((dichiarazione,) if dichiarazione is not None else ()) + tuple(usati[i] for i in sorted(usati)),
+        detrazione_carichi,
+        dichiarazione is not None,
+        "; ".join(sorted(formule)),
     )
 
 
@@ -425,9 +511,11 @@ def _ritenuta(
         (riga.valore for riga in (*gia_dedotte, *deduzioni)), Decimal(0)
     )
     dichiarazione = _dichiarazione(registro, persona, regola, data_pagamento, istante)
+    carico, _ = _carichi_del_mese(registro, regola, persona, data_pagamento.year, data_pagamento.month, istante)
     calcolo = _calcola(
         corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione,
         categorie=frozenset(riga.categoria_reddito for riga in (*gia_pagate, *righe)),
+        carichi=(carico,),
     )
     operato = sum((riga.valore for riga in gia_operate), Decimal(0))
     importo = Importo(
@@ -446,7 +534,9 @@ def _ritenuta(
                 f"imposta del periodo = {regola.imposta}; detrazione rapportata = "
                 f"{regola.detrazione if dichiarazione is not None else 'non applicata'}; "
                 f"detrazione automatica = {regola.detrazione_automatica}; "
-                "ritenuta = imposta meno detrazione meno detrazione automatica meno ritenute già operate nel periodo"
+                f"{_formula_carichi(calcolo)}"
+                "ritenuta = imposta meno detrazione meno detrazione automatica meno carichi di famiglia "
+                "meno ritenute già operate nel periodo"
             ),
             versione_corpus=corpus.versione,
             noto_al=istante,
@@ -457,6 +547,15 @@ def _ritenuta(
     )
     return _Ritenuta(
         importo, regola, riferimento, dichiarazione, calcolo, (*gia_pagate, *righe), (*gia_dedotte, *deduzioni)
+    )
+
+
+def _formula_carichi(calcolo: _Calcolo) -> str:
+    if not calcolo.testo_carichi:
+        return ""
+    return (
+        "detrazione carichi di famiglia = per ogni familiare a carico nel mese la formula annua della relazione "
+        f"({calcolo.testo_carichi}) per la percentuale, un dodicesimo per mese; "
     )
 
 
@@ -505,6 +604,24 @@ def _giorni_di_servizio(
     return sum(in_servizio[:giorni_considerati]), giorni_anno
 
 
+def _mesi_di_servizio(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> frozenset[int]:
+    """Mesi dell'anno con almeno un giorno di servizio della persona, su tutti i suoi rapporti (ADR 0033).
+
+    Al conguaglio i carichi di famiglia contano solo in questi mesi: le istruzioni CU 2026 (prassi) li legano al
+    periodo di lavoro, salvo la richiesta per l'intero anno (codice AC), non modellata. Senza fatto di servizio nel
+    corpus la persona ha servizio tutto l'anno.
+    """
+    if corpus.fatto_servizio is None:
+        return frozenset(range(1, PERIODI_MENSILI + 1))
+    anno_intero = Periodo(date(anno, 1, 1), date(anno, 12, 31))
+    giorni = anno_intero.giorni()
+    mesi: set[int] = set()
+    for rapporto in registro.rapporti_della_persona(persona, istante):
+        vigenti = registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, anno_intero, istante)
+        mesi.update(giorno.month for giorno, fatto in zip(giorni, vigenti) if fatto is not None)
+    return frozenset(mesi)
+
+
 def _ha_tempo_determinato(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> bool:
     """Un rapporto della persona è a tempo determinato (tipo di impiego 17 o 18) in almeno un giorno dell'anno."""
     if corpus.fatto_servizio is None:
@@ -550,6 +667,10 @@ def _annuale(
     operate += list(ritenute_nuove)
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
     giorni, giorni_anno = _giorni_di_servizio(registro, corpus, persona, anno, istante)
+    carichi = tuple(
+        _carichi_del_mese(registro, regola_ritenuta, persona, anno, mese, istante)[0]
+        for mese in sorted(_mesi_di_servizio(registro, corpus, persona, anno, istante))
+    )
     calcolo = _calcola(
         corpus,
         regola_ritenuta,
@@ -560,6 +681,7 @@ def _annuale(
         giorni,
         giorni_anno,
         frozenset(riga.categoria_reddito for riga in reddito),
+        carichi,
     )
     return _Annuale(
         calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta,
@@ -585,10 +707,11 @@ def _importo_conguaglio(
             riferimento=_riferimento_unito(regola.riferimento, annuale.regola_ritenuta.riferimento),
             formula=(
                 f"imposta dell'anno = {annuale.regola_ritenuta.imposta}; detrazione = "
-                f"{annuale.regola_ritenuta.detrazione if annuale.calcolo.fatti else 'non applicata'}; "
+                f"{annuale.regola_ritenuta.detrazione if annuale.calcolo.dichiarata else 'non applicata'}; "
                 f"detrazione automatica = {annuale.regola_ritenuta.detrazione_automatica}; "
-                "conguaglio = imposta meno detrazione meno detrazione automatica meno ritenute e conguagli già operati, "
-                "con un solo periodo"
+                f"{_formula_carichi(annuale.calcolo)}"
+                "conguaglio = imposta meno detrazione meno detrazione automatica meno carichi di famiglia "
+                "meno ritenute e conguagli già operati, con un solo periodo"
             ),
             versione_corpus=corpus.versione,
             noto_al=istante,
@@ -680,6 +803,18 @@ def calcola_fiscale(
                 AVVISO_SENZA_DICHIARAZIONE,
                 f"Persona {persona}: senza dichiarazione del sostituito per {regola.detrazione_richiesta}, "
                 "nessuna detrazione nella ritenuta",
+                persona,
+                anno,
+            )
+        )
+    _, fuori_eta = _carichi_del_mese(registro, regola, persona, data_pagamento.year, data_pagamento.month, istante)
+    for fatto in fuori_eta:
+        familiare = leggi_familiare(fatto)
+        avvisi.append(
+            Avviso(
+                AVVISO_FAMILIARE_FUORI_ETA,
+                f"Persona {persona}: il familiare {familiare.codice_fiscale} ({familiare.relazione}) è registrato ma, "
+                "per l'età, nel mese del pagamento non dà detrazione",
                 persona,
                 anno,
             )
@@ -788,6 +923,7 @@ def _benefici_del_pagamento(
                 corpus, regola_ritenuta, annuale.calcolo.imponibile, 1, riferimento, annuale.giorni, annuale.giorni_anno
             ),
             oneri=oneri,
+            carichi=annuale.calcolo.carichi,
             periodi=1,
             giorni=annuale.giorni,
             giorni_anno=annuale.giorni_anno,
@@ -810,6 +946,7 @@ def _benefici_del_pagamento(
                 corpus, regola_ritenuta, calcolo_ritenuta.calcolo.imponibile, PERIODI_MENSILI, riferimento, 1, 1
             ),
             oneri=oneri,
+            carichi=calcolo_ritenuta.calcolo.carichi,
             periodi=PERIODI_MENSILI,
             giorni=1,
             giorni_anno=1,

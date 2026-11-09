@@ -437,7 +437,7 @@ class DichiarazioneDeduzione:
             raise ErroreCorpus(f"Deduzione fiscale {self.istituto}: vigenza invertita")
 
 
-PERIODI_FISCALI = frozenset({"imponibile", "periodi", "giorni", "giorni_anno"})
+PERIODI_FISCALI = frozenset({"imponibile", "periodi", "giorni", "giorni_anno", "figli"})
 
 
 @dataclass(frozen=True)
@@ -451,6 +451,10 @@ class RegolaRitenuta:
     detrazione che il sostituto riconosce in via automatica) e vale 0 se la regola non la dichiara.
     `fisco.giorni` e `fisco.giorni_anno` servono a rapportare le detrazioni al periodo di lavoro: nella ritenuta
     del mese valgono entrambi 1, nel conguaglio i giorni di servizio dell'anno e i giorni dell'anno.
+    Carichi di famiglia (ADR 0033): `carichi_coniuge`, `carichi_figlio` e `carichi_ascendente` sono la detrazione ANNUA
+    per un familiare a carico al 100%, nelle stesse variabili, più `fisco.figli`, il numero dei figli che danno diritto
+    nello stesso mese (aumenta la soglia dei figli). Il coniuge vale anche per il figlio in luogo del coniuge. Il motore
+    le applica per mese, per percentuale e per familiare, un dodicesimo ciascuna, senza la dichiarazione del sostituito.
     La regola copre solo le `categorie` elencate.
     """
 
@@ -465,6 +469,9 @@ class RegolaRitenuta:
     al: date | None = None
     detrazione_automatica: str = "0"
     categorie_detrazione_automatica: tuple[str, ...] = ()
+    carichi_coniuge: str = "0"
+    carichi_figlio: str = "0"
+    carichi_ascendente: str = "0"
 
     def __post_init__(self) -> None:
         soggetto = f"Ritenuta {self.istituto}"
@@ -477,7 +484,10 @@ class RegolaRitenuta:
             raise ErroreCorpus(f"{soggetto}: categorie obbligatorie")
         if not self.detrazione_richiesta.strip():
             raise ErroreCorpus(f"{soggetto}: detrazione_richiesta obbligatoria")
-        for formula in (self.imposta, self.detrazione, self.detrazione_automatica):
+        for formula in (
+            self.imposta, self.detrazione, self.detrazione_automatica,
+            self.carichi_coniuge, self.carichi_figlio, self.carichi_ascendente,
+        ):
             letti = riferimenti(formula)
             if letti.fatti or letti.importi or letti.basi:
                 raise ErroreCorpus(f"{soggetto}: la formula legge solo parametri e fisco, non fatti, importi o basi")
@@ -491,6 +501,9 @@ class RegolaRitenuta:
             riferimenti(self.imposta).parametri
             | riferimenti(self.detrazione).parametri
             | riferimenti(self.detrazione_automatica).parametri
+            | riferimenti(self.carichi_coniuge).parametri
+            | riferimenti(self.carichi_figlio).parametri
+            | riferimenti(self.carichi_ascendente).parametri
         )
 
 
@@ -631,7 +644,7 @@ class RegolaAddizionali:
 # reddito vero), il reddito di lavoro dipendente del periodo, imposta lorda e detrazione dell'art. 13 del periodo, gli oneri
 # detraibili comunicati (annui), i periodi e i giorni di servizio come nella ritenuta.
 FISCO_BENEFICI = frozenset(
-    {"reddito_stimato", "reddito_dipendente", "reddito_fascia", "imposta", "detrazione", "oneri", "periodi", "giorni", "giorni_anno"}
+    {"reddito_stimato", "reddito_dipendente", "reddito_fascia", "imposta", "detrazione", "carichi", "oneri", "periodi", "giorni", "giorni_anno"}
 )
 ISTITUTI_BENEFICI = (
     "istituto_somma_esente", "istituto_trattamento_integrativo", "recupero_somma_esente", "recupero_trattamento_integrativo",
@@ -1485,7 +1498,9 @@ class Corpus:
                 "ritenute": sorted(
                     [r.istituto, r.versione, r.dal.isoformat(), r.al.isoformat() if r.al else "", r.riferimento,
                      r.imposta, r.detrazione, sorted(r.categorie), r.detrazione_richiesta,
-                     *([r.detrazione_automatica] if r.detrazione_automatica != "0" else [])]
+                     *([r.detrazione_automatica] if r.detrazione_automatica != "0" else []),
+                     *([r.carichi_coniuge, r.carichi_figlio, r.carichi_ascendente]
+                       if (r.carichi_coniuge, r.carichi_figlio, r.carichi_ascendente) != ("0", "0", "0") else [])]
                     for r in fiscale.ritenute
                 ),
                 "conguagli": sorted(
@@ -2029,6 +2044,9 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
             al=_data(voce["al"], "al") if "al" in voce else None,
             detrazione_automatica=voce.get("detrazione_automatica", "0"),
             categorie_detrazione_automatica=tuple(voce.get("categorie_detrazione_automatica", ())),
+            carichi_coniuge=voce.get("carichi_coniuge", "0"),
+            carichi_figlio=voce.get("carichi_figlio", "0"),
+            carichi_ascendente=voce.get("carichi_ascendente", "0"),
         )
         for voce in dati.get("ritenuta", [])
     )

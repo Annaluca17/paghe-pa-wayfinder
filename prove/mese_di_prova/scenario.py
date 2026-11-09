@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from paghe import Atto, Mese
 
-from .codici import codice_fiscale
+from .codici import carattere_di_controllo, codice_fiscale
 
 DENOMINAZIONE_ENTE = "ENTE DI PROVA"
 CF_ENTE = "01234567897"  # codice fiscale di fantasia dell'ente, cifra di controllo valida
@@ -152,6 +152,11 @@ ATTO_DOMICILIO = Atto("ente:ente_di_prova:comunicazione.domicilio:2025-12-10;1",
 ATTO_CU_2025 = Atto("ente:ente_di_prova:cu:2026-01-09;1", date(2026, 1, 9))
 REDDITO_2025_P01 = "18000.00"  # dalla CU: R01 non ha il conguaglio 2025 nel modello, l'acconto 2026 parte da qui
 ATTO_DETRAZIONI = Atto("ente:ente_di_prova:dichiarazione.detrazioni:2026-01-09;1", date(2026, 1, 9))
+# Carichi di famiglia (ticket #98): R01 ha un figlio di 22 anni a carico al 50%, codice fiscale di fantasia.
+ATTO_FAMILIARE = Atto("ente:ente_di_prova:dichiarazione.carichi:2026-01-09;2", date(2026, 1, 9))
+CF_FIGLIO_R01 = "PRVFLI04C15H501" + carattere_di_controllo("PRVFLI04C15H501")
+NASCITA_FIGLIO_R01 = date(2004, 3, 15)
+PERCENTUALE_FIGLIO_R01 = 50
 
 
 def fatti_inquadramento(r: Rapporto) -> dict[str, str]:

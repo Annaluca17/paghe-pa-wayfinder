@@ -45,6 +45,9 @@ class Contesto:
     giorni_anno: int
     importi: tuple[Importo, ...]
     fatti: tuple[Fatto, ...] = ()
+    # Carichi di famiglia dell'art. 12 nello stesso periodo della detrazione (ADR 0033): entrano nella somma delle detrazioni
+    # del trattamento integrativo tra 15.000 e 28.000 euro (D.L. 3/2020 art. 1 c. 1, secondo periodo; elenco da verificare).
+    carichi: Decimal = Decimal(0)
 
 
 @dataclass(frozen=True)
@@ -96,6 +99,7 @@ def _valuta(corpus: Corpus, formula: str, contesto: Contesto, giorno: date) -> t
         "imposta": contesto.imposta,
         "detrazione": contesto.detrazione,
         "oneri": contesto.oneri,
+        "carichi": contesto.carichi,
         "periodi": Decimal(contesto.periodi),
         "giorni": Decimal(contesto.giorni),
         "giorni_anno": Decimal(contesto.giorni_anno),
@@ -123,7 +127,7 @@ def _letture(contesto: Contesto) -> str:
         f"reddito di lavoro dipendente = {contesto.reddito_dipendente}; "
         f"reddito per la percentuale della somma esente = {contesto.reddito_fascia}; imposta lorda = {contesto.imposta}; "
         f"detrazione dell'art. 13 = {contesto.detrazione} (calcolata anche senza dichiarazione del sostituito); "
-        f"oneri detraibili comunicati = {contesto.oneri}"
+        f"carichi di famiglia = {contesto.carichi}; oneri detraibili comunicati = {contesto.oneri}"
     )
 
 
