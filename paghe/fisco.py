@@ -18,12 +18,12 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from . import addizionali
+from . import addizionali, benefici
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
 from .modello import MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
-from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, Registro
+from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, TIPO_ONERI_DETRAIBILI, Registro
 from .denuncia import MATURAZIONI_DERIVATE
 from .denuncia_individuale import IMPIEGHI_TEMPO_DETERMINATO
 from .tempo import Periodo, in_utc
@@ -68,15 +68,31 @@ class ImponibileFiscale:
 
 @dataclass(frozen=True)
 class FiscaleDelPagamento:
-    """Ritenuta, conguaglio (con le addizionali dovute dell'anno nella sua derivazione) e importi delle addizionali (ADR 0029)."""
+    """Ritenuta, conguaglio (con le addizionali dovute dell'anno nella sua derivazione) e importi delle addizionali (ADR 0029).
+
+    `benefici` sono la somma esente, il trattamento integrativo e i loro recuperi (ticket #95): a favore o a carico
+    della persona, non sono reddito.
+    """
 
     ritenuta: Importo
     conguaglio: Importo | None = None
     avvisi: tuple[Avviso, ...] = ()
     addizionali: tuple[Importo, ...] = ()
+    benefici: tuple[Importo, ...] = ()
 
     def avvisi_di(self, tipo: str) -> tuple[Avviso, ...]:
         return tuple(avviso for avviso in self.avvisi if avviso.tipo == tipo)
+
+
+@dataclass(frozen=True)
+class _Ritenuta:
+    importo: Importo
+    regola: RegolaRitenuta
+    riferimento: date
+    dichiarazione: Fatto | None
+    calcolo: "_Calcolo"
+    redditi: tuple[Importo, ...]
+    deduzioni: tuple[Importo, ...]
 
 
 @dataclass(frozen=True)
@@ -305,6 +321,25 @@ def _calcola(
     )
 
 
+def _detrazione_teorica(
+    corpus: Corpus, regola: RegolaRitenuta, imponibile: Decimal, periodi: int, riferimento: date, giorni: int, giorni_anno: int
+) -> Decimal:
+    """La detrazione dell'art. 13 del periodo anche senza la dichiarazione del sostituito (per il trattamento integrativo)."""
+    valori_fisco = {
+        "imponibile": imponibile,
+        "periodi": Decimal(periodi),
+        "giorni": Decimal(giorni),
+        "giorni_anno": Decimal(giorni_anno),
+    }
+
+    def risolvi(origine: str, nome: str) -> Decimal:
+        if origine == "fisco":
+            return valori_fisco[nome]
+        return corpus.parametro(nome).vigenza_per(Periodo(riferimento, riferimento)).valore
+
+    return valuta(regola.detrazione, risolvi)
+
+
 def _regola_ritenuta(corpus: Corpus, anno: int, data_pagamento: date) -> tuple[RegolaRitenuta, date]:
     """Regola e parametri si scelgono all'anno d'imposta: per un pagamento di gennaio dell'anno prima, al 31 dicembre."""
     riferimento = min(data_pagamento, date(anno, 12, 31))
@@ -365,7 +400,7 @@ def _ritenuta(
     data_pagamento: date,
     istante: datetime,
     deduzioni: tuple[Importo, ...] = (),
-) -> tuple[Importo, RegolaRitenuta, date, Fatto | None]:
+) -> _Ritenuta:
     anno = righe[0].anno_imposta
     regola, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
     del_periodo = [
@@ -420,7 +455,9 @@ def _ritenuta(
             importi=(*gia_pagate, *righe, *gia_dedotte, *deduzioni, *gia_operate),
         ),
     )
-    return importo, regola, riferimento, dichiarazione
+    return _Ritenuta(
+        importo, regola, riferimento, dichiarazione, calcolo, (*gia_pagate, *righe), (*gia_dedotte, *deduzioni)
+    )
 
 
 def _ultimo_del_mese(giorno: date) -> date:
@@ -434,29 +471,38 @@ class _Annuale:
     righe: tuple[Importo, ...]
     regola: RegolaConguaglio
     regola_ritenuta: RegolaRitenuta
+    redditi: tuple[Importo, ...] = ()
+    deduzioni: tuple[Importo, ...] = ()
+    giorni: int = 1
+    giorni_anno: int = 1
 
     @property
     def valore(self) -> Decimal:
         return self.calcolo.dovuto - self.operato
 
 
-def _giorni_di_servizio(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> tuple[int, int]:
+def _giorni_di_servizio(
+    registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime, fino_al: date | None = None
+) -> tuple[int, int]:
     """Giorni di servizio della persona nell'anno d'imposta e giorni dell'anno (ADR 0019, ticket #93).
 
     I giorni sono quelli del fatto di servizio del corpus sull'unione dei rapporti della persona, festivi compresi, e
     nessun giorno si conta due volte. Senza fatto di servizio nel corpus la persona ha servizio tutto l'anno.
+    Con `fino_al` si contano solo i giorni dal 1° gennaio a quella data compresa (reddito annuo stimato, ticket #95).
     """
     anno_intero = Periodo(date(anno, 1, 1), date(anno, 12, 31))
     giorni_anno = len(anno_intero.giorni())
+    ultimo = min(fino_al, date(anno, 12, 31)) if fino_al is not None else date(anno, 12, 31)
+    giorni_considerati = (ultimo - date(anno, 1, 1)).days + 1
     if corpus.fatto_servizio is None:
-        return giorni_anno, giorni_anno
+        return giorni_considerati, giorni_anno
     in_servizio = [False] * giorni_anno
     for rapporto in registro.rapporti_della_persona(persona, istante):
         vigenti = registro.vigenti_per_giorno(rapporto, corpus.fatto_servizio, anno_intero, istante)
         for indice, fatto in enumerate(vigenti):
             if fatto is not None:
                 in_servizio[indice] = True
-    return sum(in_servizio), giorni_anno
+    return sum(in_servizio[:giorni_considerati]), giorni_anno
 
 
 def _ha_tempo_determinato(registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime) -> bool:
@@ -516,7 +562,8 @@ def _annuale(
         frozenset(riga.categoria_reddito for riga in reddito),
     )
     return _Annuale(
-        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta
+        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta,
+        tuple(reddito), tuple(deduzioni), giorni, giorni_anno,
     )
 
 
@@ -622,8 +669,9 @@ def calcola_fiscale(
     reddito = _controlla_righe(registro, rapporto, persona, righe, regola_provvisoria, istante)
     anno = reddito[0].anno_imposta
     deduzioni = tuple(riga for riga in righe if _e_deduzione(corpus, riga, data_pagamento))
-    ritenuta, regola, riferimento, dichiarazione = _ritenuta(
-        registro, corpus, rapporto, persona, reddito, data_pagamento, istante, deduzioni
+    calcolo_ritenuta = _ritenuta(registro, corpus, rapporto, persona, reddito, data_pagamento, istante, deduzioni)
+    ritenuta, regola, riferimento, dichiarazione = (
+        calcolo_ritenuta.importo, calcolo_ritenuta.regola, calcolo_ritenuta.riferimento, calcolo_ritenuta.dichiarazione
     )
     avvisi: list[Avviso] = []
     if dichiarazione is None:
@@ -668,6 +716,17 @@ def calcola_fiscale(
             registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
         )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
+    regola_benefici = corpus.regola_benefici(riferimento)
+    importi_benefici: tuple[Importo, ...] = ()
+    if regola_benefici is not None:
+        importi_benefici, piani = _benefici_del_pagamento(
+            registro, corpus, regola_benefici, rapporto, persona, anno, data_pagamento, calcolo_ritenuta, annuale,
+            ultimo_dell_anno, istante,
+        )
+        if conguaglio is not None and piani:
+            conguaglio = replace(
+                conguaglio, derivazione=replace(conguaglio.derivazione, importi=(*conguaglio.derivazione.importi, *piani))
+            )
     rate = addizionali.RateDelMese() if finale else _rate_delle_addizionali(
         registro, corpus, rapporto, persona, data_pagamento, istante
     )
@@ -681,7 +740,134 @@ def calcola_fiscale(
                 rate.acconto_senza_base,
             )
         )
-    return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi), (*chiusura, *rate.importi))
+    return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi), (*chiusura, *rate.importi), importi_benefici)
+
+
+def _benefici_del_pagamento(
+    registro: Registro,
+    corpus: Corpus,
+    regola: benefici.RegolaBenefici,
+    rapporto: str,
+    persona: str,
+    anno: int,
+    data_pagamento: date,
+    calcolo_ritenuta: _Ritenuta,
+    annuale: _Annuale,
+    conguaglio: bool,
+    istante: datetime,
+) -> tuple[tuple[Importo, ...], tuple[Importo, ...]]:
+    """Somma esente, trattamento integrativo e recuperi del pagamento; con il conguaglio, i recuperi a rate da registrare.
+
+    Nel pagamento del mese il reddito annuo stimato è il pagato dall'inizio dell'anno diviso i giorni di servizio fino
+    alla fine del mese per 365; al conguaglio è il reddito vero dell'anno, e l'imposta lorda e la detrazione sono quelle
+    dell'anno. La detrazione dell'art. 13 si calcola anche senza la dichiarazione del sostituito.
+    """
+    riferimento = calcolo_ritenuta.riferimento
+    pagate = [(p.riga, p.data or p.valuta) for p in _pagati(registro, persona, istante)]
+    istituti = (regola.istituto_somma_esente, regola.istituto_trattamento_integrativo)
+    dell_anno = [riga for riga, _ in pagate if riga.istituto in istituti and riga.anno_imposta == anno]
+    mese = (data_pagamento.year, data_pagamento.month)
+    nel_mese = [riga for riga, giorno in pagate if riga.istituto in istituti and riga.anno_imposta == anno and (giorno.year, giorno.month) == mese]
+    oneri_fatto = registro.vigente_persona(persona, TIPO_ONERI_DETRAIBILI, data_pagamento, istante)
+    oneri = oneri_fatto.valore if oneri_fatto is not None else Decimal(0)
+    fatti = (oneri_fatto,) if oneri_fatto is not None else ()
+    regola_ritenuta = calcolo_ritenuta.regola
+    if conguaglio:
+        redditi, dedotte = annuale.redditi, annuale.deduzioni
+        contesto = benefici.Contesto(
+            reddito_stimato=annuale.calcolo.imponibile,
+            origine_stimato="reddito vero dell'anno",
+            reddito_dipendente=benefici.reddito_idoneo(redditi, dedotte, regola.categorie_somma_esente),
+            # L. 207/2024 art. 1 c. 5: per la percentuale il reddito di lavoro dipendente è rapportato all'intero anno;
+            # il limite dei 20.000 euro resta sul reddito complessivo vero.
+            reddito_fascia=benefici.reddito_annuo_stimato(
+                benefici.reddito_idoneo(redditi, dedotte, regola.categorie_somma_esente), annuale.giorni
+            ),
+            imposta=annuale.calcolo.imposta,
+            detrazione=_detrazione_teorica(
+                corpus, regola_ritenuta, annuale.calcolo.imponibile, 1, riferimento, annuale.giorni, annuale.giorni_anno
+            ),
+            oneri=oneri,
+            periodi=1,
+            giorni=annuale.giorni,
+            giorni_anno=annuale.giorni_anno,
+            importi=annuale.righe,
+            fatti=fatti,
+        )
+    else:
+        redditi, dedotte = calcolo_ritenuta.redditi, calcolo_ritenuta.deduzioni
+        fino_al = min(_ultimo_del_mese(data_pagamento), date(anno, 12, 31))
+        giorni, _ = _giorni_di_servizio(registro, corpus, persona, anno, istante, fino_al)
+        pagato = annuale.calcolo.imponibile
+        contesto = benefici.Contesto(
+            reddito_stimato=benefici.reddito_annuo_stimato(pagato, giorni),
+            origine_stimato=f"imponibile fiscale pagato dall'inizio dell'anno {pagato} diviso {giorni} giorni di servizio per "
+            f"{benefici.GIORNI_REDDITO_ANNUO}",
+            reddito_dipendente=benefici.reddito_idoneo(redditi, dedotte, regola.categorie_somma_esente),
+            reddito_fascia=benefici.reddito_annuo_stimato(pagato, giorni),
+            imposta=calcolo_ritenuta.calcolo.imposta,
+            detrazione=_detrazione_teorica(
+                corpus, regola_ritenuta, calcolo_ritenuta.calcolo.imponibile, PERIODI_MENSILI, riferimento, 1, 1
+            ),
+            oneri=oneri,
+            periodi=PERIODI_MENSILI,
+            giorni=1,
+            giorni_anno=1,
+            importi=(*redditi, *dedotte),
+            fatti=fatti,
+        )
+    categorie = frozenset(riga.categoria_reddito for riga in redditi)
+    finale = conguaglio and pagamento_finale(registro, corpus, persona, anno, data_pagamento, istante)
+    if conguaglio:
+        importi, piani = benefici.al_conguaglio(
+            corpus, regola, rapporto, anno, data_pagamento, riferimento, contesto, categorie, dell_anno, finale,
+            _ulteriore_in_piu(registro, corpus, persona, anno, data_pagamento, calcolo_ritenuta, annuale, istante), istante,
+        )
+    else:
+        importi, piani = benefici.riconosciuti_del_mese(
+            corpus, regola, rapporto, anno, data_pagamento, riferimento, contesto, categorie, nel_mese, istante
+        ), ()
+    rate = benefici.rate_del_mese(corpus, regola, rapporto, data_pagamento, finale, pagate, istante)
+    return (*importi, *rate), piani
+
+
+def _ulteriore_in_piu(
+    registro: Registro,
+    corpus: Corpus,
+    persona: str,
+    anno: int,
+    data_pagamento: date,
+    calcolo_ritenuta: _Ritenuta,
+    annuale: _Annuale,
+    istante: datetime,
+) -> Decimal:
+    """L'ulteriore detrazione spettante nell'anno oltre quella già applicata nelle ritenute dei mesi (non sotto zero).
+
+    Serve alla soglia cumulata del recupero della somma esente. L'applicata si ricalcola mese per mese sull'imponibile
+    di ogni mese, come la ritenuta; il mese di questo pagamento è quello della sua ritenuta.
+    """
+    regola = calcolo_ritenuta.regola
+    mese = (data_pagamento.year, data_pagamento.month)
+    mesi: dict[tuple[int, int], list[Decimal]] = {}
+    categorie: dict[tuple[int, int], set[str]] = {}
+    for pagata in _pagati(registro, persona, istante):
+        giorno = pagata.data or pagata.valuta
+        chiave = (giorno.year, giorno.month)
+        if chiave == mese:
+            continue
+        if _e_reddito(pagata.riga) and pagata.riga.anno_imposta == anno:
+            mesi.setdefault(chiave, []).append(pagata.riga.valore)
+            categorie.setdefault(chiave, set()).add(pagata.riga.categoria_reddito)
+        elif _e_deduzione(corpus, pagata.riga, giorno) and _anno_della_deduzione(pagata) == anno:
+            mesi.setdefault(chiave, []).append(-pagata.riga.valore)
+    applicata = calcolo_ritenuta.calcolo.detrazione_automatica
+    for chiave, valori in mesi.items():
+        calcolo = _calcola(
+            corpus, regola, sum(valori, Decimal(0)), PERIODI_MENSILI, calcolo_ritenuta.riferimento, None,
+            categorie=frozenset(categorie.get(chiave, ())),
+        )
+        applicata += calcolo.detrazione_automatica
+    return max(Decimal(0), annuale.calcolo.detrazione_automatica - applicata)
 
 
 def _rate_delle_addizionali(

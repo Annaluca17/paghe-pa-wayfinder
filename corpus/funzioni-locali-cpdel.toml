@@ -2664,6 +2664,307 @@ istituto = "gs_lavoratore"
 dal = 2027-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com2-leta + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art54-com1"
 
+# --- Somma esente e trattamento integrativo: importi a favore della persona, non reddito (ticket #95, ADR 0019) ---
+# Marcatura: norma certa per soglie, percentuali, importi e rate; prassi (circ. AdE 4/E/2025, 29/E/2020) per il reddito annuo teorico,
+# la soglia dei 60 euro cumulata fra somma esente e ulteriore detrazione e il recupero alla cessazione. Dal 2027 stessi valori,
+# con il rinvio al TU D.Lgs. 117/2026 (art. 376 c. 2): fonte singola, da rileggere con la legge di bilancio 2027.
+
+# somma esente, limite della prima fascia: norma certa (L. 207/2024 art. 1 c. 4-5, senza termine); seconda fonte: istruzioni CU 2026 punti 718-728 e circ. AdE 4/E/2025 par. 1.2
+[[parametro]]
+nome = "somma_esente_soglia_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "8500"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "8500"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# somma esente, limite della seconda fascia: norma certa (L. 207/2024 art. 1 c. 4-5, senza termine); seconda fonte: istruzioni CU 2026 punti 718-728 e circ. AdE 4/E/2025 par. 1.2
+[[parametro]]
+nome = "somma_esente_soglia_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# somma esente, reddito oltre il quale non spetta: norma certa (L. 207/2024 art. 1 c. 4-5, senza termine); seconda fonte: istruzioni CU 2026 punti 718-728 e circ. AdE 4/E/2025 par. 1.2
+[[parametro]]
+nome = "somma_esente_soglia_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "20000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "20000"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# somma esente, percentuale fino al limite della prima fascia (7,1%): norma certa (L. 207/2024 art. 1 c. 4-5, senza termine); seconda fonte: istruzioni CU 2026 punti 718-728 e circ. AdE 4/E/2025 par. 1.2
+[[parametro]]
+nome = "somma_esente_percentuale_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.071"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "0.071"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# somma esente, percentuale della seconda fascia (5,3%): norma certa (L. 207/2024 art. 1 c. 4-5, senza termine); seconda fonte: istruzioni CU 2026 punti 718-728 e circ. AdE 4/E/2025 par. 1.2
+[[parametro]]
+nome = "somma_esente_percentuale_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.053"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "0.053"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# somma esente, percentuale della terza fascia (4,8%): norma certa (L. 207/2024 art. 1 c. 4-5, senza termine); seconda fonte: istruzioni CU 2026 punti 718-728 e circ. AdE 4/E/2025 par. 1.2
+[[parametro]]
+nome = "somma_esente_percentuale_3"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.048"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "0.048"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# trattamento integrativo, importo annuo: norma certa (D.L. 3/2020 art. 1 c. 1); seconda fonte: istruzioni CU 2026 punti 390-395
+[[parametro]]
+nome = "integrativo_importo"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "1200"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "1200"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# trattamento integrativo, reddito fino al quale basta l'imposta lorda sopra la detrazione: norma certa (D.L. 3/2020 art. 1 c. 1); seconda fonte: istruzioni CU 2026 punti 390-395
+[[parametro]]
+nome = "integrativo_soglia_1"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "15000"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# trattamento integrativo, reddito complessivo che non si supera: norma certa (D.L. 3/2020 art. 1 c. 1); seconda fonte: istruzioni CU 2026 punti 390-395
+[[parametro]]
+nome = "integrativo_soglia_2"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# trattamento integrativo, riduzione della detrazione dell'art. 13 nel confronto con l'imposta lorda (annua, rapportata al periodo): norma certa (D.L. 3/2020 art. 1 c. 1); seconda fonte: istruzioni CU 2026 punti 390-395
+[[parametro]]
+nome = "integrativo_riduzione"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "75"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stato:legge:2024-12-30;207~art1-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "75"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stato:legge:2024-12-30;207~art1-com3 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# recupero di somma esente, ulteriore detrazione o trattamento integrativo: fino a questo importo in unica soluzione (per la somma esente cumulato con l'ulteriore detrazione: prassi, circ. AdE 4/E/2025): norma certa; seconda fonte: istruzioni CU 2026
+[[parametro]]
+nome = "recupero_benefici_soglia"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "60"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com3 + urn:nir:stato:legge:2024-12-30;207~art1-com7"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "60"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com3 + urn:nir:stato:legge:2024-12-30;207~art1-com7 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# recupero del trattamento integrativo oltre la soglia, rate di pari ammontare: norma certa; seconda fonte: istruzioni CU 2026
+[[parametro]]
+nome = "recupero_integrativo_rate"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "8"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "8"
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com3 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# recupero di somma esente (e ulteriore detrazione) oltre la soglia, rate di pari ammontare: norma certa; seconda fonte: istruzioni CU 2026
+[[parametro]]
+nome = "recupero_somma_esente_rate"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "10"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com7"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "10"
+riferimento = "urn:nir:stato:legge:2024-12-30;207~art1-com7 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+# 2027: stessi valori; il rinvio al TUIR vale per il TU (art. 376 c. 2 D.Lgs. 117/2026), da rileggere con la legge di bilancio 2027
+
+# Il trattamento integrativo spetta al lavoro dipendente e agli assimilati dell'art. 50 c. 1 lett. c-bis) TUIR (collaborazione), non alla
+# carica elettiva; la somma esente al solo lavoro dipendente. Il reddito annuo stimato e' il pagato dall'inizio dell'anno diviso i giorni
+# di servizio per 365 (prassi, circ. AdE 4/E/2025): lo calcola il motore. Il trattamento integrativo tra 15.000 e 28.000 euro conta le
+# detrazioni note (art. 13 c. 1 e c. 1.1) e gli oneri comunicati dalla persona. Il corpus non porta ancora le condizioni sugli oneri
+# «sostenuti fino al 31 dicembre 2021» (da verificare).
+[[beneficio]]
+versione = 1
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stato:decreto.legge:2020-02-05;3~art1-com3 + urn:nir:stato:legge:2024-12-30;207~art1-com3 + urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:legge:2024-12-30;207~art1-com7"
+categorie_somma_esente = ["lavoro_dipendente"]
+categorie_trattamento_integrativo = ["lavoro_dipendente", "collaborazione"]
+somma_esente = '''arrotonda(
+    se(fisco.reddito_stimato <= parametro.somma_esente_soglia_3,
+       se(fisco.reddito_fascia <= parametro.somma_esente_soglia_1, parametro.somma_esente_percentuale_1,
+          se(fisco.reddito_fascia <= parametro.somma_esente_soglia_2, parametro.somma_esente_percentuale_2,
+             parametro.somma_esente_percentuale_3)), 0)
+    * fisco.reddito_dipendente, 2)'''
+trattamento_integrativo = '''arrotonda(
+    se(fisco.reddito_stimato <= parametro.integrativo_soglia_1,
+       se(fisco.imposta > fisco.detrazione - parametro.integrativo_riduzione / fisco.periodi,
+          parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi, 0),
+       se(fisco.reddito_stimato <= parametro.integrativo_soglia_2,
+          min(parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi,
+              max(0, fisco.detrazione + fisco.oneri / fisco.periodi - fisco.imposta)), 0)), 2)'''
+istituto_somma_esente = "somma_esente"
+istituto_trattamento_integrativo = "trattamento_integrativo"
+recupero_somma_esente = "somma_esente_recupero"
+recupero_trattamento_integrativo = "trattamento_integrativo_recupero"
+soglia_recupero = "recupero_benefici_soglia"
+rate_somma_esente = "recupero_somma_esente_rate"
+rate_trattamento_integrativo = "recupero_integrativo_rate"
+
+[[beneficio]]
+versione = 2
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legge:2020-02-05;3~art1-com1 + urn:nir:stato:decreto.legge:2020-02-05;3~art1-com3 + urn:nir:stato:legge:2024-12-30;207~art1-com3 + urn:nir:stato:legge:2024-12-30;207~art1-com4 + urn:nir:stato:legge:2024-12-30;207~art1-com7 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art376-com2"
+categorie_somma_esente = ["lavoro_dipendente"]
+categorie_trattamento_integrativo = ["lavoro_dipendente", "collaborazione"]
+somma_esente = '''arrotonda(
+    se(fisco.reddito_stimato <= parametro.somma_esente_soglia_3,
+       se(fisco.reddito_fascia <= parametro.somma_esente_soglia_1, parametro.somma_esente_percentuale_1,
+          se(fisco.reddito_fascia <= parametro.somma_esente_soglia_2, parametro.somma_esente_percentuale_2,
+             parametro.somma_esente_percentuale_3)), 0)
+    * fisco.reddito_dipendente, 2)'''
+trattamento_integrativo = '''arrotonda(
+    se(fisco.reddito_stimato <= parametro.integrativo_soglia_1,
+       se(fisco.imposta > fisco.detrazione - parametro.integrativo_riduzione / fisco.periodi,
+          parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi, 0),
+       se(fisco.reddito_stimato <= parametro.integrativo_soglia_2,
+          min(parametro.integrativo_importo * fisco.giorni / fisco.giorni_anno / fisco.periodi,
+              max(0, fisco.detrazione + fisco.oneri / fisco.periodi - fisco.imposta)), 0)), 2)'''
+istituto_somma_esente = "somma_esente"
+istituto_trattamento_integrativo = "trattamento_integrativo"
+recupero_somma_esente = "somma_esente_recupero"
+recupero_trattamento_integrativo = "trattamento_integrativo_recupero"
+soglia_recupero = "recupero_benefici_soglia"
+rate_somma_esente = "recupero_somma_esente_rate"
+rate_trattamento_integrativo = "recupero_integrativo_rate"
+
+# Composizione del pagamento e codici tributo F24EP (ADR 0023): il riconosciuto e' una riga sul netto della persona e un credito del
+# sostituto (175E somma esente, 170E trattamento integrativo; A = mese e B = anno dell'erogazione); il recupero e' una riga a debito
+# separata con lo stesso codice. Norma certa: ris. AdE 9/E/2025 e 35/E/2020; mese di riferimento del recupero: da verificare.
+[[composizione]]
+istituto = "somma_esente"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2025-01-31;9-E"
+natura = "credito_sostituto"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[mappatura]]
+istituto = "somma_esente"
+sistema = "codice_tributo_f24ep"
+codice = "175E"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2025-01-31;9-E"
+
+[[composizione]]
+istituto = "trattamento_integrativo"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2020-06-26;35-E"
+natura = "credito_sostituto"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[mappatura]]
+istituto = "trattamento_integrativo"
+sistema = "codice_tributo_f24ep"
+codice = "170E"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2020-06-26;35-E"
+
+[[composizione]]
+istituto = "somma_esente_recupero"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2025-01-31;9-E"
+natura = "trattenuta_terzi"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[mappatura]]
+istituto = "somma_esente_recupero"
+sistema = "codice_tributo_f24ep"
+codice = "175E"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2025-01-31;9-E"
+
+[[composizione]]
+istituto = "trattamento_integrativo_recupero"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2020-06-26;35-E"
+natura = "trattenuta_terzi"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[mappatura]]
+istituto = "trattamento_integrativo_recupero"
+sistema = "codice_tributo_f24ep"
+codice = "170E"
+dal = 2026-01-01
+riferimento = "prassi:ade:risoluzione:2020-06-26;35-E"
+
 # --- Addizionali: parametri nazionali e regola (ADR 0029). Le aliquote di comuni e regioni sono dichiarazioni a parte. ---
 
 # Acconto comunale al 30% dell'addizionale dell'anno prima: norma certa, art. 1 c. 4 D.Lgs. 360/1998; seconda fonte: circolare AdE 15/E 2007 par. 3.4

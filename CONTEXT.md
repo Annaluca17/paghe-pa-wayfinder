@@ -453,6 +453,18 @@ _Avoid_: Detrazione d'ufficio
 Detrazione che il sostituto riconosce senza richiesta della persona, come l'ulteriore detrazione per i redditi tra 20.000 e 40.000 euro.
 _Avoid_: Bonus, cuneo (che comprende anche la somma esente, che non è una detrazione)
 
+**Somma esente**:
+Somma pagata in busta a chi ha un reddito di lavoro dipendente fino a 20.000 euro, in percentuale del reddito di lavoro dipendente del mese scelta sul reddito annuo stimato. Non concorre al reddito e non è una detrazione. Il sostituto la recupera in compensazione nella delega.
+_Avoid_: Cuneo, bonus, detrazione
+
+**Trattamento integrativo**:
+Somma pagata in busta a lavoratori dipendenti e assimilati fino a 28.000 euro di reddito, ripartita fra i pagamenti e ricalcolata al conguaglio. Tra 15.000 e 28.000 euro conta le detrazioni note e gli oneri comunicati dalla persona. Il sostituto la recupera in compensazione nella delega.
+_Avoid_: Bonus Renzi, ex bonus 100 euro
+
+**Recupero a rate**:
+Restituzione, decisa al conguaglio, di un beneficio pagato e non spettante: oltre 60 euro, otto rate per il trattamento integrativo e dieci per somma esente e ulteriore detrazione insieme, dal primo pagamento dopo il conguaglio. Alla cessazione si recupera tutto sul pagamento finale.
+_Avoid_: Rateizzazione (che è anche quella del 730-4 o della richiesta di differimento)
+
 **Periodo di lavoro nell'anno**:
 I giorni dell'anno in cui la persona ha avuto servizio presso l'ente, su tutti i suoi rapporti, festivi compresi. Al conguaglio rapporta le detrazioni che la norma lega al lavoro svolto.
 _Avoid_: Giorni lavorati (che escludono i festivi), mesi di servizio
@@ -490,7 +502,7 @@ Fatto della persona con i redditi corrisposti dall'ente nei due anni prima di qu
 _Avoid_: Aliquota media (che è il risultato della regola), storico redditi
 
 **Reddito annuo stimato**:
-Proiezione sull'anno dei pagamenti dell'ente più i redditi di altri sostituti della dichiarazione del sostituito, usata quando una regola dipende dal reddito dell'anno e il sostituto deve operare prima di conoscerlo (limite della sostitutiva sull'accessorio, fascia della somma esente). Il conguaglio fiscale la sostituisce con il reddito vero.
+Pagato dall'inizio dell'anno diviso i giorni di servizio per 365 (circ. 4/E/2025), più i redditi di altri sostituti della dichiarazione del sostituito, usato quando una regola dipende dal reddito dell'anno e il sostituto deve operare prima di conoscerlo (limite della sostitutiva sull'accessorio, fascia della somma esente, soglie del trattamento integrativo). Il conguaglio fiscale la sostituisce con il reddito vero.
 _Avoid_: Reddito presunto, proiezione del conguaglio (che è un avviso, non una base)
 
 **Reddito dell'anno precedente**:
