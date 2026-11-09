@@ -56,12 +56,14 @@ riferimento = "fittizio:72-ter-e-dm-40-2008"
 
 [[calendario_festivi]]
 anno = 2026
-giorni = [2026-03-19]
+feste = ["03-19"]
+lunedi_dell_angelo = false
 riferimento = "fittizio:festivi-2026"
 
 [[calendario_festivi]]
 anno = 2027
-giorni = []
+feste = []
+lunedi_dell_angelo = false
 riferimento = "fittizio:festivi-2027"
 """
 

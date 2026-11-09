@@ -133,6 +133,7 @@ TD_TIPO_PART_TIME = "verticale"  # lunedi', martedi' e mercoledi', tranne una se
 TD_SETTIMANA_NON_LAVORATA = (date(2026, 3, 15), date(2026, 3, 21))  # domenica-sabato: interamente senza ore (TipoCopertura D)
 TD_TERMINE_PER_SOSTITUZIONE = "si"
 TD_PRIMA_ISCRIZIONE_DAL_1996 = "no"
+TD_QUALIFICA_INPS = "impiegato"  # Qualifica1 della DenunciaIndividuale: fatto del rapporto, non dell'area (#105)
 ORE_GIORNATA_PIENA = Decimal("7.2")  # 36 ore settimanali su cinque giorni
 
 # Atti di fantasia: riferimento nel formato ente:<ente>:<tipo>:<data>;<numero>

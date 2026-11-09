@@ -73,17 +73,17 @@ I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccan
 
 | Categoria | Avvio | Preparazione di febbraio | Marzo | Dicembre |
 |---|---:|---:|---:|---:|
-| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 178 | 0 | 15 | 0 |
+| Fatti di avvio, una tantum (anagrafica, assunzioni, inquadramento) | 179 | 0 | 15 | 0 |
 | Fatti ricorrenti del mese (atti, variazioni, cessazioni, 730) | 0 | 0 | 17 | 1 |
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
 | Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 14 | 13 |
 | Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 5 | 2 |
-| **Totale senza i comandi** | **178** | **3** | **49** | **18** |
+| **Totale senza i comandi** | **179** | **3** | **49** | **18** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
 
-Fatti di avvio per soggetto: R01 18, R02 16, R03 16, R04 18, R05 16, R07 16, R08 15, R09 16, R10 11, R11 10, R12 20, ente 6.
+Fatti di avvio per soggetto: R01 18, R02 16, R03 16, R04 18, R05 16, R07 16, R08 15, R09 16, R10 11, R11 10, R12 21, ente 6.
 Assunzione di marzo (avvio di un rapporto nuovo): R06 15.
 
 Dettaglio di Marzo, escluso l'avvio:
@@ -145,7 +145,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Fatti**
 
 - Riuscito:
-  - 193 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
+  - 194 fatti di avvio (ente, persone, rapporti, assunzione di R06) registrati nel registro
   - 17 fatti del mese: performance, progressione, cessazione
 - Fermi: nessuno
 - Su dati fittizi:
