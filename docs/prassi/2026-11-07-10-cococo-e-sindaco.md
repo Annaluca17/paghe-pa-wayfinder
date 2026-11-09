@@ -15,7 +15,7 @@ Riferimento: `prassi:immedia:nota:2026-11-07;10`. Fonte: decisioni di Luca del 0
 **Prassi-interpretazione.**
 
 - Il corpus modella la posizione previdenziale con tre codici: `gestione_separata` (solo gestione separata, non pensionato), `pensionato`, `altra_cassa`. L'aliquota si sceglie dal codice, con un istituto di totale per codice.
-- Per pensionati e altra cassa il totale e' 24,00 + 0,72 = 24,72%, **senza DIS-COLL**. La ricerca non trova un testo che dica se la DIS-COLL si applichi a chi ha altra copertura (la circolare la dice dovuta «anche se non beneficiari», senza stamparne il totale per i co.co.co. delle PA). **Da verificare:** con la DIS-COLL il totale sarebbe 26,03%.
+- Per pensionati e altra cassa il totale e' 24,00 + 0,72 = 24,72%, **senza DIS-COLL**: che la DIS-COLL non sia dovuta a pensionati e altra cassa e' norma certa (circ. INPS 122/2017 e 8/2026). **Aperto:** il totale 24,00% (testo letterale) contro 24,72% resta tale finche' non c'e' una seconda fonte indipendente (ADR 0003, ticket #104).
 - Quota del collaboratore: un terzo del totale, arrotondato; quota dell'ente per differenza, come la CPDEL (nota di prassi 3).
 - Le aliquote valgono per il 2026: dal 01/01/2027 il calcolo si ferma finche' la circolare 2027 non e' nel corpus.
 
@@ -25,7 +25,7 @@ Riferimento: `prassi:immedia:nota:2026-11-07;10`. Fonte: decisioni di Luca del 0
 
 Le categorie di reddito (collaborazione, CU punti 1-2; carica elettiva, CU punto 4), la ritenuta, la deduzione della quota del collaboratore e la composizione stanno solo nel corpus fittizio, con valori finti (ADR 0003): il corpus reale non le dichiara per nessun titolo.
 
-**Causale F24EP della gestione separata: non mappata.** L'Agenzia delle Entrate elenca C10 e CXX, entrambe «Gestione Committenti». Nessuna fonte letta dice quale vada con quale aliquota. Il corpus non mappa nessuna causale: le righe della gestione separata (quota del collaboratore, quota dell'ente, quota forfettaria) fermano la delega con `mappatura_mancante`, che nomina l'istituto. La delega e' tutta o niente (ADR 0023): ferma anche i rapporti che non c'entrano. Il percorso del mese di prova lo mostra, e un test lo prova a valle con un codice di fantasia.
+**Causale F24EP della gestione separata (ticket #104), prassi per analogia.** C10 per `pensionato` e `altra_cassa`, CXX per `gestione_separata` e per l'onere dell'art. 86 (circ. INPS 88/2023 sez. 10.1.1, sul lavoro sportivo; ris. AdE 98/E/2010; circ. INPS 23/2013 par. 2.2). Il codice di quota collaboratore e quota ente segue la posizione previdenziale del rapporto; se manca la posizione la delega ha un dato mancante che nomina il rapporto, se non ha causale si ferma. Riferimento A = mese e anno di pagamento (`MMAAAA`). Aperti: la lettura del messaggio INPS 8460/2013 e della tabella AdE dopo il 01/04/2020.
 
 ## Lista collaboratori
 

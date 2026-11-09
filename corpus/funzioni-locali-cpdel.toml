@@ -389,7 +389,8 @@ valore = "33.00"
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par1"
 
 # Pensionati o iscritti ad altra forma obbligatoria: IVS al 24% (art. 1 c. 79 L. 247/2007, Circ. INPS 8/2026 par. 1) piu' le
-# aggiuntive. Se la DIS-COLL si applichi a chi ha altra copertura e' da verificare (nota di prassi 10): qui non e' applicata.
+# aggiuntive. DIS-COLL non dovuta a pensionati e altra cassa: norma certa (circ. INPS 122/2017 e 8/2026), qui non applicata. Il totale
+# 24,00% (testo letterale) contro 24,72% resta aperto finche' non c'e' una seconda fonte indipendente (ADR 0003, ticket #104).
 [[parametro]]
 nome = "aliquota_gs_ivs_ridotta"
 [[parametro.vigenza]]
@@ -3328,6 +3329,46 @@ sistema = "codice_tributo_f24ep"
 codice = "170E"
 dal = 2026-01-01
 riferimento = "prassi:ade:risoluzione:2020-06-26;35-E"
+
+# Causale F24EP della gestione separata (ticket #104): PRASSI PER ANALOGIA. Il testo che dice quale causale vada con quale aliquota
+# (circ. INPS 88/2023 sez. 10.1.1) riguarda il lavoro sportivo, non i collaboratori delle PA. C10 per pensionati e altra cassa, CXX
+# per chi non ha altra copertura e per gli amministratori locali tipo 04 (onere art. 86, nessuna altra cassa). Riferimento A: mese e
+# anno di pagamento del compenso (circ. INPS 23/2013 par. 2.2). Aperti: la lettura del messaggio INPS 8460/2013 e della tabella AdE
+# dopo il 01/04/2020.
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "gestione_separata"
+codice = "CXX"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "pensionato"
+codice = "C10"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "altra_cassa"
+codice = "C10"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura]]
+istituto = "onere_art86"
+sistema = "codice_tributo_f24ep"
+codice = "CXX"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
 
 # --- Addizionali: parametri nazionali e regola (ADR 0029). Le aliquote di comuni e regioni sono dichiarazioni a parte. ---
 

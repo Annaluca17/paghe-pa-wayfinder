@@ -308,11 +308,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga F 175E: debito 0.00, credito 1014.98
   - riga R 380E: debito 2332.35, credito 0.00
   - riga S 385E: debito 3.30, credito 0.00
+  - riga Q CXX: debito 1053.96, credito 0.00
   - riga Q P201: debito 7554.80, credito 0.00
   - riga Q P607: debito 504.55, credito 0.00
   - riga Q P608: debito 584.83, credito 0.00
   - riga Q P909: debito 80.90, credito 0.00
-  - riga Q ZGS1: debito 1053.96, credito 0.00
   - saldo 15665.04
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
@@ -447,11 +447,11 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga F 175E: debito 0.00, credito 1046.38
   - riga R 380E: debito 1281.64, credito 0.00
   - riga S 161E: debito 0.00, credito 3.30
+  - riga Q CXX: debito 528.51, credito 0.00
   - riga Q P201: debito 3943.56, credito 0.00
   - riga Q P607: debito 450.65, credito 0.00
   - riga Q P608: debito 129.74, credito 0.00
   - riga Q P909: debito 42.27, credito 0.00
-  - riga Q ZGS1: debito 528.51, credito 0.00
   - saldo 5769.24
   - delega DELEGA-2026-12 trasmessa il 2027-01-12
 - Fermi: nessuno

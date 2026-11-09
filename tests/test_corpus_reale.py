@@ -211,3 +211,15 @@ def test_recupero_su_cessato_per_cessazione_retroattiva(registro, reale, orologi
 def test_il_corpus_reale_classifica_le_spese_di_personale_con_l_origine_automatica(reale, istituto, codice):
     dichiarazione = reale.classificazione(istituto, date(2026, 3, 31))
     assert (dichiarazione.piano_dei_conti, dichiarazione.origine_impegno) == (codice, "automatico")
+
+
+@pytest.mark.parametrize("posizione, causale", [("gestione_separata", "CXX"), ("pensionato", "C10"), ("altra_cassa", "C10")])
+def test_il_corpus_reale_mappa_la_causale_della_gestione_separata_per_posizione(reale, posizione, causale):
+    mappata = reale.mappatura_di_fatto(
+        "f24ep.causale_gestione_separata", "causale", "posizione_previdenziale", posizione, date(2026, 11, 27)
+    )
+    assert mappata is not None and mappata.codice == causale
+
+
+def test_il_corpus_reale_mappa_l_onere_art86_su_cxx(reale):
+    assert reale.mappatura("onere_art86", "codice_tributo_f24ep", date(2026, 11, 27), None).codice == "CXX"

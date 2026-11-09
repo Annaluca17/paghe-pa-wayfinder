@@ -33,7 +33,7 @@ Sigle delle fonti lette in questa ricerca:
 
 ---
 
-## 1. Causale F24EP della gestione separata (oggi `ZGS1`, fittizia)
+## 1. Causale F24EP della gestione separata (ticket #104: C10/CXX per posizione, `ZGS1` tolto)
 
 **Stato: prassi** per la mappa aliquota-causale. **Norma certa** che le causali siano C10 e CXX.
 
