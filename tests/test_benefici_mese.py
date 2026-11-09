@@ -39,7 +39,7 @@ def test_la_derivazione_porta_formula_parametri_e_importi_letti(registro, orolog
     assumi(registro)
     _, fiscale = mese_pagato(registro, orologio, corpus, 6)
     derivazione = del_beneficio(fiscale, "trattamento_integrativo").derivazione
-    assert "1200" not in derivazione.formula or "ti_importo" in derivazione.formula  # la formula e' il testo del corpus
+    assert "parametro.ti_importo" in derivazione.formula  # la formula e' il testo del corpus
     assert {"ti_importo", "ti_soglia_1", "ti_riduzione"} <= {p.nome for p in derivazione.parametri}
     assert all(p.riferimento.startswith("fittizio:") for p in derivazione.parametri)
     assert [i.istituto for i in derivazione.importi] == ["stipendio"]

@@ -458,7 +458,7 @@ Somma pagata in busta a chi ha un reddito di lavoro dipendente fino a 20.000 eur
 _Avoid_: Cuneo, bonus, detrazione
 
 **Trattamento integrativo**:
-Somma pagata in busta a lavoratori dipendenti e assimilati fino a 28.000 euro di reddito, ripartita fra i pagamenti e ricalcolata al conguaglio. Il sostituto la recupera in compensazione nella delega.
+Somma pagata in busta a lavoratori dipendenti e assimilati fino a 28.000 euro di reddito, ripartita fra i pagamenti e ricalcolata al conguaglio. Tra 15.000 e 28.000 euro conta le detrazioni note e gli oneri comunicati dalla persona. Il sostituto la recupera in compensazione nella delega.
 _Avoid_: Bonus Renzi, ex bonus 100 euro
 
 **Recupero a rate**:
