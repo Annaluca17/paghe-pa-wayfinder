@@ -18,12 +18,19 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from . import addizionali, benefici
+from . import addizionali, benefici, sostitutiva
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
-from .modello import MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
-from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_DICHIARAZIONE_SOSTITUITO, TIPO_ONERI_DETRAIBILI, Registro, leggi_familiare
+from .modello import MATURAZIONE_SOSTITUTIVA, MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
+from .registro import (
+    TIPO_ANNO_IMPOSTA_DIVERSO,
+    TIPO_DICHIARAZIONE_SOSTITUITO,
+    TIPO_ONERI_DETRAIBILI,
+    TIPO_RINUNCIA_SOSTITUTIVA,
+    Registro,
+    leggi_familiare,
+)
 from .denuncia import MATURAZIONI_DERIVATE
 from .denuncia_individuale import IMPIEGHI_TEMPO_DETERMINATO
 from .tempo import Periodo, in_utc
@@ -86,7 +93,7 @@ class FiscaleDelPagamento:
     """Ritenuta, conguaglio (con le addizionali dovute dell'anno nella sua derivazione) e importi delle addizionali (ADR 0029).
 
     `benefici` sono la somma esente, il trattamento integrativo e i loro recuperi (ticket #95): a favore o a carico
-    della persona, non sono reddito.
+    della persona, non sono reddito. `sostitutiva` sono la quota di accessorio a sostitutiva e la sua imposta (ticket #96).
     """
 
     ritenuta: Importo
@@ -94,6 +101,7 @@ class FiscaleDelPagamento:
     avvisi: tuple[Avviso, ...] = ()
     addizionali: tuple[Importo, ...] = ()
     benefici: tuple[Importo, ...] = ()
+    sostitutiva: tuple[Importo, ...] = ()
 
     def avvisi_di(self, tipo: str) -> tuple[Avviso, ...]:
         return tuple(avviso for avviso in self.avvisi if avviso.tipo == tipo)
@@ -116,6 +124,7 @@ class _Pagata:
     data: date | None
     valuta: date
     anno_esito: int | None
+    esito: int = 0
 
 
 def anno_imposta(corpus: Corpus, categoria: str, data_pagamento: date) -> int:
@@ -219,13 +228,15 @@ def _pagati(registro: Registro, persona: str, istante: datetime) -> list[_Pagata
                 fatto = pagamenti[riga.rapporto].get(esito.id)
                 anni = {r.anno_imposta for r in esito.righe if r.rapporto == riga.rapporto and _e_reddito(r)}
                 anno_esito = anni.pop() if len(anni) == 1 else None
-                pagate.append(_Pagata(riga, fatto.valido_dal if fatto else None, esito.data, anno_esito))
+                pagate.append(_Pagata(riga, fatto.valido_dal if fatto else None, esito.data, anno_esito, esito.id))
     return pagate
 
 
 def _e_deduzione(corpus: Corpus, riga: Importo, giorno: date) -> bool:
     """Un importo derivato dal pagato che l'istituto dichiara riduttivo dell'imponibile fiscale alla data di pagamento."""
-    return not _e_reddito(riga) and corpus.deduzione_fiscale(riga.istituto, giorno) is not None
+    return not _e_reddito(riga) and (
+        corpus.deduzione_fiscale(riga.istituto, giorno) is not None or corpus.e_quota_sostitutiva(riga.istituto)
+    )
 
 
 def _anno_della_deduzione(pagata: _Pagata) -> int:
@@ -644,8 +655,13 @@ def _annuale(
     righe_nuove: tuple[Importo, ...] = (),
     ritenute_nuove: tuple[Importo, ...] = (),
     deduzioni_nuove: tuple[Importo, ...] = (),
+    imposte_nuove: tuple[Importo, ...] = (),
 ) -> _Annuale:
-    """Imposta dell'anno sull'imponibile fiscale della persona, meno ritenute e conguagli già operati."""
+    """Imposta dell'anno sull'imponibile fiscale della persona, meno ritenute e conguagli già operati.
+
+    La sostitutiva sull'accessorio trattenuta oltre quella che spetta sulla quota rimasta a sostitutiva si scomputa
+    dall'IRPEF dovuta come una ritenuta operata (ADR 0035): `imposte_nuove` sono le imposte di questo pagamento.
+    """
     regola_ritenuta, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
     regola = _regola_conguaglio(corpus, riferimento)
     base = imponibile_fiscale(registro, persona, anno, istante, corpus=corpus)
@@ -665,6 +681,7 @@ def _annuale(
         and pagata.riga.anno_imposta == anno
     ]
     operate += list(ritenute_nuove)
+    sostitutive, scomputata = _sostitutiva_pagata(registro, corpus, persona, anno, riferimento, deduzioni, imposte_nuove, istante)
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
     giorni, giorni_anno = _giorni_di_servizio(registro, corpus, persona, anno, istante)
     carichi = tuple(
@@ -684,7 +701,8 @@ def _annuale(
         carichi,
     )
     return _Annuale(
-        calcolo, sum((riga.valore for riga in operate), Decimal(0)), (*reddito, *deduzioni, *operate), regola, regola_ritenuta,
+        calcolo, sum((riga.valore for riga in operate), Decimal(0)) + scomputata,
+        (*reddito, *deduzioni, *operate, *sostitutive), regola, regola_ritenuta,
         tuple(reddito), tuple(deduzioni), giorni, giorni_anno,
     )
 
@@ -792,7 +810,12 @@ def calcola_fiscale(
     reddito = _controlla_righe(registro, rapporto, persona, righe, regola_provvisoria, istante)
     anno = reddito[0].anno_imposta
     deduzioni = tuple(riga for riga in righe if _e_deduzione(corpus, riga, data_pagamento))
-    calcolo_ritenuta = _ritenuta(registro, corpus, rapporto, persona, reddito, data_pagamento, istante, deduzioni)
+    _, riferimento_regole = _regola_ritenuta(corpus, anno, data_pagamento)
+    quota = _sostitutiva_del_pagamento(
+        registro, corpus, rapporto, persona, anno, data_pagamento, riferimento_regole, reddito, deduzioni, istante
+    )
+    ordinarie = (*deduzioni, *(riga for riga in quota.importi if corpus.e_quota_sostitutiva(riga.istituto)))
+    calcolo_ritenuta = _ritenuta(registro, corpus, rapporto, persona, reddito, data_pagamento, istante, ordinarie)
     ritenuta, regola, riferimento, dichiarazione = (
         calcolo_ritenuta.importo, calcolo_ritenuta.regola, calcolo_ritenuta.riferimento, calcolo_ritenuta.dichiarazione
     )
@@ -823,8 +846,17 @@ def calcola_fiscale(
     if ultimo_dell_anno:
         _controlla_ultimo(registro, persona, anno, data_pagamento, istante)
         annuale = _annuale(
-            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
+            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), ordinarie, quota.imposte
         )
+        rettifica = _sostitutiva_al_conguaglio(
+            registro, corpus, rapporto, persona, anno, data_pagamento, quota, annuale, istante
+        )
+        if rettifica:
+            quota = replace(quota, importi=(*quota.importi, *rettifica))
+            ordinarie = (*deduzioni, *(riga for riga in quota.importi if corpus.e_quota_sostitutiva(riga.istituto)))
+            annuale = _annuale(
+                registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), ordinarie, quota.imposte
+            )
         conguaglio = _importo_conguaglio(corpus, rapporto, anno, annuale, istante)
         if annuale.calcolo.imponibile < SOGLIA_MINIMO_TEMPO_DETERMINATO and _ha_tempo_determinato(
             registro, corpus, persona, anno, istante
@@ -848,7 +880,7 @@ def calcola_fiscale(
         )
     else:
         annuale = _annuale(
-            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), deduzioni
+            registro, corpus, persona, anno, data_pagamento, istante, reddito, (ritenuta,), ordinarie, quota.imposte
         )
         avvisi.append(_avviso_proiezione(persona, anno, annuale))
     regola_benefici = corpus.regola_benefici(riferimento)
@@ -875,7 +907,203 @@ def calcola_fiscale(
                 rate.acconto_senza_base,
             )
         )
-    return FiscaleDelPagamento(ritenuta, conguaglio, tuple(avvisi), (*chiusura, *rate.importi), importi_benefici)
+    return FiscaleDelPagamento(
+        ritenuta, conguaglio, tuple(avvisi), (*chiusura, *rate.importi), importi_benefici, quota.importi
+    )
+
+
+@dataclass(frozen=True)
+class _Quota:
+    """Sostitutiva sull'accessorio del pagamento: gli importi, il netto dell'accessorio ammesso e da dove viene."""
+
+    importi: tuple[Importo, ...] = ()
+    netto: Decimal = Decimal(0)
+    fonti: tuple[Importo, ...] = ()
+    istituto_imposta: str = ""
+
+    @property
+    def imposte(self) -> tuple[Importo, ...]:
+        return tuple(riga for riga in self.importi if riga.istituto == self.istituto_imposta)
+
+
+def _ammesso_alla_sostitutiva(
+    registro: Registro, corpus: Corpus, persona: str, riga: Importo, giorno: date, riferimento: date, istante: datetime
+) -> bool:
+    """L'importo è accessorio di una persona che può averla: non dirigente, senza rinuncia, non segretario (ADR 0035).
+
+    Il dirigente è escluso (L. 199/2025 art. 1 c. 237, personale non dirigenziale); la rinuncia vale dalla sua data. Il
+    segretario comunale non ha un regime modellato: il calcolo si ferma nominando il caso.
+    """
+    if corpus.accessorio(riga.istituto, riferimento) is None:
+        return False
+    area = next((f.valore for f in reversed(registro.fatti_noti(riga.rapporto, "area", istante)) if f.copre(giorno)), None)
+    if area == "dirigente":
+        return False
+    if registro.vigente_persona(persona, TIPO_RINUNCIA_SOSTITUTIVA, giorno, istante) is not None:
+        return False
+    if area == "segretario":
+        raise CasoNonModellato(
+            f"Rapporto {riga.rapporto}, istituto {riga.istituto}: caso non modellato, la sostitutiva sull'accessorio "
+            "del segretario comunale non è modellata"
+        )
+    return True
+
+
+def _netto_accessorio(
+    registro: Registro, corpus: Corpus, persona: str, redditi, contributi, giorno: date, riferimento: date, istante: datetime
+) -> tuple[Decimal, tuple[Importo, ...]]:
+    """Accessorio ammesso dei `redditi` di un pagamento, al netto dei contributi in proporzione, e gli importi che lo compongono."""
+    ammessi = tuple(
+        riga for riga in redditi if _ammesso_alla_sostitutiva(registro, corpus, persona, riga, giorno, riferimento, istante)
+    )
+    if not ammessi:
+        return Decimal(0), ()
+    netto = sostitutiva.netto_accessorio(
+        sum((riga.valore for riga in ammessi), Decimal(0)),
+        sum((riga.valore for riga in redditi), Decimal(0)),
+        sum((riga.valore for riga in contributi), Decimal(0)),
+    )
+    return netto, ammessi
+
+
+def _gia_a_sostitutiva(
+    registro: Registro, persona: str, anno: int, regola, istante: datetime
+) -> tuple[Decimal, Decimal]:
+    """(quota a sostitutiva, imposta) già pagate nell'anno dalla persona, su tutti i suoi rapporti."""
+    base = imposta = Decimal(0)
+    for pagata in _pagati(registro, persona, istante):
+        riga = pagata.riga
+        if riga.derivazione.maturazione != MATURAZIONE_SOSTITUTIVA or riga.anno_imposta != anno:
+            continue
+        if riga.istituto == regola.istituto_base:
+            base += riga.valore
+        elif riga.istituto == regola.istituto:
+            imposta += riga.valore
+    return base, imposta
+
+
+def _sostitutiva_pagata(
+    registro: Registro,
+    corpus: Corpus,
+    persona: str,
+    anno: int,
+    riferimento: date,
+    deduzioni: tuple[Importo, ...],
+    imposte_nuove: tuple[Importo, ...],
+    istante: datetime,
+) -> tuple[tuple[Importo, ...], Decimal]:
+    """Le imposte sostitutive pagate nell'anno con quelle nuove, e la parte da scomputare dall'IRPEF dovuta."""
+    regola = corpus.regola_sostitutiva(riferimento)
+    if regola is None:
+        return (), Decimal(0)
+    imposte = [
+        pagata.riga
+        for pagata in _pagati(registro, persona, istante)
+        if pagata.riga.derivazione.maturazione == MATURAZIONE_SOSTITUTIVA
+        and pagata.riga.istituto == regola.istituto
+        and pagata.riga.anno_imposta == anno
+    ]
+    imposte += list(imposte_nuove)
+    base = sum((riga.valore for riga in deduzioni if riga.istituto == regola.istituto_base), Decimal(0))
+    aliquota = sostitutiva.parametri(corpus, regola, riferimento)[0].valore
+    scomputata = sostitutiva.scomputo(aliquota, base, sum((riga.valore for riga in imposte), Decimal(0)))
+    return tuple(imposte), scomputata
+
+
+def _sostitutiva_del_pagamento(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    persona: str,
+    anno: int,
+    data_pagamento: date,
+    riferimento: date,
+    reddito: tuple[Importo, ...],
+    deduzioni: tuple[Importo, ...],
+    istante: datetime,
+) -> _Quota:
+    """Quota a sostitutiva e imposta del pagamento (ADR 0035); vuota se la regola non è vigente o non c'è accessorio ammesso.
+
+    Il reddito annuo stimato è quello della somma esente (pagato dall'inizio dell'anno diviso i giorni di servizio per
+    365) ma con l'accessorio già a sostitutiva dentro, che resta reddito di lavoro dipendente (da verificare).
+    """
+    regola = corpus.regola_sostitutiva(riferimento)
+    if regola is None:
+        return _Quota()
+    contributi = tuple(riga for riga in deduzioni if not corpus.e_quota_sostitutiva(riga.istituto))
+    netto, ammessi = _netto_accessorio(registro, corpus, persona, reddito, contributi, data_pagamento, riferimento, istante)
+    if not ammessi:
+        return _Quota(istituto_imposta=regola.istituto)
+    base_gia, imposta_gia = _gia_a_sostitutiva(registro, persona, anno, regola, istante)
+    precedente = imponibile_fiscale(registro, persona, anno, istante, corpus=corpus)
+    pagato = (
+        precedente.valore
+        + sum((riga.valore for riga in precedente.deduzioni if corpus.e_quota_sostitutiva(riga.istituto)), Decimal(0))
+        + sum((riga.valore for riga in reddito), Decimal(0))
+        - sum((riga.valore for riga in contributi), Decimal(0))
+    )
+    fino_al = min(_ultimo_del_mese(data_pagamento), date(anno, 12, 31))
+    giorni, _ = _giorni_di_servizio(registro, corpus, persona, anno, istante, fino_al)
+    importi = sostitutiva.del_pagamento(
+        corpus, regola, rapporto, anno, data_pagamento, riferimento, netto,
+        benefici.reddito_annuo_stimato(pagato, giorni),
+        f"imponibile fiscale pagato dall'inizio dell'anno, accessorio a sostitutiva compreso, {pagato} diviso {giorni} "
+        f"giorni di servizio per {benefici.GIORNI_REDDITO_ANNUO}",
+        base_gia, imposta_gia, ammessi, (), istante,
+    )
+    return _Quota(importi, netto, ammessi, regola.istituto)
+
+
+def _accessorio_dell_anno(
+    registro: Registro, corpus: Corpus, persona: str, anno: int, riferimento: date, istante: datetime
+) -> Decimal:
+    """Accessorio ammesso e netto dei contributi dei pagamenti già eseguiti nell'anno, per pagamento e rapporto."""
+    gruppi: dict[tuple[int, str], tuple[list[Importo], list[Importo], date]] = {}
+    for pagata in _pagati(registro, persona, istante):
+        riga, giorno = pagata.riga, pagata.data or pagata.valuta
+        if _e_reddito(riga):
+            if riga.anno_imposta == anno:
+                gruppi.setdefault((pagata.esito, riga.rapporto), ([], [], giorno))[0].append(riga)
+        elif (
+            _e_deduzione(corpus, riga, giorno)
+            and not corpus.e_quota_sostitutiva(riga.istituto)
+            and _anno_della_deduzione(pagata) == anno
+        ):
+            gruppi.setdefault((pagata.esito, riga.rapporto), ([], [], giorno))[1].append(riga)
+    return sum(
+        (
+            _netto_accessorio(registro, corpus, persona, redditi, contributi, giorno, riferimento, istante)[0]
+            for redditi, contributi, giorno in gruppi.values()
+        ),
+        Decimal(0),
+    )
+
+
+def _sostitutiva_al_conguaglio(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    persona: str,
+    anno: int,
+    data_pagamento: date,
+    quota: _Quota,
+    annuale: _Annuale,
+    istante: datetime,
+) -> tuple[Importo, ...]:
+    """Differenza di quota e di imposta tra quanto applicato nell'anno e quanto spetta sul reddito vero (ADR 0035)."""
+    _, riferimento = _regola_ritenuta(corpus, anno, data_pagamento)
+    regola = corpus.regola_sostitutiva(riferimento)
+    if regola is None:
+        return ()
+    base_gia = sum(
+        (riga.valore for riga in annuale.deduzioni if riga.istituto == regola.istituto_base), Decimal(0)
+    )
+    imposta_gia = sum((riga.valore for riga in annuale.righe if riga.istituto == regola.istituto), Decimal(0))
+    netto_anno = _accessorio_dell_anno(registro, corpus, persona, anno, riferimento, istante) + quota.netto
+    return sostitutiva.al_conguaglio(
+        corpus, regola, rapporto, anno, data_pagamento, riferimento, netto_anno,
+        annuale.calcolo.imponibile + base_gia, base_gia, imposta_gia, quota.fonti, (), istante,
+    )
 
 
 def _benefici_del_pagamento(

@@ -59,6 +59,12 @@ categoria = "lavoro_dipendente"
 dal = 2025-01-01
 riferimento = "fittizio:reddito-performance"
 
+# La performance e' l'unico istituto accessorio della prova: la sostitutiva del corpus reale (ticket #96) la prende nel 2026.
+[[accessorio]]
+istituto = "performance"
+dal = 2025-01-01
+riferimento = "fittizio:accessorio-performance"
+
 # --- Concorsi della performance (il corpus reale non li dichiara) e del rimborso 730 ---
 
 [[concorso]]
@@ -635,6 +641,18 @@ rif_b = "anno_pagamento"
 modalita = "debito_credito"
 dal = 2025-01-01
 riferimento = "fittizio:codice-175e"
+
+# 179E (sostitutiva sull'accessorio, ticket #96): ris. AdE 4/E/2026, sezione Erario, A = mese, B = anno; solo a debito.
+[[codice_f24ep]]
+codice = "179E"
+sezione = "F"
+codice_campo = "nessuno"
+estremi = "nessuno"
+rif_a = "mese_pagamento"
+rif_b = "anno_pagamento"
+modalita = "debito"
+dal = 2025-01-01
+riferimento = "fittizio:codice-179e"
 
 [[codice_f24ep]]
 codice = "P201"

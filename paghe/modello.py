@@ -140,6 +140,8 @@ MATURAZIONI_FISCALI = frozenset({"ritenuta", "conguaglio"})
 # `da_recuperare` e' il recupero a rate deciso dal conguaglio: vive solo nella derivazione del conguaglio, non e' una riga.
 MATURAZIONE_BENEFICIO = "beneficio"
 MATURAZIONE_DA_RECUPERARE = "da_recuperare"
+# Sostitutiva sull'accessorio (ticket #96, ADR 0035): imposta trattenuta e quota di accessorio che esce dall'imponibile ordinario.
+MATURAZIONE_SOSTITUTIVA = "sostitutiva"
 
 
 @dataclass(frozen=True)

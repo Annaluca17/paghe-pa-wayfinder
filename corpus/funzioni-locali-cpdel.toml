@@ -3599,3 +3599,72 @@ categoria = "carica_elettiva"
 dal = 2027-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art52-com1-leti"
 
+
+# =====================================================================================================================
+# Sostitutiva del 15% sull'accessorio 2026 (ticket #96, ADR 0035). L. 199/2025 art. 1 c. 237: imposta sostitutiva di IRPEF e
+# addizionali sui compensi del trattamento accessorio del personale non dirigenziale, entro 800 euro, se il reddito di lavoro
+# dipendente dell'anno non supera 50.000 euro, salvo rinuncia scritta. Codice 179E: ris. AdE 4/E/2026, A = mese e B = anno.
+# Marcatura: aliquota, tetto, limite, rinuncia e 179E norma certa; base netta dei contributi, accessorio nel reddito del limite,
+# uscita dall'imponibile ordinario, scomputo al conguaglio, EQ come comparto: da verificare (analogia). Nel corpus reale nessun
+# istituto e' ancora dichiarato accessorio con `[[accessorio]]` (istituto, dal, al, riferimento): lo dichiara l'istituto del contratto.
+# La proroga al 2027 e' un disegno di legge e resta nel ticket #82.
+# =====================================================================================================================
+
+[[parametro]]
+nome = "sostitutiva_accessorio_aliquota"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.15"
+riferimento = "urn:nir:stato:legge:2025-12-30;199~art1-com237"
+
+[[parametro]]
+nome = "sostitutiva_accessorio_tetto"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "800"
+riferimento = "urn:nir:stato:legge:2025-12-30;199~art1-com237"
+
+[[parametro]]
+nome = "sostitutiva_accessorio_limite"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "50000"
+riferimento = "urn:nir:stato:legge:2025-12-30;199~art1-com237"
+
+[[sostitutiva]]
+versione = 1
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:legge:2025-12-30;199~art1-com237 + prassi:ade:risoluzione:2026-01-29;4-E"
+aliquota = "sostitutiva_accessorio_aliquota"
+tetto = "sostitutiva_accessorio_tetto"
+limite = "sostitutiva_accessorio_limite"
+istituto = "sostitutiva_accessorio"
+istituto_base = "sostitutiva_accessorio_base"
+
+# La quota a sostitutiva non e' nel netto: e' un totale che esce dall'imponibile ordinario (intermedio). L'imposta e' una trattenuta
+# versata con 179E.
+[[composizione]]
+istituto = "sostitutiva_accessorio_base"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:legge:2025-12-30;199~art1-com237"
+intermedio = true
+
+[[composizione]]
+istituto = "sostitutiva_accessorio"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "prassi:ade:risoluzione:2026-01-29;4-E"
+natura = "trattenuta_terzi"
+effetto = "meno"
+destinatario = "terzo"
+canale = "f24ep"
+
+[[mappatura]]
+istituto = "sostitutiva_accessorio"
+sistema = "codice_tributo_f24ep"
+codice = "179E"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "prassi:ade:risoluzione:2026-01-29;4-E"
