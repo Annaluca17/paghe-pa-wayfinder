@@ -26,17 +26,19 @@ IBAN_TESORERIA = "IT76X0100003245TEST00000001"  # IBAN di prova: conto evidentem
 SIGLA = "RM"
 ADATTATORE = "adattatore-prova"
 
-# Festivi del calendario di prova: i fissi e il lunedì di Pasqua (5 aprile 2026, 28 marzo 2027, 16 aprile 2028).
+# Festivi del calendario di prova: i fissi (4 ottobre dal 2026) e il lunedi dell'Angelo, calcolato.
 FESTIVI_FISSI = ("01-01", "01-06", "04-25", "05-01", "06-02", "08-15", "11-01", "12-08", "12-25", "12-26")
-PASQUETTA = {2026: "2026-04-06", 2027: "2027-03-29", 2028: "2028-04-17"}
 
 
 def _calendario(anno: int, extra: tuple[str, ...] = ()) -> str:
-    giorni = [f"{anno}-{fisso}" for fisso in FESTIVI_FISSI] + [PASQUETTA[anno], *[e for e in extra if e.startswith(str(anno))]]
+    feste = list(FESTIVI_FISSI) + (["10-04"] if anno >= 2026 else [])
+    feste += [e[5:] for e in extra if e.startswith(str(anno)) and e[5:] not in feste]
+    elenco = ", ".join(f'"{f}"' for f in sorted(feste))
     return f'''
 [[calendario_festivi]]
 anno = {anno}
-giorni = [{", ".join(sorted(giorni))}]
+feste = [{elenco}]
+lunedi_dell_angelo = true
 riferimento = "fittizio:festivi-{anno}"
 '''
 

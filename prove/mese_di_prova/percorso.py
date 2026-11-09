@@ -440,6 +440,7 @@ def _fatti_di_avvio(c: _Contesto) -> dict[str, dict[str, object]]:
         c.ufficio.programmazione_part_time("R04", S.programmazione_part_time_2026(), S.ATTO_PROGRAMMAZIONE)
         c.ufficio.fatto("R12", "part_time", S.TD_PERCENTUALE, date(2026, 1, 1))
         c.ufficio.codice("R12", "tipo_part_time", S.TD_TIPO_PART_TIME, date(2026, 1, 1))
+        c.ufficio.codice("R12", "qualifica_inps", S.TD_QUALIFICA_INPS, date(2026, 1, 1))
         c.ufficio.codice("R12", "termine_per_sostituzione", S.TD_TERMINE_PER_SOSTITUZIONE, date(2026, 1, 1))
         c.ufficio.codice("R12", "prima_iscrizione_dal_1996", S.TD_PRIMA_ISCRIZIONE_DAL_1996, date(2026, 1, 1))
         c.ufficio.programmazione_part_time("R12", S.programmazione_td_2026(), S.ATTO_PROGRAMMAZIONE_TD)
