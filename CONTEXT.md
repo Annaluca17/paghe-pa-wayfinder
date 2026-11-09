@@ -473,6 +473,14 @@ _Avoid_: Rateizzazione (che è anche quella del 730-4 o della richiesta di diffe
 I giorni dell'anno in cui la persona ha avuto servizio presso l'ente, su tutti i suoi rapporti, festivi compresi. Al conguaglio rapporta le detrazioni che la norma lega al lavoro svolto.
 _Avoid_: Giorni lavorati (che escludono i festivi), mesi di servizio
 
+**Calendario dei festivi**:
+Dato del corpus per anno, con il riferimento di legge: le feste nazionali fisse, il 4 ottobre dal 2026 e il lunedì dell'Angelo, la cui Pasqua è calcolata e non scritta a mano. Un anno senza calendario resta «non dichiarato» e il calcolo si ferma.
+_Avoid_: Festività (senza dire se nazionali o del patrono), giorni di chiusura
+
+**Patrono**:
+Festa del santo del comune di sede di lavoro: fatto datato del rapporto (`patrono_sede_lavoro`, «codice comune MM-GG»), con il riferimento al CCNL nel corpus. Si unisce ai festivi nazionali e non aggiunge giorni se cade di sabato, di domenica o su una festa nazionale. Per il segretario in convenzione si registra quello del comune capofila.
+_Avoid_: Festa locale, santo patrono dell'ente
+
 **Conguaglio fiscale**:
 Ricalcolo dell'imposta dell'anno sull'imponibile fiscale della persona, confrontato con le ritenute già negli esiti. Si fa sull'ultimo pagamento attribuito all'anno, o su quello finale alla cessazione; se un fatto cambia il dovuto, ne segue uno nuovo per differenza, entro il 28 febbraio per l'anno precedente. Una proiezione resta visibile come avviso.
 _Avoid_: Conguaglio (senza dire quale: c'è anche quello contributivo), ricalcolo di dicembre

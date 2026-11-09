@@ -276,7 +276,8 @@ def test_un_mese_in_servizio_senza_importi_pagati_ha_la_vista_senza_imponibile_n
 FESTIVI_2026 = """
 [[calendario_festivi]]
 anno = 2026
-giorni = [2026-01-01, 2026-01-06, 2026-04-06, 2026-04-25, 2026-05-01, 2026-06-02, 2026-08-15, 2026-11-01, 2026-12-08, 2026-12-25, 2026-12-26]
+feste = ["01-01", "01-06", "04-25", "05-01", "06-02", "08-15", "10-04", "11-01", "12-08", "12-25", "12-26"]
+lunedi_dell_angelo = true
 riferimento = "fittizio:festivi-prova"
 """
 
@@ -315,6 +316,67 @@ def test_il_misto_con_giorni_a_orario_diverso_si_distingue_solo_dalle_ore(regist
     # 83,2 ore su 158,4 = 52,52% -> 5253 (a giorni sarebbero 14 su 22 = 6364).
     assert (vista.qualifica2, vista.perc_part_time, vista.perc_part_time_mese) == ("M", 6000, 5253)
     assert (vista.ore_contribuite, vista.settimane_utili) == (8320, 231)
+
+
+PATRONO_DEL_CORPUS = '''
+[patrono]
+riferimento = "fittizio:patrono-prova"
+'''
+
+
+@pytest.fixture(scope="module")
+def corpus_con_patrono():
+    return Corpus.da_toml(CORPUS.read_text(encoding="utf-8") + FESTIVI_2026 + PATRONO_DEL_CORPUS)
+
+
+def giorni_lavorati_di_marzo(registro, orologio, corpus, patrono, dal=date(2026, 1, 1), al=None):
+    td_pagato(registro, orologio, corpus, "17")
+    if patrono is not None:
+        registro.registra_codice(R, "patrono_sede_lavoro", patrono, dal, al)
+    vista = denuncia_individuale(registro, corpus, R, MARZO)
+    return vista, [g.giorno.day for g in vista.giorni if g.lavorato == "S"]
+
+
+def test_senza_patrono_registrato_il_tempo_pieno_ha_tutti_i_giorni_lavorativi(
+    registro, orologio, corpus_con_patrono
+):
+    _, senza = giorni_lavorati_di_marzo(registro, orologio, corpus_con_patrono, None)
+    assert len(senza) == 22 and 17 in senza
+
+
+def test_con_il_patrono_il_giorno_della_festa_non_e_lavorato(registro, orologio, corpus_con_patrono):
+    vista, con = giorni_lavorati_di_marzo(registro, orologio, corpus_con_patrono, "H501 03-17")
+    assert len(con) == 21 and 17 not in con
+    assert not any("patrono" in d.fatto for d in vista.mancanti)
+
+
+def test_il_patrono_di_sabato_non_toglie_giorni(registro, orologio, corpus_con_patrono):
+    _, con = giorni_lavorati_di_marzo(registro, orologio, corpus_con_patrono, "H501 03-14")
+    assert len(con) == 22
+
+
+def test_se_il_patrono_cambia_nel_mese_vale_per_ogni_giorno_il_fatto_che_lo_copre(
+    registro, orologio, corpus_con_patrono
+):
+    # Il patrono del 17 vale fino al 10 marzo, poi la sede cambia: il 17 torna lavorativo, il 24 no.
+    td_pagato(registro, orologio, corpus_con_patrono, "17")
+    registro.registra_codice(R, "patrono_sede_lavoro", "H501 03-17", date(2026, 1, 1), date(2026, 3, 10))
+    registro.registra_codice(R, "patrono_sede_lavoro", "H501 03-24", date(2026, 3, 11))
+    lavorati = [g.giorno.day for g in denuncia_individuale(registro, corpus_con_patrono, R, MARZO).giorni if g.lavorato == "S"]
+    assert 17 in lavorati and 24 not in lavorati and len(lavorati) == 21
+
+
+def test_un_patrono_nel_rapporto_senza_riferimento_nel_corpus_si_chiede(registro, orologio, corpus_con_festivi):
+    vista, _ = giorni_lavorati_di_marzo(registro, orologio, corpus_con_festivi, "H501 03-17")
+    assert "patrono (riferimento nel corpus)" in [d.fatto for d in vista.mancanti]
+    assert not vista.trasmissibile
+
+
+def test_un_patrono_malformato_ferma_il_calcolo_con_un_errore_chiaro(registro, orologio, corpus_con_patrono):
+    td_pagato(registro, orologio, corpus_con_patrono, "17")
+    registro.registra_codice(R, "patrono_sede_lavoro", "San Pietro", date(2026, 1, 1))
+    with pytest.raises(ErrorePaghe, match="Patrono"):
+        denuncia_individuale(registro, corpus_con_patrono, R, MARZO)
 
 
 def test_senza_calendario_dei_festivi_il_verticale_chiede_il_dato_invece_di_stimare_le_ore_lavorabili(
