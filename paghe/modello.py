@@ -104,6 +104,8 @@ FATTO_TIPO_PART_TIME = "tipo_part_time"
 FATTO_TERMINE_PER_SOSTITUZIONE = "termine_per_sostituzione"
 # La prima iscrizione a una forma previdenziale obbligatoria è dal 01/01/1996 in poi (regime contributivo): «si» o «no».
 FATTO_PRIMA_ISCRIZIONE_DAL_1996 = "prima_iscrizione_dal_1996"
+# Qualifica INPS del rapporto, inserita all'assunzione (Qualifica1 della DenunciaIndividuale): «operaio», «impiegato» o «dirigente».
+FATTO_QUALIFICA_INPS = "qualifica_inps"
 
 
 @dataclass(frozen=True)
