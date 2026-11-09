@@ -42,7 +42,7 @@ from .errori import (
     ValiditaNonUniforme,
 )
 from .formula import valuta
-from .modello import MATURAZIONI_FISCALI, ConcorsoLetto, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
+from .modello import MATURAZIONE_BENEFICIO, MATURAZIONI_FISCALI, ConcorsoLetto, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
 from .registro import Registro
 from .tempo import Mese, Periodo, in_utc
 
@@ -54,7 +54,8 @@ RIPORTO = "riporto"
 # Derivano dagli importi pagati: non sono retribuzione e non concorrono a una base.
 # `onere`: a carico dell'ente, non e' retribuzione della persona (ticket #73).
 # `addizionale`: addizionali regionale e comunale, dovute al conguaglio o trattenute a rate (ticket #85).
-MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere", "addizionale"} | MATURAZIONI_FISCALI
+# `beneficio`: somma esente, trattamento integrativo e recuperi, non sono reddito (ticket #95).
+MATURAZIONI_DERIVATE = {"periodo", "mese", "cassa", "onere", "addizionale", MATURAZIONE_BENEFICIO} | MATURAZIONI_FISCALI
 IN_SERVIZIO = "in servizio"
 SU_CESSATO = "su cessato"
 CESSAZIONE = "cessazione"
