@@ -16,6 +16,7 @@ def part_time(registro, tipo, ore_del_giorno, mesi, dal=date(2026, 1, 1)):
     registro.registra_codice(R, "tipo_impiego", "18", dal)
     registro.registra_fatto(R, "part_time", "50", dal)
     registro.registra_codice(R, "tipo_part_time", tipo, dal)
+    registro.registra_codice(R, "qualifica_inps", "impiegato", dal)
     registro.registra_codice(R, "termine_per_sostituzione", "no", dal)
     registro.registra_codice(R, "prima_iscrizione_dal_1996", "no", dal)
     giorni = {g: ore_del_giorno(g) for mese in mesi for g in mese.giorni() if g >= dal}

@@ -716,15 +716,23 @@ al_giorno = 20
 fonte = "prassi"
 riferimento = "fittizio:proroga-agosto-2027"
 
+# L. 260/1949 e successive; L. 151/2025 (4 ottobre dal 2026)
 [[calendario_festivi]]
 anno = 2026
-giorni = [2026-01-01, 2026-01-06, 2026-04-06, 2026-04-25, 2026-05-01, 2026-06-02, 2026-08-15, 2026-11-01, 2026-12-08, 2026-12-25, 2026-12-26]
-riferimento = "fittizio:festivi-2026"
+feste = ["01-01", "01-06", "04-25", "05-01", "06-02", "08-15", "10-04", "11-01", "12-08", "12-25", "12-26"]
+lunedi_dell_angelo = true
+riferimento = "fittizio:festivi-nazionali"
 
+# L. 260/1949 e successive; L. 151/2025 (4 ottobre dal 2026)
 [[calendario_festivi]]
 anno = 2027
-giorni = [2027-01-01, 2027-01-06, 2027-03-29, 2027-04-25, 2027-05-01, 2027-06-02, 2027-08-15, 2027-11-01, 2027-12-08, 2027-12-25, 2027-12-26]
-riferimento = "fittizio:festivi-2027"
+feste = ["01-01", "01-06", "04-25", "05-01", "06-02", "08-15", "10-04", "11-01", "12-08", "12-25", "12-26"]
+lunedi_dell_angelo = true
+riferimento = "fittizio:festivi-nazionali"
+
+# CCNL Funzioni locali: comparto art. 38 c. 6; Area art. 10 c. 10
+[patrono]
+riferimento = "fittizio:patrono-ccnl"
 
 # Catalogo delle causali F24EP della gestione separata (ticket #104): il corpus reale ha le mappature (C10 per pensionati e
 # altra cassa, CXX per gestione separata e onere art. 86), non il catalogo. Riferimento A = mese e anno di pagamento

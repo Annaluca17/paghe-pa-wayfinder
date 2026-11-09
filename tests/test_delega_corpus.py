@@ -104,7 +104,8 @@ riferimento = "fittizio:proroga-agosto"
 
 [[calendario_festivi]]
 anno = 2026
-giorni = [2026-01-01, 2026-12-25]
+feste = ["01-01", "12-25"]
+lunedi_dell_angelo = true
 riferimento = "fittizio:festivi-2026"
 """
 
@@ -147,29 +148,46 @@ def test_regole_di_scadenza_sovrapposte_sono_rifiutate():
         corpus(doppia)
 
 
-def test_il_calendario_dice_i_festivi_dell_anno_con_il_riferimento():
+def test_il_calendario_dice_i_festivi_dell_anno_con_il_riferimento_e_calcola_il_lunedi_dell_angelo():
     calendario = corpus(SCADENZA).calendario_festivi(2026)
-    assert calendario.giorni == (date(2026, 1, 1), date(2026, 12, 25))
+    assert calendario.giorni == (date(2026, 1, 1), date(2026, 12, 25), date(2026, 4, 6))
     assert calendario.riferimento == "fittizio:festivi-2026"
     assert corpus(SCADENZA).calendario_festivi(2027) is None
 
 
-def test_un_festivo_fuori_dall_anno_o_ripetuto_e_rifiutato():
-    with pytest.raises(ErroreCorpus, match="2026"):
-        corpus(SCADENZA.replace("2026-12-25]", "2027-01-01]"))
+def test_senza_lunedi_dell_angelo_dichiarato_i_giorni_sono_solo_le_feste():
+    senza = SCADENZA.replace("lunedi_dell_angelo = true", "lunedi_dell_angelo = false")
+    assert corpus(senza).calendario_festivi(2026).giorni == (date(2026, 1, 1), date(2026, 12, 25))
+
+
+def test_il_4_ottobre_dal_2026_e_un_giorno_festivo_anche_di_domenica():
+    festa = SCADENZA.replace('"12-25"]', '"10-04", "12-25"]')
+    assert date(2026, 10, 4) in corpus(festa).calendario_festivi(2026).giorni  # domenica
+
+
+def test_una_festa_malformata_o_inesistente_o_ripetuta_e_rifiutata():
+    with pytest.raises(ErroreCorpus, match="12-25"):
+        corpus(SCADENZA.replace('"12-25"]', '"2026-12-25"]'))
+    with pytest.raises(ErroreCorpus, match="02-30"):
+        corpus(SCADENZA.replace('"12-25"]', '"02-30"]'))
     with pytest.raises(ErroreCorpus, match="ripetut"):
-        corpus(SCADENZA.replace("2026-12-25]", "2026-01-01]"))
+        corpus(SCADENZA.replace('"12-25"]', '"01-01"]'))
+
+
+def test_il_riferimento_del_calendario_e_obbligatorio():
+    with pytest.raises(ErroreCorpus, match="riferimento"):
+        corpus(SCADENZA.replace('riferimento = "fittizio:festivi-2026"', 'riferimento = ""'))
 
 
 def test_due_calendari_dello_stesso_anno_sono_rifiutati():
-    doppio = SCADENZA + "\n[[calendario_festivi]]\nanno = 2026\ngiorni = []\nriferimento = \"fittizio:altro\"\n"
+    doppio = SCADENZA + '\n[[calendario_festivi]]\nanno = 2026\nfeste = []\nriferimento = "fittizio:altro"\n'
     with pytest.raises(ErroreCorpus, match="2026"):
         corpus(doppio)
 
 
 def test_scadenza_e_calendario_cambiano_la_versione_del_corpus():
     assert corpus("").versione != corpus(SCADENZA).versione
-    assert corpus(SCADENZA).versione != corpus(SCADENZA.replace("2026-12-25]", "2026-12-26]")).versione
+    assert corpus(SCADENZA).versione != corpus(SCADENZA.replace('"12-25"]', '"12-26"]')).versione
 
 
 def test_la_natura_irap_e_ammessa_nella_composizione():

@@ -71,13 +71,13 @@ riferimento = "prassi:immedia:nota:2026-11-06;3"
 fatto = "retribuzione_risultato"
 caso = "retribuzione di risultato di dirigente o segretario, fondo non modellato"
 ambito = "calcolo"
-riferimento = "ccnl:S105:2026-02-23~art24 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art24 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "interim"
 caso = "interim del dirigente, a carico del fondo dirigenti non modellato"
 ambito = "calcolo"
-riferimento = "ccnl:S105:2024-07-16~art64 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2024-07-16~art64 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "fascia_segretario"
@@ -86,25 +86,25 @@ ambito = "calcolo"
 se = "area=segretario"
 manca = true
 valori = ["A", "B", "C"]
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "convenzione_segreteria"
 caso = "convenzione di segreteria, riparto e proposta di accertamento non modellati"
 ambito = "calcolo"
-riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art98-com3 + ccnl:S105:2026-02-23~art63 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art98-com3 + ccnl:S125:2026-02-23~art63 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "scavalco"
 caso = "scavalco o incarico del segretario, non modellato nel rapporto di titolarita'"
 ambito = "calcolo"
-riferimento = "ccnl:S105:2024-07-16~art62 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2024-07-16~art62 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "galleggiamento"
 caso = "galleggiamento della posizione del segretario, non modellato"
 ambito = "calcolo"
-riferimento = "ccnl:S105:2026-02-23~art38-com5 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art38-com5 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "diritti_rogito"
@@ -117,21 +117,21 @@ fatto = "fascia_segretario"
 caso = "fascia_segretario fuori dal suo regime, il fatto vale solo con area=segretario"
 ambito = "calcolo"
 solo_se = "area=segretario"
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "posizione_annua_segretario"
 caso = "posizione_annua_segretario fuori dal suo regime, il fatto vale solo con area=segretario"
 ambito = "calcolo"
 solo_se = "area=segretario"
-riferimento = "ccnl:S105:2026-02-23~art38-com1 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art38-com1 + prassi:immedia:nota:2026-11-07;9"
 
 [[fermo]]
 fatto = "posizione_annua_dirigente"
 caso = "posizione_annua_dirigente fuori dal suo regime, il fatto vale solo con area=dirigente"
 ambito = "calcolo"
 solo_se = "area=dirigente"
-riferimento = "ccnl:S105:2026-02-23~art22-com6 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art22-com6 + prassi:immedia:nota:2026-11-07;9"
 
 # Co.co.co. (ticket #73, PR B): casi che la prima fetta non modella (nota di prassi 10).
 
@@ -548,28 +548,28 @@ nome = "tabellare_annuo_dirigenti"
 [[parametro.vigenza]]
 dal = 2024-01-01
 valore = "50005.77"
-riferimento = "ccnl:S105:2026-02-23~art22-com3 + ccnl:S105:2024-07-16~art37-com3"
+riferimento = "ccnl:S125:2026-02-23~art22-com3 + ccnl:S125:2024-07-16~art37-com3"
 
 [[parametro]]
 nome = "tabellare_annuo_segretario_a"
 [[parametro.vigenza]]
 dal = 2024-01-01
 valore = "50005.77"
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + ccnl:S105:2024-07-16~art57-com3"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + ccnl:S125:2024-07-16~art57-com3"
 
 [[parametro]]
 nome = "tabellare_annuo_segretario_b"
 [[parametro.vigenza]]
 dal = 2024-01-01
 valore = "50005.77"
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + ccnl:S105:2024-07-16~art57-com3"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + ccnl:S125:2024-07-16~art57-com3"
 
 [[parametro]]
 nome = "tabellare_annuo_segretario_c"
 [[parametro.vigenza]]
 dal = 2024-01-01
 valore = "40004.59"
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + ccnl:S105:2024-07-16~art57-com3"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + ccnl:S125:2024-07-16~art57-com3"
 
 # Indennità di comparto mensile, tab. C CCNL 28/10/2026, per 12 mensilità.
 # L'incremento dal 01/07/2027 dipende, per i Comuni, dal decreto di riparto (art. 36-bis c. 3):
@@ -711,7 +711,7 @@ decimali = 2
 istituto = "tabellare_dirigenti"
 versione = 1
 dal = 2026-01-01
-riferimento = "ccnl:S105:2026-02-23~art22-com3 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art22-com3 + prassi:immedia:nota:2026-11-07;9"
 formula = "arrotonda(parametro.tabellare_annuo_dirigenti / 13, 2)"
 maturazione = "giorni"
 applica_se = "area=dirigente"
@@ -723,7 +723,7 @@ decimali = 2
 istituto = "posizione_dirigenti"
 versione = 1
 dal = 2026-01-01
-riferimento = "ccnl:S105:2026-02-23~art22-com6 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art22-com6 + prassi:immedia:nota:2026-11-07;9"
 formula = "arrotonda(fatto.posizione_annua_dirigente / 13, 2)"
 maturazione = "giorni"
 applica_se = "posizione_annua_dirigente"
@@ -735,7 +735,7 @@ decimali = 2
 istituto = "tabellare_segretario_a"
 versione = 1
 dal = 2026-01-01
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
 formula = "arrotonda(parametro.tabellare_annuo_segretario_a / 13, 2)"
 maturazione = "giorni"
 applica_se = "fascia_segretario=A"
@@ -747,7 +747,7 @@ decimali = 2
 istituto = "tabellare_segretario_b"
 versione = 1
 dal = 2026-01-01
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
 formula = "arrotonda(parametro.tabellare_annuo_segretario_b / 13, 2)"
 maturazione = "giorni"
 applica_se = "fascia_segretario=B"
@@ -759,7 +759,7 @@ decimali = 2
 istituto = "tabellare_segretario_c"
 versione = 1
 dal = 2026-01-01
-riferimento = "ccnl:S105:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art35-com3 + prassi:immedia:nota:2026-11-07;9"
 formula = "arrotonda(parametro.tabellare_annuo_segretario_c / 13, 2)"
 maturazione = "giorni"
 applica_se = "fascia_segretario=C"
@@ -774,7 +774,7 @@ decimali = 2
 istituto = "posizione_segretario"
 versione = 1
 dal = 2026-01-01
-riferimento = "ccnl:S105:2026-02-23~art38-com1 + prassi:immedia:nota:2026-11-07;9"
+riferimento = "ccnl:S125:2026-02-23~art38-com1 + prassi:immedia:nota:2026-11-07;9"
 formula = "arrotonda(fatto.posizione_annua_segretario / 13, 2)"
 maturazione = "giorni"
 applica_se = "posizione_annua_segretario"
@@ -1707,50 +1707,40 @@ codice = "D"
 dal = 2013-01-01
 riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag110"
 
-# Qualifica1: «2» impiegato. Il codice è certo (Allegato tecnico 4.33.1, pp. 108-109) e la circolare INPS 31/2025
-# par. 3 lo vuole per i tempi determinati delle pubbliche amministrazioni con contratti dell'art. 3-ter D.L. 44/2023;
-# per le aree del comparto (operatori, operatori esperti, istruttori, funzionari) non c'è una regola di
-# corrispondenza letta sul testo: DA VERIFICARE (docs/research/uniemens-privatistico-tempo-determinato.md § 2.2).
+# Qualifica1 è un fatto del rapporto, `qualifica_inps`, inserito all'assunzione (decisione del grilling del #87,
+# 09/11/2026, Luca): nessun default dall'area. L'Allegato tecnico 4.33.1 (p. 108) legge solo questi tre codici:
+# 1 operaio, 2 impiegato, 3 dirigente. Se il fatto manca la vista lo chiede.
 
 [[mappatura_fatto]]
 sistema = "uniemens.denuncia_individuale"
 elemento = "Qualifica1"
-fatto = "area"
-valore = "funzionari"
-codice = "2"
+fatto = "qualifica_inps"
+valore = "operaio"
+codice = "1"
 dal = 2026-01-01
-riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108"
 
 [[mappatura_fatto]]
 sistema = "uniemens.denuncia_individuale"
 elemento = "Qualifica1"
-fatto = "area"
-valore = "istruttori"
+fatto = "qualifica_inps"
+valore = "impiegato"
 codice = "2"
 dal = 2026-01-01
-riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108"
 
 [[mappatura_fatto]]
 sistema = "uniemens.denuncia_individuale"
 elemento = "Qualifica1"
-fatto = "area"
-valore = "operatori_esperti"
-codice = "2"
+fatto = "qualifica_inps"
+valore = "dirigente"
+codice = "3"
 dal = 2026-01-01
-riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
-
-[[mappatura_fatto]]
-sistema = "uniemens.denuncia_individuale"
-elemento = "Qualifica1"
-fatto = "area"
-valore = "operatori"
-codice = "2"
-dal = 2026-01-01
-riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108 + prassi:inps:circolare:2025-01-30;31~par3"
+riferimento = "prassi:inps:documento.tecnico:2026-10-30;4.33.1~pag108"
 
 # RegimePost95: «S» se il lavoratore è soggetto al regime contributivo, «N» altrimenti (documento tecnico 4.33, p. 42).
-# Quale valore spetti a un lavoratore con pensione in cassa pubblica non è detto dalle fonti: la corrispondenza con la
-# prima iscrizione dal 01/01/1996 (L. 335/1995 art. 1 c. 6) è una lettura nostra, DA VERIFICARE.
+# La corrispondenza con la prima iscrizione dal 01/01/1996 (L. 335/1995 art. 1 c. 6) è confermata da Luca nel
+# grilling del #87 (09/11/2026), come prassi-interpretazione.
 
 [[mappatura_fatto]]
 sistema = "uniemens.denuncia_individuale"

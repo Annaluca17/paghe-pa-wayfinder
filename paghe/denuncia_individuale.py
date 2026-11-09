@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
+from .calendario import TIPO_PATRONO, e_lavorativo
 from .corpus import Corpus
 from .denuncia import calcola_denuncia, periodi_in_servizio
 from .errori import ErroreCalcolo, ErroreRegistro, VistaFerma
@@ -20,6 +21,7 @@ from .lista_pos_pa import TIPI_PART_TIME, DatoMancante, QuadroFermo
 from .modello import (
     FATTO_PART_TIME,
     FATTO_PRIMA_ISCRIZIONE_DAL_1996,
+    FATTO_QUALIFICA_INPS,
     FATTO_TERMINE_PER_SOSTITUZIONE,
     FATTO_TIPO_PART_TIME,
     Importo,
@@ -231,12 +233,22 @@ class _Vista:
         return len(lavorativi) * self.parametro(ORARIO_SETTIMANALE) / self.parametro(GIORNI_SETTIMANA)
 
     def giorni_lavorativi(self) -> list[date] | None:
-        """Giorni di rapporto da lunedì a venerdì non festivi, dal calendario del corpus; senza calendario si chiede."""
+        """Giorni di rapporto da lunedì a venerdì non festivi: calendario del corpus e patrono della sede (#106).
+
+        Senza calendario si chiede. Il patrono è il fatto `patrono_sede_lavoro` che copre ciascun giorno; senza fatto
+        non c'è nessun giorno in più e nessuna domanda. Se c'è ma il corpus non ne dichiara il riferimento, si chiede.
+        """
         calendario = self.corpus.calendario_festivi(self.mese.anno)
         if calendario is None:
             self._chiedi(f"calendario_festivi {self.mese.anno}")
             return None
-        return [giorno for giorno in self.giorni if giorno.weekday() < 5 and giorno not in calendario.giorni]
+        periodo = Periodo(self.giorni[0], self.giorni[-1])
+        vigenti = dict(zip(periodo.giorni(), self.registro.vigenti_per_giorno(self.rapporto, TIPO_PATRONO, periodo, self.istante)))
+        patroni = {giorno: str(vigenti[giorno].valore) for giorno in self.giorni if vigenti[giorno] is not None}
+        if patroni and self.corpus.riferimento_patrono is None:
+            self._chiedi("patrono (riferimento nel corpus)")
+            return None
+        return [giorno for giorno in self.giorni if e_lavorativo(calendario, giorno, patroni.get(giorno))]
 
     def lavorati(self, part_time: _PartTime) -> tuple[Giorno, ...]:
         """S se il giorno ha ore programmate (a tempo pieno: è lavorativo), altrimenti N."""
@@ -389,7 +401,7 @@ def _vista_e_righe(
         )
         return DenunciaIndividuale(rapporto, mese, fermi=(QuadroFermo(VISTA, mese.periodo, motivo),)), ()
     vista = _Vista(registro, corpus, rapporto, mese, istante, giorni)
-    qualifica1 = vista.codice("Qualifica1", "area")
+    qualifica1 = vista.codice("Qualifica1", FATTO_QUALIFICA_INPS)
     qualifica3 = vista.codice("Qualifica3", FATTO_TERMINE_PER_SOSTITUZIONE)
     regime_post95 = vista.codice("RegimePost95", FATTO_PRIMA_ISCRIZIONE_DAL_1996)
     codice_contratto = vista.codice("CodiceContratto", "contratto")
