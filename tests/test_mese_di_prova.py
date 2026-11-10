@@ -58,8 +58,7 @@ def test_il_resoconto_e_deterministico(resoconto):
 
 def test_il_percorso_di_marzo(esecuzione, uscita):
     arrivi = {r: a for (m, r), a in esecuzione.arrivi.items() if m == "2026-03"}
-    # La causale della gestione separata e' ASSUNTA nel corpus fittizio (ZGS1, di fantasia: C10 o CXX da verificare), cosi' la
-    # delega con le righe di R10 e R11 non ferma tutto il mese (ticket #73).
+    # La delega con le righe di R10 (onere art. 86) e R11 (gestione separata) non ferma il mese: entrambe vanno su CXX (ticket #104).
     assert [r for r, a in arrivi.items() if a == "completo"] == ["R01", "R02", "R03", "R05", "R06", "R07"]
     assert not [r for r, a in arrivi.items() if a == "delega"]
     # R04, a tempo parziale al 60% (verticale), supera il calcolo e arriva alla ListaPosPA, ma e' una bozza (ticket #72).
@@ -71,7 +70,7 @@ def test_il_percorso_di_marzo(esecuzione, uscita):
     assert {arrivi[r] for r in ("R10", "R11")} == {"lista_collaboratori"}
     f24ep = (uscita / "f24ep-2026-03.txt").read_bytes()
     assert controlla(f24ep) == ([], [])
-    assert b"ZGS1" in f24ep
+    assert b"CXX" in f24ep and b"ZGS1" not in f24ep
 
 
 def test_il_prospetto_paga_di_marzo_si_ferma_solo_per_la_posizione_e_non_cambia_dove_arrivano_i_rapporti(esecuzione):

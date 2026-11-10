@@ -721,17 +721,18 @@ riferimento = "fittizio:codice-p909"
 
 # --- Scadenza F24EP e festivi (calendario dichiarato per anno) ---
 
+# Il 2026 e' nel corpus reale (art. 32-ter c. 1-bis D.L. 185/2008, ticket #107): qui resta solo il 2025.
 [[scadenza_f24ep]]
 dal = 2025-01-01
-al = 2026-12-31
+al = 2025-12-31
 giorno = 16
-riferimento = "fittizio:scadenza-2026"
+riferimento = "fittizio:scadenza-2025"
 [scadenza_f24ep.proroga]
 mese = 8
 dal_giorno = 1
 al_giorno = 20
 fonte = "prassi"
-riferimento = "fittizio:proroga-agosto-2026"
+riferimento = "fittizio:proroga-agosto-2025"
 
 [[scadenza_f24ep]]
 dal = 2027-01-01
@@ -762,40 +763,31 @@ riferimento = "fittizio:festivi-nazionali"
 [patrono]
 riferimento = "fittizio:patrono-ccnl"
 
-# Causale F24EP della gestione separata ASSUNTA (ticket #73, PR B): la ricerca non sa se sia C10 o CXX. Codice di fantasia
-# ZGS1, solo perche' la delega non fermi tutto il mese; da sostituire quando la causale e' letta sul testo INPS.
+# Catalogo delle causali F24EP della gestione separata (ticket #104): il corpus reale ha le mappature (C10 per pensionati e
+# altra cassa, CXX per gestione separata e onere art. 86), non il catalogo. Riferimento A = mese e anno di pagamento
+# (MMAAAA), riferimento B nessuno.
 
 [[codice_f24ep]]
-codice = "ZGS1"
+codice = "C10"
 sezione = "Q"
 codice_campo = "provincia"
 estremi = "facoltativo"
-rif_a = "periodo_inizio"
-rif_b = "periodo_fine"
+rif_a = "mese_anno_pagamento"
+rif_b = "nessuno"
 modalita = "debito"
 dal = 2025-01-01
-riferimento = "fittizio:codice-zgs1"
+riferimento = "fittizio:codice-c10"
 
-[[mappatura]]
-istituto = "gs_lavoratore"
-sistema = "codice_tributo_f24ep"
-codice = "ZGS1"
+[[codice_f24ep]]
+codice = "CXX"
+sezione = "Q"
+codice_campo = "provincia"
+estremi = "facoltativo"
+rif_a = "mese_anno_pagamento"
+rif_b = "nessuno"
+modalita = "debito"
 dal = 2025-01-01
-riferimento = "fittizio:mappatura-gs-lavoratore"
-
-[[mappatura]]
-istituto = "gs_ente"
-sistema = "codice_tributo_f24ep"
-codice = "ZGS1"
-dal = 2025-01-01
-riferimento = "fittizio:mappatura-gs-ente"
-
-[[mappatura]]
-istituto = "onere_art86"
-sistema = "codice_tributo_f24ep"
-codice = "ZGS1"
-dal = 2025-01-01
-riferimento = "fittizio:mappatura-onere-art86"
+riferimento = "fittizio:codice-cxx"
 
 # --- Prospetto paga (ADR 0030): la posizione di amministratori e collaboratori, senza una fonte reale da citare ---
 

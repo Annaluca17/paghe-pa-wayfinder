@@ -389,7 +389,8 @@ valore = "33.00"
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:inps:circolare:2026-02-03;8~par1"
 
 # Pensionati o iscritti ad altra forma obbligatoria: IVS al 24% (art. 1 c. 79 L. 247/2007, Circ. INPS 8/2026 par. 1) piu' le
-# aggiuntive. Se la DIS-COLL si applichi a chi ha altra copertura e' da verificare (nota di prassi 10): qui non e' applicata.
+# aggiuntive. DIS-COLL non dovuta a pensionati e altra cassa: norma certa (circ. INPS 122/2017 e 8/2026), qui non applicata. Il totale
+# 24,00% (testo letterale) contro 24,72% resta aperto finche' non c'e' una seconda fonte indipendente (ADR 0003, ticket #104).
 [[parametro]]
 nome = "aliquota_gs_ivs_ridotta"
 [[parametro.vigenza]]
@@ -1032,7 +1033,7 @@ istituto = "irap_acconto"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art30-com5 + urn:nir:stato:decreto.legislativo:1997-12-15;446~art16-com2"
-formula = "arrotonda(max(base.irap - importo.gs_lavoratore, 0) * parametro.aliquota_irap / 100, 2)"
+formula = "arrotonda(base.irap * parametro.aliquota_irap / 100, 2)"
 maturazione = "periodo"
 
 # Concorsi: tabellare e comparto entrano per intero in entrambe le basi.
@@ -1571,8 +1572,9 @@ misura = "intero"
 dal = 2026-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
 
-# Co.co.co.: il compenso concorre alla base IRAP (art. 10-bis c. 1); la quota di gestione separata a carico del collaboratore
-# si toglie nella regola irap_acconto (scelta di Luca, ADR 0028: la fonte non e' leggibile, da verificare).
+# Co.co.co.: il compenso concorre alla base IRAP (art. 10-bis c. 1) per l'intero compenso lordo erogato. La quota di gestione
+# separata a carico del collaboratore non si toglie; quella a carico dell'ente non entra. Fonte: ris. AdE 121/E/2009 (prassi,
+# testo non riletto, da verificare; la data non e' nel corpus, ADR 0032).
 [[concorso]]
 istituto = "compenso_collaborazione"
 basi = ["irap"]
@@ -2158,6 +2160,16 @@ riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
 piano_dei_conti = "U.1.02.01.01.001"
 origine_impegno = "automatico"
 
+# Scadenza di versamento dell'F24EP (ticket #107): il giorno 16 del mese successivo (art. 32-ter c. 1-bis D.L. 185/2008, norma
+# certa fino al 2026, ADR 0032). La proroga di agosto (dal 1 al 20, spostata al 20) vale per prassi ma ne manca la fonte, quindi
+# non e' dichiarata. Dal 2027 l'art. 32-ter e' abrogato dal D.Lgs. 33/2025 e l'articolo del testo unico non e' riletto: nessuna
+# regola 2027, da verificare (il calcolo si ferma).
+[[scadenza_f24ep]]
+dal = 2026-01-01
+al = 2026-12-31
+giorno = 16
+riferimento = "urn:nir:stato:decreto.legge:2008-11-29;185~art32ter-com1bis"
+
 # =====================================================================================================================
 # Fisco nazionale del lavoro dipendente e assimilati (ticket #93): scaglioni IRPEF, detrazioni, categorie di reddito,
 # ritenuta, conguaglio, deduzioni e parametri nazionali delle addizionali. Vigenza dal 01/01/2026 (TUIR e L. 207/2024,
@@ -2358,6 +2370,169 @@ dal = 2027-01-01
 valore = "22000"
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1-letc"
 # 2027: fonte singola, dossier A.G. 398: stessi valori del 2026
+
+# --- Detrazione per la carica elettiva: art. 13 c. 5 TUIR (dal 2027 art. 13 c. 5 e c. 7 TU) ---
+# Non cumulabile con il c. 1 (c. 5, ultimo periodo; la regola di ritenuta applica la più favorevole). Il testo non
+# rapporta il c. 5 al periodo di lavoro: la circ. AdE 15/E/2007 §1.5.5 dice che non va ragguagliata (prassi, da verificare).
+# Marcatura di ogni parametro: norma certa; seconda fonte per il 2026: istruzioni 730/2026, tabella 8; per il 2027 fonte
+# singola (art. 13 D.Lgs. 117/2026), stessi valori del 2026. Estremi: 5.500, 28.000 e 50.000 inclusi; l'aumento di 50 euro
+# vale oltre 11.000 e fino a 17.000 compresi.
+
+# art. 13 c. 5 lett. a): detrazione fino al limite della fascia: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_importo_a"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "1265"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "1265"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-leta"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. a): reddito complessivo che non si supera: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_soglia_a"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "5500"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-leta"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "5500"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-leta"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. b): importo di base: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_importo_b"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "500"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "500"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-letb"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. b): importo moltiplicato per il rapporto: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_integrazione_b"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "765"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "765"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-letb"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. b): reddito complessivo che non si supera: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_soglia_b"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "28000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-letb"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. b): divisore del rapporto: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_divisore_b"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "22500"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-letb"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "22500"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-letb"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. b-bis) (nel TU lett. c): importo moltiplicato per il rapporto: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_importo_c"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "500"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-letbbis"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "500"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-letc"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. b-bis) (nel TU lett. c): reddito complessivo che non si supera, e termine del rapporto: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_soglia_c"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "50000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-letbbis"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "50000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-letc"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 lett. b-bis) (nel TU lett. c): divisore del rapporto: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_divisore_c"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "22000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5-letbbis"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "22000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com5-letc"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 c. 5-ter (nel TU c. 7): importo dell'aumento: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_aumento"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "50"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5ter"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "50"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com7"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 c. 5-ter (nel TU c. 7): reddito complessivo che si deve superare: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_aumento_da"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "11000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5ter"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "11000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com7"
+# 2027: fonte singola, stessi valori del 2026
+
+# art. 13 c. 5 c. 5-ter (nel TU c. 7): reddito complessivo che non si supera: norma certa; seconda fonte: istruzioni 730/2026, tabella 8
+[[parametro]]
+nome = "art13_c5_aumento_fino_a"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "17000"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art13-com5ter"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "17000"
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com7"
+# 2027: fonte singola, stessi valori del 2026
 
 # --- Aumento di 65 euro: art. 13 c. 1.1 TUIR (dal 2027 art. 13 c. 2 TU) ---
 
@@ -2832,6 +3007,20 @@ riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;
 categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
 detrazione_richiesta = "lavoro_dipendente"
 categorie_detrazione_automatica = ["lavoro_dipendente"]
+categorie_detrazione = ["lavoro_dipendente", "collaborazione"]
+categorie_detrazione_carica_elettiva = ["carica_elettiva"]
+# Detrazione della carica elettiva (art. 13 c. 5): intera, non moltiplicata per i giorni di servizio (prassi, da verificare:
+# circ. AdE 15/E/2007 §1.5.5); nella ritenuta del mese un dodicesimo per pagamento. Il rapporto delle fasce b) e b-bis) si
+# tronca a quattro decimali (c. 6; troncamento: prassi-interpretazione, da verificare). R è lo stesso reddito del c. 1.
+detrazione_carica_elettiva = '''arrotonda(
+    (se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_soglia_a,
+        parametro.art13_c5_importo_a,
+        se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_soglia_b,
+           parametro.art13_c5_importo_b + parametro.art13_c5_integrazione_b * tronca((parametro.art13_c5_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_c5_divisore_b, 4),
+           se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_soglia_c,
+              parametro.art13_c5_importo_c * tronca((parametro.art13_c5_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_c5_divisore_c, 4),
+              0)))
+     + se((fisco.imponibile * fisco.periodi) > parametro.art13_c5_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_aumento_fino_a, parametro.art13_c5_aumento, 0), 0)) / fisco.periodi, 2)'''
 # Carichi di famiglia: detrazione annua di un familiare al 100%, per relazione (ADR 0033). Il figlio in luogo del
 # coniuge usa quella del coniuge. R è lo stesso reddito dell'art. 13; `fisco.figli` è il numero dei figli che danno
 # diritto nello stesso mese. Rapporti dell'art. 12 c. 4: coniuge, fascia 1 con rapporto 1 -> 690; rapporti delle
@@ -2900,6 +3089,20 @@ riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + urn:nir
 categorie = ["lavoro_dipendente", "collaborazione", "carica_elettiva"]
 detrazione_richiesta = "lavoro_dipendente"
 categorie_detrazione_automatica = ["lavoro_dipendente"]
+categorie_detrazione = ["lavoro_dipendente", "collaborazione"]
+categorie_detrazione_carica_elettiva = ["carica_elettiva"]
+# Detrazione della carica elettiva (art. 13 c. 5): intera, non moltiplicata per i giorni di servizio (prassi, da verificare:
+# circ. AdE 15/E/2007 §1.5.5); nella ritenuta del mese un dodicesimo per pagamento. Il rapporto delle fasce b) e b-bis) si
+# tronca a quattro decimali (c. 6; troncamento: prassi-interpretazione, da verificare). R è lo stesso reddito del c. 1.
+detrazione_carica_elettiva = '''arrotonda(
+    (se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_soglia_a,
+        parametro.art13_c5_importo_a,
+        se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_soglia_b,
+           parametro.art13_c5_importo_b + parametro.art13_c5_integrazione_b * tronca((parametro.art13_c5_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_c5_divisore_b, 4),
+           se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_soglia_c,
+              parametro.art13_c5_importo_c * tronca((parametro.art13_c5_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_c5_divisore_c, 4),
+              0)))
+     + se((fisco.imponibile * fisco.periodi) > parametro.art13_c5_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_c5_aumento_fino_a, parametro.art13_c5_aumento, 0), 0)) / fisco.periodi, 2)'''
 # Carichi di famiglia: detrazione annua di un familiare al 100%, per relazione (ADR 0033). Il figlio in luogo del
 # coniuge usa quella del coniuge. R è lo stesso reddito dell'art. 13; `fisco.figli` è il numero dei figli che danno
 # diritto nello stesso mese. Rapporti dell'art. 12 c. 4: coniuge, fascia 1 con rapporto 1 -> 690; rapporti delle
@@ -3334,6 +3537,46 @@ sistema = "codice_tributo_f24ep"
 codice = "170E"
 dal = 2026-01-01
 riferimento = "prassi:ade:risoluzione:2020-06-26;35-E"
+
+# Causale F24EP della gestione separata (ticket #104): PRASSI PER ANALOGIA. Il testo che dice quale causale vada con quale aliquota
+# (circ. INPS 88/2023 sez. 10.1.1) riguarda il lavoro sportivo, non i collaboratori delle PA. C10 per pensionati e altra cassa, CXX
+# per chi non ha altra copertura e per gli amministratori locali tipo 04 (onere art. 86, nessuna altra cassa). Riferimento A: mese e
+# anno di pagamento del compenso (circ. INPS 23/2013 par. 2.2). Aperti: la lettura del messaggio INPS 8460/2013 e della tabella AdE
+# dopo il 01/04/2020.
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "gestione_separata"
+codice = "CXX"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "pensionato"
+codice = "C10"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura_fatto]]
+sistema = "f24ep.causale_gestione_separata"
+elemento = "causale"
+fatto = "posizione_previdenziale"
+valore = "altra_cassa"
+codice = "C10"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
+
+[[mappatura]]
+istituto = "onere_art86"
+sistema = "codice_tributo_f24ep"
+codice = "CXX"
+dal = 2010-11-02
+riferimento = "prassi:inps:circolare:2023-10-31;88~par10.1.1 + prassi:ade:risoluzione:2010-10-07;98-E + prassi:inps:circolare:2013-02-08;23~par2.2"
 
 # --- Addizionali: parametri nazionali e regola (ADR 0029). Le aliquote di comuni e regioni sono dichiarazioni a parte. ---
 
