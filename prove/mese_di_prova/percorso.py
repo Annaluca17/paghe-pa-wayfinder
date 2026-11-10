@@ -43,7 +43,9 @@ from paghe import (
     trasmetti_delega,
 )
 from paghe import delega as modulo_delega
+from paghe.blocco_pagamenti import registra_esito_verifica, registra_richiesta_verifica
 from paghe.errori import ErrorePaghe, VistaFerma
+from paghe.proposta import _costruisci
 from paghe.impegni import registra_impegno
 from paghe.part_time import registra_programmazione
 from paghe.uniemens import Ente, Mittente, in_xml
@@ -538,11 +540,31 @@ def _controlla_fiscale(c: _Contesto, versione) -> None:
             )
 
 
+_NETTO_DA_COMUNICARE = re.compile(r"Rapporto (\S+): verifica 48-bis mancante, netto da comunicare (\S+)")
+
+
+def _verifiche_48bis(c: _Contesto, tag: str, valuta: date, elenco: list, passo) -> None:
+    """Prima dell'invio l'ufficio chiede la verifica per i netti sopra soglia; AdER risponde non inadempiente (ADR 0036)."""
+    bozza = _costruisci(c.registro, c.corpus, valuta, tuple(elenco), (), c.registro.adesso(), con_proposta=False)
+    persone = {r.id: r.persona for r in S.RAPPORTI}
+    for fermo in bozza.fermi:
+        trovato = _NETTO_DA_COMUNICARE.match(fermo.motivo)
+        if trovato is None:
+            continue
+        rapporto, netto = trovato.group(1), Decimal(trovato.group(2))
+        c.ufficio.conta("comando", tag, f"richiesta di verifica 48-bis per {rapporto}")
+        chiave = f"verifica-48bis-{tag}-{rapporto}"
+        registra_richiesta_verifica(c.registro, chiave, "prova", persone[rapporto], valuta - timedelta(days=10), netto, valuta)
+        registra_esito_verifica(c.registro, f"{chiave}-esito", "prova", chiave, valuta - timedelta(days=8), "non_inadempiente")
+        passo.fittizio.append(f"esito della verifica 48-bis di {rapporto} simulato: non inadempiente")
+
+
 def _versione(c: _Contesto, tag: str, valuta: date, importi: dict[str, list], arrivi: dict):
     passo = c.passo(tag, "versione")
     c.comando(tag, f"emissione della versione di proposta ({tag})")
     c.ufficio.conta("scelta", tag, f"valuta prevista della versione ({valuta})")
     elenco = [i for righe in importi.values() for i in righe]
+    _verifiche_48bis(c, tag, valuta, elenco, passo)
     try:
         versione = emetti_versione(c.registro, c.corpus, valuta, elenco)
     except ErrorePaghe as errore:

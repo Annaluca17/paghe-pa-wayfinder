@@ -148,6 +148,10 @@ MATURAZIONI_FISCALI = frozenset({"ritenuta", "conguaglio", MATURAZIONE_RESTO_DIF
 # `da_recuperare` e' il recupero a rate deciso dal conguaglio: vive solo nella derivazione del conguaglio, non e' una riga.
 MATURAZIONE_BENEFICIO = "beneficio"
 MATURAZIONE_DA_RECUPERARE = "da_recuperare"
+# Somma sospesa 48-bis e suo rilascio: accantonamento dell'ente sul netto, non reddito e non base di nulla (ADR 0036).
+MATURAZIONE_ACCANTONAMENTO = "accantonamento"
+# Evento di ritorno del versamento eseguito (ADR 0025): lo leggono la proposta, la delega e il blocco dei pagamenti.
+TIPO_VERSAMENTO_ESEGUITO = "versamento_eseguito"
 # Sostitutiva sull'accessorio (ticket #96, ADR 0035): imposta trattenuta e quota di accessorio che esce dall'imponibile ordinario.
 MATURAZIONE_SOSTITUTIVA = "sostitutiva"
 

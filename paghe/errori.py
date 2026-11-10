@@ -59,3 +59,7 @@ class ComposizioneMancante(ErrorePaghe):
 
 class ClassificazioneMancante(ErrorePaghe):
     """L'istituto di una spesa non ha una dichiarazione di classificazione valida alla valuta: la proposta si ferma, non il calcolo (ADR 0031)."""
+
+
+class VerificaMancante(ErroreCalcolo):
+    """Un netto sopra soglia non ha l'esito della verifica 48-bis: il rapporto resta fermo, gli altri proseguono (ADR 0036)."""

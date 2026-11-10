@@ -78,7 +78,7 @@ I fermi del mese, raggruppati per causa. L'ordine e' per quanti rapporti bloccan
 | Conferme della Ragioneria | 0 | 1 | 1 | 1 |
 | Scelte (valuta prevista, data di versamento, ultimo pagamento) | 0 | 1 | 2 | 3 |
 | Eventi che oggi nessun adattatore porta (pagamento, ricevute, versamento) | 0 | 1 | 14 | 13 |
-| Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 3 | 2 |
+| Comandi di avvio (non sono dati: emissione, produzione dei file, trasmissione) | 0 | 1 | 5 | 2 |
 | **Totale senza i comandi** | **179** | **3** | **49** | **18** |
 
 La preparazione di febbraio e' il pagamento che precede il mese, scritto solo perche' l'arretrato di R02 e' una differenza rispetto a un esito pagato: non fa parte del mese e non e' nel totale di marzo.
@@ -116,6 +116,8 @@ Dettaglio di Marzo, escluso l'avvio:
 - [evento] 1 x versamento eseguito della delega
 - [comando] 1 x emissione della versione di proposta (2026-03)
 - [comando] 1 x produzione della denuncia e della ListaPosPA (2026-03)
+- [comando] 1 x richiesta di verifica 48-bis per R08
+- [comando] 1 x richiesta di verifica 48-bis per R09
 - [comando] 1 x trasmissione della delega (2026-03)
 
 Dettaglio di Dicembre, escluso l'avvio:
@@ -190,6 +192,8 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - conguaglio fiscale sull'ultimo pagamento: R05 -30.55
 - Fermi: nessuno
 - Su dati fittizi:
+  - esito della verifica 48-bis di R08 simulato: non inadempiente
+  - esito della verifica 48-bis di R09 simulato: non inadempiente
   - gli impegni automatici sono fatti contabili simulati dal percorso, con disponibilita' molto alta
   - categorie di reddito, ritenuta, conguaglio e dichiarazioni di composizione sono del corpus fittizio (valori fiscali finti)
 - Note:

@@ -551,6 +551,14 @@ _Avoid_: Tabella di conversione, alias della norma
 Importo che una regola calcola sul netto, dopo ritenute fiscali e contributi, per un pignoramento, una cessione o una delegazione trascritti come atto esterno sul rapporto. È un versamento a terzi nella composizione del pagamento. I limiti si misurano sul netto di ogni pagamento, meno le sole ritenute di legge. Tra istituti diversi vale chi è notificato prima; più pignoramenti, o un concorso non ancora modellato, fermano il calcolo.
 _Avoid_: Trattenuta (senza dire quale), ritenuta (che è fiscale), quinto (che è solo uno dei limiti)
 
+**Verifica 48-bis**:
+Controllo presso l'agente della riscossione prima di pagare un netto sopra soglia (2.500 euro per i dipendenti, 5.000 per gli altri titoli), sul singolo pagamento. Richiesta ed esito sono fatti datati della persona; senza esito il rapporto è fermo (ADR 0036).
+_Avoid_: Blocco (che è solo l'effetto), trattenuta 48-bis (non è una trattenuta)
+
+**Somma sospesa 48-bis**:
+Parte del netto che l'ente accantona dopo un esito inadempiente: il minore tra debito comunicato, fascia sul netto e metà del netto meno le trattenute a terzi. Diventa trattenuta a terzi con l'ordine di versamento; torna al dipendente col debito pagato o ridotto, o dopo 60 giorni senza ordine.
+_Avoid_: Pignoramento (lo diventa solo con l'ordine), trattenuta
+
 **Assenso dell'ente**:
 Atto esterno datato con cui l'ente consente che cessione e delegazione insieme superino la metà del netto. Senza, oltre la metà il calcolo si ferma.
 

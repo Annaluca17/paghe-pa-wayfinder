@@ -18,6 +18,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
+from .blocco_pagamenti import ISTITUTO_SOMMA_SOSPESA, ha_ordine_di_versamento, voci_del_blocco
 from .calcolo import _somma_righe
 from .corpus import Corpus
 from .denuncia import MATURAZIONI_DERIVATE, calcola_denuncia
@@ -25,7 +26,7 @@ from .errori import CasoNonModellato, ClassificazioneMancante, ComposizioneManca
 from .impegni import AUTOMATICO, Abbinamento, DisponibilitaImpegni, registra_cambio_abbinamento
 from .fisco import Avviso, _controlla_competenza, _pagati, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
 from .incapienza import dividi_conguaglio, fine_del_differimento, resti_aperti, trattieni_resto
-from .modello import Esito, Evento, Importo, TipoEsito
+from .modello import TIPO_VERSAMENTO_ESEGUITO, Esito, Evento, Importo, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, TIPO_RICHIESTA_DIFFERIMENTO, Registro
 from .tempo import Mese, in_utc
 
@@ -40,7 +41,6 @@ AVVISO_COMPETENZA_AL_PAGAMENTO = "competenza_non_ammessa_al_pagamento"
 
 TIPO_PAGAMENTO_ESEGUITO = "pagamento_eseguito"
 TIPO_RICEVUTA_DELEGA = "ricevuta_delega"
-TIPO_VERSAMENTO_ESEGUITO = "versamento_eseguito"
 
 FASI_DELEGA = ("controlli_formali", "controllo_crediti", "addebito")
 ESITI_RICEVUTA = ("positivo", "negativo", "sospeso")
@@ -591,6 +591,12 @@ def _rapporto(
     netto = sum((riga.sul_netto for riga in righe), Decimal(0))
     if netto < 0:
         raise CasoNonModellato(f"Rapporto {rapporto}: caso non modellato, netto negativo di {netto} nel pagamento del {valuta}")
+    voci = voci_del_blocco(
+        registro, corpus, rapporto, persona or rapporto, righe, {i.categoria_reddito for i in reddito}, valuta, istante
+    )
+    if voci:
+        righe = (*righe, *(RigaComposizione(v.importo, v.natura, v.effetto, v.destinatario, v.canale, v.riferimento) for v in voci))
+        netto = sum((riga.sul_netto for riga in righe), Decimal(0))
 
     mancanti = []
     if manca_ultimo:
@@ -1046,6 +1052,21 @@ def _riga_riferita(registro: Registro, riferimento: RiferimentoRiga, canale: str
     )
     if trovata is None:
         raise ErroreRegistro(f"La riga {riferimento.in_dizionario()} non è nella versione {riferimento.versione_id}")
+    if trovata.istituto == ISTITUTO_SOMMA_SOSPESA:
+        pagamento = next(
+            (
+                evento
+                for evento in _eventi_della_versione(registro, TIPO_PAGAMENTO_ESEGUITO, riferimento.versione_id, istante)
+                if trovata.rapporto in evento.contenuto["rapporti"]
+            ),
+            None,
+        )
+        if canale != "bonifico" or pagamento is None or not ha_ordine_di_versamento(registro, pagamento.esito_id, trovata.rapporto, istante):
+            raise ErroreRegistro(
+                f"La somma sospesa 48-bis del rapporto {trovata.rapporto} si versa col bonifico solo dopo l'ordine di "
+                "versamento di AdER, per un rapporto pagato"
+            )
+        return trovata.importo
     a_credito = canale == "f24ep" and trovata.natura in NATURE_A_CREDITO
     if not a_credito and (trovata.destinatario != "terzo" or trovata.canale != canale):
         raise ErroreRegistro(

@@ -3849,6 +3849,55 @@ dal = 2027-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art52-com1-leti"
 
 
+# Blocco dei pagamenti, art. 48-bis DPR 602/1973 e poi art. 144 D.Lgs. 33/2025 (ADR 0036).
+# La soglia si misura sul netto del singolo pagamento: lordo meno ritenute fiscali e contributi.
+
+[[soglia_verifica]]
+categoria = "lavoro_dipendente"
+dal = 2008-03-29
+al = 2025-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;602~art48bis-com1"
+
+[[soglia_verifica]]
+categoria = "lavoro_dipendente"
+soglia = "2500"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;602~art48bis-com1bis + urn:nir:stato:legge:2024-12-30;207~art1-com84"
+
+[[soglia_verifica]]
+categoria = "lavoro_dipendente"
+soglia = "2500"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33~art144-com2"
+
+[[soglia_verifica]]
+categoria = "*"
+soglia = "5000"
+dal = 2008-03-29
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;602~art48bis-com1"
+
+[[soglia_verifica]]
+categoria = "*"
+soglia = "5000"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33~art144-com1"
+
+# Somma sospesa: fasce sul netto (art. 72-ter, poi art. 171), tetto della meta' del netto con le trattenute a terzi
+# (artt. 2 e 68 DPR 180/1950), risposta entro 5 giorni feriali e sospensione di 60 giorni (DM 40/2008 art. 3).
+[[somma_sospesa]]
+dal = 2026-01-01
+giorni_risposta = 5
+giorni_sospensione = 60
+tetto = "0.5"
+fasce = [
+    { fino_a = "2500", divisore = "10" },
+    { fino_a = "5000", divisore = "7" },
+    { divisore = "5" },
+]
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;602~art72ter + urn:nir:ministero.economia.finanze:decreto:2008-01-18;40~art3"
+
 # =====================================================================================================================
 # Sostitutiva del 15% sull'accessorio 2026 (ticket #96, ADR 0035). L. 199/2025 art. 1 c. 237: imposta sostitutiva di IRPEF e
 # addizionali sui compensi del trattamento accessorio del personale non dirigenziale, entro 800 euro, se il reddito di lavoro

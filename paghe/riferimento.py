@@ -38,8 +38,8 @@ _TIPI_NORMA = {
     "costituzione",
 }
 _TIPI_REGIONALI = {"legge", "regolamento"}
-# Atti di altre autorità statali: il DPCM 20/12/1999 sul TFR non ha numero (ticket #33).
-_ALTRE_AUTORITA = {"presidente.consiglio.ministri": {"decreto"}}
+# Atti di altre autorità statali: il DPCM 20/12/1999 sul TFR non ha numero (ticket #33); il DM MEF 40/2008 sulla verifica 48-bis ha il numero.
+_ALTRE_AUTORITA = {"presidente.consiglio.ministri": {"decreto"}, "ministero.economia.finanze": {"decreto"}}
 _TIPI_PRASSI = {
     "inps": {"circolare", "messaggio", "documento.tecnico"},
     "inpdap": {"nota.operativa"},
