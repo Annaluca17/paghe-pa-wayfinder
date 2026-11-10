@@ -100,6 +100,12 @@ TIPO_REDDITO_ANNO_PRECEDENTE = "reddito_anno_precedente"
 # Fatto della persona (ticket #95): la detrazione annua per oneri che la persona comunica nella dichiarazione del
 # sostituito, in euro; la legge il trattamento integrativo tra 15.000 e 28.000 euro di reddito. Senza il fatto vale zero.
 TIPO_ONERI_DETRAIBILI = "oneri_detraibili"
+# Rinuncia alla sostitutiva sull'accessorio (ticket #96, ADR 0035): fatto della persona con validità e documento di origine;
+# dalla sua data l'accessorio va a tassazione ordinaria. Forma e revoca (chiusura della validità) da verificare.
+TIPO_RINUNCIA_SOSTITUTIVA = "rinuncia_sostitutiva"
+# Richiesta di differimento (ticket #99, ADR 0034): fatto datato della persona che chiede per iscritto di trattenere nei
+# mesi successivi, con l'interesse, l'imposta del conguaglio che non trova capienza. Il valore e' un codice: «si».
+TIPO_RICHIESTA_DIFFERIMENTO = "richiesta_differimento"
 # Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
 # Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
 TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
@@ -268,6 +274,12 @@ class Registro:
             raise ErroreRegistro(f"Codice non valido: {codice!r}")
         return self._inserisci_fatto(persona, tipo, codice, True, valido_dal, valido_al, atto, SOGGETTO_PERSONA)
 
+    def registra_richiesta_differimento(
+        self, persona: str, valido_dal: date, valido_al: date | None = None, atto: Atto | None = None
+    ) -> Fatto:
+        """La richiesta scritta della persona di differire l'incapienza del conguaglio (art. 23 c. 3 D.P.R. 600/1973)."""
+        return self.registra_codice_persona(persona, TIPO_RICHIESTA_DIFFERIMENTO, "si", valido_dal, valido_al, atto)
+
     def registra_iban_persona(
         self,
         persona: str,
@@ -353,6 +365,14 @@ class Registro:
         if atto is None:
             raise ErroreRegistro("La dichiarazione del sostituito vuole il documento di origine")
         return self.registra_codice_persona(persona, TIPO_DICHIARAZIONE_SOSTITUITO, detrazioni, valido_dal, valido_al, atto)
+
+    def registra_rinuncia_sostitutiva(
+        self, persona: str, valido_dal: date, valido_al: date | None, atto: Atto | None
+    ) -> Fatto:
+        """Rinuncia alla sostitutiva sull'accessorio (ADR 0035): fatto della persona con validità e documento di origine."""
+        if atto is None:
+            raise ErroreRegistro("La rinuncia alla sostitutiva vuole il documento di origine")
+        return self.registra_codice_persona(persona, TIPO_RINUNCIA_SOSTITUTIVA, "rinuncia", valido_dal, valido_al, atto)
 
     def registra_familiare_a_carico(
         self,

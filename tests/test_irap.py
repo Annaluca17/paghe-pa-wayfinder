@@ -63,12 +63,13 @@ def collabora(registro, orologio, reale, importo="1000.00", posizione="gestione_
     paga_il_mese(registro, orologio, reale, giorno=date(2026, 11, 30))
 
 
-def test_un_cococo_ha_la_base_al_netto_della_quota_di_gestione_separata_a_carico_del_collaboratore(registro, reale, orologio):
+def test_un_cococo_ha_la_base_al_lordo_del_compenso_erogato(registro, reale, orologio):
     collabora(registro, orologio, reale)
     v = valori(registro, reale)
-    assert v["gs_lavoratore"] == D("116.77")
-    # (1.000,00 - 116,77) x 8,5% = 75,07455: scelta di Luca, fonte non leggibile, da verificare (ADR 0028)
-    assert v["irap_acconto"] == D("75.07")
+    assert v["gs_lavoratore"] == D("116.77")  # la quota del collaboratore non si toglie dalla base IRAP
+    assert v["base.irap"] == D("1000.00")
+    # 1.000,00 x 8,5% = 85,00: base lorda, ris. AdE 121/E/2009 (prassi, testo non riletto, ADR 0032)
+    assert v["irap_acconto"] == D("85.00")
 
 
 def mandato(registro, orologio, reale, condizione="non_dipendente", misura="3000.00"):
@@ -221,3 +222,11 @@ def test_la_fine_mandato_entra_al_netto_di_309_87_per_anno_e_mai_sotto_zero(regi
     registro.registra_fatto(R, "importo_fine_mandato", indennita, date(2026, 11, 20), date(2026, 11, 20))
     paga(registro, orologio, calcola(registro, corpus, R, Mese(2026, 11)), date(2026, 11, 27))
     assert valori(registro, corpus)["irap_acconto"] == D(atteso)  # (10.000,00 - 1.549,35) x 8,5% = 718,30525, al centesimo 718,31
+
+
+def test_la_base_lorda_del_cococo_arrotonda_l_acconto_al_centesimo(registro, reale, orologio):
+    """Caso limite (#107): 1.234,57 x 8,5% = 104,93845; la quota del collaboratore non entra nel calcolo."""
+    collabora(registro, orologio, reale, importo="1234.57")
+    v = valori(registro, reale)
+    assert v["base.irap"] == D("1234.57")
+    assert v["irap_acconto"] == D("104.94")
