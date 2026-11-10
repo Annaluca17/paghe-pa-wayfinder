@@ -3162,6 +3162,22 @@ versione = 2
 dal = 2027-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33-com4 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art11-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art13-com1"
 
+# --- Incapienza del conguaglio (ADR 0034) ---
+# Interesse sul resto del conguaglio che la persona chiede di trattenere nei periodi di paga successivi (0,50% per ogni mese
+# di differimento, semplice sul resto aperto): norma certa, ricerca parametri-fiscali-2026-2027.md tema 7. Dal 2027 l'art. 23
+# diventa l'art. 33 D.Lgs. 33/2025 (fonte singola per la numerazione). Il codice tributo F24EP dell'interesse NON e' nel corpus:
+# finche' manca, la delega che lo contiene si ferma nominando l'istituto conguaglio_irpef_interesse.
+[[parametro]]
+nome = "interesse_differimento_mensile"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "0.005"
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com3"
+[[parametro.vigenza]]
+dal = 2027-01-01
+valore = "0.005"
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33-com4"
+
 # --- Deduzioni fiscali: i contributi a carico del lavoratore non concorrono al reddito ---
 # Norma certa: art. 51 c. 2 lett. a) TUIR; per la gestione separata anche l'art. 52 c. 1 (collaboratori). Seconda fonte:
 # istruzioni CU 2026 punto 441 (per i contributi di legge). Dal 2027 art. 53 c. 2 lett. a) D.Lgs. 117/2026 (fonte singola).

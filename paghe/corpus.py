@@ -517,6 +517,11 @@ class RegolaRitenuta:
         )
 
 
+SUFFISSO_RESTO = "_resto"
+SUFFISSO_INTERESSE = "_interesse"
+SUFFISSO_NON_TRATTENUTO = "_non_trattenuto"
+
+
 @dataclass(frozen=True)
 class RegolaConguaglio:
     """Conguaglio fiscale (ADR 0019): le formule della ritenuta sull'imponibile fiscale dell'anno, con un solo periodo."""
@@ -526,6 +531,21 @@ class RegolaConguaglio:
     dal: date
     riferimento: str
     al: date | None = None
+
+    @property
+    def istituto_resto(self) -> str:
+        """Il resto differito dell'incapienza, trattenuto nei pagamenti successivi (ADR 0034)."""
+        return f"{self.istituto}{SUFFISSO_RESTO}"
+
+    @property
+    def istituto_interesse(self) -> str:
+        """L'interesse sul resto differito: un importo a sé, con il suo codice tributo (ADR 0034)."""
+        return f"{self.istituto}{SUFFISSO_INTERESSE}"
+
+    @property
+    def istituto_non_trattenuto(self) -> str:
+        """Il resto che non si e' potuto trattenere: un importo del conguaglio che la vista CU legge (ADR 0034)."""
+        return f"{self.istituto}{SUFFISSO_NON_TRATTENUTO}"
 
     def __post_init__(self) -> None:
         soggetto = f"Conguaglio {self.istituto}"
@@ -1206,6 +1226,7 @@ class Corpus:
         """Istituti con una regola, o con la ritenuta e il conguaglio fiscale."""
         fiscale = self.fiscale
         noti = set(self._regole) | {r.istituto for r in fiscale.ritenute} | {c.istituto for c in fiscale.conguagli}
+        noti |= {i for c in fiscale.conguagli for i in (c.istituto_resto, c.istituto_interesse)}
         noti |= {i for regola in fiscale.addizionali for i in regola.istituti}
         return noti | {i for regola in fiscale.benefici for i in regola.istituti}
 

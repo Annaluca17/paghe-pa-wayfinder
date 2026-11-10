@@ -491,6 +491,16 @@ _Avoid_: Conguaglio (senza dire quale: c'è anche quello contributivo), ricalcol
 
 **Richiesta di differimento**:
 Fatto della persona che chiede di trattenere nei mesi successivi, con interesse, l'imposta del conguaglio che non trova capienza. Senza richiesta la trattenuta si ferma a capienza e il resto va in CU come non trattenuto.
+
+**Incapienza del conguaglio**:
+Parte del conguaglio IRPEF a debito che il netto del pagamento, dopo tutte le altre righe, non copre. Con la richiesta di differimento diventa resto differito; senza, non trattenuto.
+_Avoid_: Capienza (che è quella del fondo), netto negativo
+
+**Resto differito**:
+Incapienza che passa, calcolata, ai pagamenti successivi con l'interesse dello 0,50% mensile, fino all'ultimo pagamento di dicembre dell'anno di trattenuta o alla cessazione. Non è un fatto: ogni pagamento lo ricava dal precedente. Quello che resta alla fine diventa non trattenuto.
+
+**Non trattenuto**:
+Imposta del conguaglio che il sostituto non ha potuto trattenere, per incapienza o cessazione: la CU la riporta e la persona la versa entro il 15 gennaio.
 _Avoid_: Rateizzazione (che è anche quella del 730-4 o dei recuperi oltre i 60 euro)
 
 **Domicilio fiscale**:
