@@ -52,7 +52,7 @@ CANALI = frozenset({"accredito", "f24ep", "bonifico"})
 SEZIONI_F24EP = frozenset({"F", "I", "R", "S", "N", "Q", "W", "G", "P", "5"})
 CODICE_CAMPO_F24EP = frozenset({"nessuno", "regione", "catastale", "provincia"})
 ESTREMI_F24EP = frozenset({"nessuno", "facoltativo"})
-RIF_A_F24EP = frozenset({"nessuno", "mese_pagamento", "periodo_inizio"})
+RIF_A_F24EP = frozenset({"nessuno", "mese_pagamento", "periodo_inizio", "mese_anno_pagamento"})
 RIF_B_F24EP = frozenset({"nessuno", "anno_pagamento", "anno_imposta", "periodo_fine"})
 MODALITA_F24EP = frozenset({"debito", "debito_credito"})
 LIMITI_CREDITO_F24EP = frozenset({"nessuno", "non_modellato"})
@@ -459,6 +459,11 @@ class RegolaRitenuta:
     per un familiare a carico al 100%, nelle stesse variabili, più `fisco.figli`, il numero dei figli che danno diritto
     nello stesso mese (aumenta la soglia dei figli). Il coniuge vale anche per il figlio in luogo del coniuge. Il motore
     le applica per mese, per percentuale e per familiare, un dodicesimo ciascuna, senza la dichiarazione del sostituito.
+    Carica elettiva (ADR 0019, ticket #97): `detrazione_carica_elettiva` è la detrazione dell'art. 13 c. 5, nelle stesse
+    variabili, intera al conguaglio (non rapportata ai giorni) e un dodicesimo per pagamento nella ritenuta. Spetta se
+    il reddito ha una delle `categorie_detrazione_carica_elettiva`; `detrazione` (c. 1) spetta se ha una delle
+    `categorie_detrazione` (vuote: sempre, come prima). Le due non si cumulano: con la dichiarazione, il motore applica
+    la più alta, o quella scelta dalla dichiarazione.
     La regola copre solo le `categorie` elencate.
     """
 
@@ -476,6 +481,9 @@ class RegolaRitenuta:
     carichi_coniuge: str = "0"
     carichi_figlio: str = "0"
     carichi_ascendente: str = "0"
+    categorie_detrazione: tuple[str, ...] = ()
+    detrazione_carica_elettiva: str = "0"
+    categorie_detrazione_carica_elettiva: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         soggetto = f"Ritenuta {self.istituto}"
@@ -490,7 +498,7 @@ class RegolaRitenuta:
             raise ErroreCorpus(f"{soggetto}: detrazione_richiesta obbligatoria")
         for formula in (
             self.imposta, self.detrazione, self.detrazione_automatica,
-            self.carichi_coniuge, self.carichi_figlio, self.carichi_ascendente,
+            self.carichi_coniuge, self.carichi_figlio, self.carichi_ascendente, self.detrazione_carica_elettiva,
         ):
             letti = riferimenti(formula)
             if letti.fatti or letti.importi or letti.basi:
@@ -508,7 +516,13 @@ class RegolaRitenuta:
             | riferimenti(self.carichi_coniuge).parametri
             | riferimenti(self.carichi_figlio).parametri
             | riferimenti(self.carichi_ascendente).parametri
+            | riferimenti(self.detrazione_carica_elettiva).parametri
         )
+
+
+SUFFISSO_RESTO = "_resto"
+SUFFISSO_INTERESSE = "_interesse"
+SUFFISSO_NON_TRATTENUTO = "_non_trattenuto"
 
 
 @dataclass(frozen=True)
@@ -520,6 +534,21 @@ class RegolaConguaglio:
     dal: date
     riferimento: str
     al: date | None = None
+
+    @property
+    def istituto_resto(self) -> str:
+        """Il resto differito dell'incapienza, trattenuto nei pagamenti successivi (ADR 0034)."""
+        return f"{self.istituto}{SUFFISSO_RESTO}"
+
+    @property
+    def istituto_interesse(self) -> str:
+        """L'interesse sul resto differito: un importo a sé, con il suo codice tributo (ADR 0034)."""
+        return f"{self.istituto}{SUFFISSO_INTERESSE}"
+
+    @property
+    def istituto_non_trattenuto(self) -> str:
+        """Il resto che non si e' potuto trattenere: un importo del conguaglio che la vista CU legge (ADR 0034)."""
+        return f"{self.istituto}{SUFFISSO_NON_TRATTENUTO}"
 
     def __post_init__(self) -> None:
         soggetto = f"Conguaglio {self.istituto}"
@@ -1269,6 +1298,7 @@ class Corpus:
         """Istituti con una regola, o con la ritenuta e il conguaglio fiscale."""
         fiscale = self.fiscale
         noti = set(self._regole) | {r.istituto for r in fiscale.ritenute} | {c.istituto for c in fiscale.conguagli}
+        noti |= {i for c in fiscale.conguagli for i in (c.istituto_resto, c.istituto_interesse)}
         noti |= {i for regola in fiscale.addizionali for i in regola.istituti}
         noti |= {i for regola in fiscale.benefici for i in regola.istituti}
         return noti | {i for regola in fiscale.sostitutive for i in regola.istituti}
@@ -1613,7 +1643,10 @@ class Corpus:
                      r.imposta, r.detrazione, sorted(r.categorie), r.detrazione_richiesta,
                      *([r.detrazione_automatica] if r.detrazione_automatica != "0" else []),
                      *([r.carichi_coniuge, r.carichi_figlio, r.carichi_ascendente]
-                       if (r.carichi_coniuge, r.carichi_figlio, r.carichi_ascendente) != ("0", "0", "0") else [])]
+                       if (r.carichi_coniuge, r.carichi_figlio, r.carichi_ascendente) != ("0", "0", "0") else []),
+                     *([sorted(r.categorie_detrazione), r.detrazione_carica_elettiva,
+                        sorted(r.categorie_detrazione_carica_elettiva)]
+                       if (r.categorie_detrazione, r.detrazione_carica_elettiva) != ((), "0") else [])]
                     for r in fiscale.ritenute
                 ),
                 "conguagli": sorted(
@@ -2190,6 +2223,9 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
             carichi_coniuge=voce.get("carichi_coniuge", "0"),
             carichi_figlio=voce.get("carichi_figlio", "0"),
             carichi_ascendente=voce.get("carichi_ascendente", "0"),
+            categorie_detrazione=tuple(voce.get("categorie_detrazione", ())),
+            detrazione_carica_elettiva=voce.get("detrazione_carica_elettiva", "0"),
+            categorie_detrazione_carica_elettiva=tuple(voce.get("categorie_detrazione_carica_elettiva", ())),
         )
         for voce in dati.get("ritenuta", [])
     )

@@ -103,6 +103,9 @@ TIPO_ONERI_DETRAIBILI = "oneri_detraibili"
 # Rinuncia alla sostitutiva sull'accessorio (ticket #96, ADR 0035): fatto della persona con validità e documento di origine;
 # dalla sua data l'accessorio va a tassazione ordinaria. Forma e revoca (chiusura della validità) da verificare.
 TIPO_RINUNCIA_SOSTITUTIVA = "rinuncia_sostitutiva"
+# Richiesta di differimento (ticket #99, ADR 0034): fatto datato della persona che chiede per iscritto di trattenere nei
+# mesi successivi, con l'interesse, l'imposta del conguaglio che non trova capienza. Il valore e' un codice: «si».
+TIPO_RICHIESTA_DIFFERIMENTO = "richiesta_differimento"
 # Fatto della persona: un pagamento è stato eseguito in un anno d'imposta diverso dal previsto (ADR 0025).
 # Il valore è l'esito pagato; il calcolo fiscale della persona si ferma.
 TIPO_ANNO_IMPOSTA_DIVERSO = "anno_imposta_diverso"
@@ -270,6 +273,12 @@ class Registro:
         if not isinstance(codice, str) or not codice.strip():
             raise ErroreRegistro(f"Codice non valido: {codice!r}")
         return self._inserisci_fatto(persona, tipo, codice, True, valido_dal, valido_al, atto, SOGGETTO_PERSONA)
+
+    def registra_richiesta_differimento(
+        self, persona: str, valido_dal: date, valido_al: date | None = None, atto: Atto | None = None
+    ) -> Fatto:
+        """La richiesta scritta della persona di differire l'incapienza del conguaglio (art. 23 c. 3 D.P.R. 600/1973)."""
+        return self.registra_codice_persona(persona, TIPO_RICHIESTA_DIFFERIMENTO, "si", valido_dal, valido_al, atto)
 
     def registra_iban_persona(
         self,

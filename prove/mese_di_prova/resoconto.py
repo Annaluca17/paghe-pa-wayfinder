@@ -235,8 +235,9 @@ def _non_esercitato(esecuzione: Esecuzione) -> list[str]:
     voci.append(
         "L'acconto IRAP e' calcolato all'8,5% sulla base di ogni pagamento e versato col 380E, una riga per regione. Nessun "
         "rapporto del mese ha una sede di lavoro: vale la regione dell'ente, un fatto dell'ente. Il codice regione e' del corpus "
-        "reale, da riscontrare sulla tabella AdE. Comando e convenzione non sono modellati (la convenzione di segreteria "
-        "ferma gia' il calcolo del rapporto)."
+        "reale, da riscontrare sulla tabella AdE. Comando e convenzione: l'IRAP segue l'ente che utilizza il dipendente, sul "
+        "rimborso versato; i rimborsi tra enti non sono modellati (la convenzione di segreteria ferma gia' il calcolo del "
+        "rapporto)."
     )
     return [f"- {v}" for v in voci]
 

@@ -22,7 +22,17 @@ from . import addizionali, benefici, sostitutiva
 from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
-from .modello import MATURAZIONE_SOSTITUTIVA, MATURAZIONI_FISCALI, Derivazione, Fatto, Importo, ParametroLetto, TipoEsito
+from .modello import (
+    MATURAZIONE_NON_TRATTENUTO,
+    MATURAZIONE_RESTO_DA_DIFFERIRE,
+    MATURAZIONE_SOSTITUTIVA,
+    MATURAZIONI_FISCALI,
+    Derivazione,
+    Fatto,
+    Importo,
+    ParametroLetto,
+    TipoEsito,
+)
 from .registro import (
     TIPO_ANNO_IMPOSTA_DIVERSO,
     TIPO_DICHIARAZIONE_SOSTITUITO,
@@ -40,6 +50,10 @@ GIORNO_CASSA_ALLARGATA = 12  # art. 51 c. 1 TUIR: somme corrisposte entro il 12 
 ULTIMO_GIORNO_CONGUAGLIO = (2, 28)  # entro il 28 febbraio (art. 23 c. 3 DPR 600/1973)
 
 AVVISO_SENZA_DICHIARAZIONE = "senza_dichiarazione_sostituito"
+# Valori della dichiarazione del sostituito che forzano una delle due detrazioni dell'art. 13 (ticket #97); il valore
+# `detrazione_richiesta` della regola chiede le detrazioni e lascia la più favorevole.
+SCELTA_ART13_C1 = "scelta_art13_c1"
+SCELTA_ART13_C5 = "scelta_art13_c5"
 AVVISO_PROIEZIONE = "proiezione_conguaglio"
 AVVISO_ACCONTO_SENZA_BASE = "acconto_senza_base"
 AVVISO_TEMPO_DETERMINATO = "tempo_determinato_sotto_soglia"
@@ -313,6 +327,10 @@ class _Calcolo:
     carichi: Decimal = Decimal(0)
     dichiarata: bool = False
     testo_carichi: str = ""
+    art13: str = ""  # la detrazione dell'art. 13 applicata: «c. 1» o «c. 5», vuoto se nessuna
+    motivo_art13: str = ""
+    detrazione_c1: Decimal = Decimal(0)
+    detrazione_c5: Decimal = Decimal(0)
 
 
 def _mese_assoluto(anno: int, mese: int) -> int:
@@ -349,9 +367,49 @@ def _carichi_del_mese(
 
 def _dichiarazione(registro: Registro, persona: str, regola: RegolaRitenuta, giorno: date, istante: datetime) -> Fatto | None:
     fatto = registro.vigente_persona(persona, TIPO_DICHIARAZIONE_SOSTITUITO, giorno, istante)
-    if fatto is not None and fatto.valore == regola.detrazione_richiesta:
+    if fatto is not None and fatto.valore in (regola.detrazione_richiesta, SCELTA_ART13_C1, SCELTA_ART13_C5):
         return fatto
     return None
+
+
+def _detrazione_art13(
+    regola: RegolaRitenuta, categorie: frozenset[str], dichiarazione, c1: Decimal, c5: Decimal
+) -> tuple[Decimal, str, str]:
+    """La detrazione dell'art. 13 applicata, con quale comma e perché (c. 5, ultimo periodo: non cumulabile con il c. 1).
+
+    Solo con la dichiarazione. Il c. 1 spetta alle categorie di `categorie_detrazione` (vuote: sempre), il c. 5 a quelle
+    di `categorie_detrazione_carica_elettiva`. Con entrambe presenti vale la scelta scritta nella dichiarazione, altrimenti
+    la più alta (a parità, il c. 1). Una scelta per una categoria assente non si applica.
+    """
+    if dichiarazione is None:
+        return Decimal(0), "", ""
+    ha_c1 = not regola.categorie_detrazione or bool(categorie & set(regola.categorie_detrazione))
+    ha_c5 = regola.detrazione_carica_elettiva != "0" and bool(categorie & set(regola.categorie_detrazione_carica_elettiva))
+    if ha_c1 and ha_c5:
+        scelta = getattr(dichiarazione, "valore", None)
+        if scelta == SCELTA_ART13_C1:
+            return c1, "c. 1", "scelta della dichiarazione del sostituito"
+        if scelta == SCELTA_ART13_C5:
+            return c5, "c. 5", "scelta della dichiarazione del sostituito"
+        return (c1, "c. 1", "più favorevole") if c1 >= c5 else (c5, "c. 5", "più favorevole")
+    if ha_c5:
+        return c5, "c. 5", "unica detrazione spettante alle categorie di reddito presenti"
+    if ha_c1:
+        return c1, "c. 1", "unica detrazione spettante alle categorie di reddito presenti"
+    return Decimal(0), "", ""
+
+
+def _formula_detrazione(formula_c1: str, regola: RegolaRitenuta, calcolo: "_Calcolo") -> str:
+    """Il testo della detrazione applicata: senza il c. 5 nella regola resta la formula del c. 1, come prima."""
+    if not calcolo.dichiarata:
+        return "non applicata"
+    if regola.detrazione_carica_elettiva == "0":
+        return formula_c1
+    formula = regola.detrazione_carica_elettiva if calcolo.art13 == "c. 5" else formula_c1
+    return (
+        f"{formula} (art. 13 {calcolo.art13 or 'nessun comma'}, applicata perché {calcolo.motivo_art13 or 'nessuna categoria spetta'}; "
+        f"c. 1 = {calcolo.detrazione_c1}, c. 5 = {calcolo.detrazione_c5})"
+    )
 
 
 def _calcola(
@@ -368,7 +426,8 @@ def _calcola(
 ) -> _Calcolo:
     """Imposta, detrazioni e dovuto del periodo, o dell'anno con un solo periodo.
 
-    La detrazione a richiesta c'è solo con la dichiarazione, la detrazione automatica sempre. Nella ritenuta del
+    La detrazione a richiesta c'è solo con la dichiarazione, la detrazione automatica sempre. Le detrazioni dell'art. 13
+    sono due, c. 1 e c. 5 (carica elettiva), non cumulabili: `_detrazione_art13` sceglie. Il c. 5 non usa i giorni. Nella ritenuta del
     mese `giorni` e `giorni_anno` valgono 1: il rapporto è neutro e il periodo è un dodicesimo per pagamento.
     I `carichi` sono i mesi con familiari a carico: la ritenuta ne ha uno, il conguaglio fino a dodici (ADR 0033).
     Ogni familiare dà la formula annua per la sua quota, un dodicesimo per mese; i carichi non seguono i giorni di servizio.
@@ -390,7 +449,9 @@ def _calcola(
         return vigenza.valore
 
     imposta = valuta(regola.imposta, risolvi)
-    detrazione = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
+    c1 = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
+    c5 = valuta(regola.detrazione_carica_elettiva, risolvi) if dichiarazione is not None else Decimal(0)
+    detrazione, art13, motivo_art13 = _detrazione_art13(regola, categorie, dichiarazione, c1, c5)
     spetta = not regola.categorie_detrazione_automatica or bool(categorie & set(regola.categorie_detrazione_automatica))
     automatica = valuta(regola.detrazione_automatica, risolvi) if spetta else Decimal(0)
     somma_carichi = Decimal(0)
@@ -415,6 +476,10 @@ def _calcola(
         detrazione_carichi,
         dichiarazione is not None,
         "; ".join(sorted(formule)),
+        art13,
+        motivo_art13,
+        c1,
+        c5,
     )
 
 
@@ -543,7 +608,7 @@ def _ritenuta(
             riferimento=regola.riferimento,
             formula=(
                 f"imposta del periodo = {regola.imposta}; detrazione rapportata = "
-                f"{regola.detrazione if dichiarazione is not None else 'non applicata'}; "
+                f"{_formula_detrazione(regola.detrazione, regola, calcolo)}; "
                 f"detrazione automatica = {regola.detrazione_automatica}; "
                 f"{_formula_carichi(calcolo)}"
                 "ritenuta = imposta meno detrazione meno detrazione automatica meno carichi di famiglia "
@@ -682,6 +747,20 @@ def _annuale(
     ]
     operate += list(ritenute_nuove)
     sostitutive, scomputata = _sostitutiva_pagata(registro, corpus, persona, anno, riferimento, deduzioni, imposte_nuove, istante)
+    # Ciò che l'incapienza di un conguaglio pagato ha già deciso (non trattenuto, o resto da differire) non è dovuto di nuovo:
+    # è nella derivazione di quel conguaglio, non tra le righe, perché il resto trattenuto dopo è già dentro la decisione (ADR 0034).
+    decisi = sum(
+        (
+            importo.valore
+            for pagata in _pagati(registro, persona, istante)
+            if pagata.riga.derivazione.maturazione == "conguaglio"
+            and pagata.riga.istituto == regola.istituto
+            and pagata.riga.anno_imposta == anno
+            for importo in pagata.riga.derivazione.importi
+            if importo.derivazione.maturazione in (MATURAZIONE_NON_TRATTENUTO, MATURAZIONE_RESTO_DA_DIFFERIRE)
+        ),
+        Decimal(0),
+    )
     dichiarazione = _dichiarazione(registro, persona, regola_ritenuta, data_pagamento, istante)
     giorni, giorni_anno = _giorni_di_servizio(registro, corpus, persona, anno, istante)
     carichi = tuple(
@@ -701,7 +780,7 @@ def _annuale(
         carichi,
     )
     return _Annuale(
-        calcolo, sum((riga.valore for riga in operate), Decimal(0)) + scomputata,
+        calcolo, sum((riga.valore for riga in operate), Decimal(0)) + scomputata + decisi,
         (*reddito, *deduzioni, *operate, *sostitutive), regola, regola_ritenuta,
         tuple(reddito), tuple(deduzioni), giorni, giorni_anno,
     )
@@ -725,7 +804,7 @@ def _importo_conguaglio(
             riferimento=_riferimento_unito(regola.riferimento, annuale.regola_ritenuta.riferimento),
             formula=(
                 f"imposta dell'anno = {annuale.regola_ritenuta.imposta}; detrazione = "
-                f"{annuale.regola_ritenuta.detrazione if annuale.calcolo.dichiarata else 'non applicata'}; "
+                f"{_formula_detrazione(annuale.regola_ritenuta.detrazione, annuale.regola_ritenuta, annuale.calcolo)}; "
                 f"detrazione automatica = {annuale.regola_ritenuta.detrazione_automatica}; "
                 f"{_formula_carichi(annuale.calcolo)}"
                 "conguaglio = imposta meno detrazione meno detrazione automatica meno carichi di famiglia "

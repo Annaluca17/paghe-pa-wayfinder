@@ -23,9 +23,10 @@ from .corpus import Corpus
 from .denuncia import MATURAZIONI_DERIVATE, calcola_denuncia
 from .errori import CasoNonModellato, ClassificazioneMancante, ComposizioneMancante, ErroreCalcolo, ErroreRegistro, RedditoMancante
 from .impegni import AUTOMATICO, Abbinamento, DisponibilitaImpegni, registra_cambio_abbinamento
-from .fisco import Avviso, _controlla_competenza, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
+from .fisco import Avviso, _controlla_competenza, _pagati, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
+from .incapienza import dividi_conguaglio, fine_del_differimento, resti_aperti, trattieni_resto
 from .modello import Esito, Evento, Importo, TipoEsito
-from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, Registro
+from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, TIPO_RICHIESTA_DIFFERIMENTO, Registro
 from .tempo import Mese, in_utc
 
 # Nature della composizione che diventano spesa del Titolo 1 e quindi righe di proposta (ADR 0031).
@@ -511,6 +512,57 @@ def _proposta(
     return _righe_di_proposta(voci, decisioni), mancanti, fermi
 
 
+def _con_incapienza(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    persona: str | None,
+    righe: tuple[RigaComposizione, ...],
+    valuta: date,
+    ultimo: bool,
+    finale: bool,
+    istante: datetime,
+) -> tuple[RigaComposizione, ...]:
+    """Il resto differito dei pagamenti precedenti e l'incapienza del conguaglio di questo (ADR 0034, ticket #99).
+
+    La capienza è il netto senza il conguaglio. Prima si trattengono interesse e resto di un differimento aperto, poi il
+    conguaglio si ferma a netto zero. Se il netto senza il conguaglio è già negativo non si tocca nulla: resta il fermo.
+    """
+    if persona is None:
+        return righe
+    conguaglio = next((riga for riga in righe if riga.importo.derivazione.maturazione == "conguaglio"), None)
+    pagate = [(pagata.riga, pagata.data or pagata.valuta) for pagata in _pagati(registro, persona, istante)]
+    resti = resti_aperti(pagate)
+    if conguaglio is None and not resti:
+        return righe
+    if len(resti) > 1:
+        raise CasoNonModellato(
+            f"Rapporto {rapporto}: caso non modellato, più resti differiti aperti della stessa persona ({len(resti)})"
+        )
+    altre = [riga for riga in righe if riga is not conguaglio]
+    capienza = sum((riga.sul_netto for riga in altre), Decimal(0))
+    if capienza < 0:
+        return righe
+    nuove: list[Importo] = []
+    aperto_dopo = False
+    if resti:
+        resto = resti[0]
+        fine = fine_del_differimento(resto, valuta, ultimo, finale)
+        nuove, capienza = trattieni_resto(corpus, resto, rapporto, capienza, valuta, fine, istante)
+        trattenuto = sum((i.valore for i in nuove if i.istituto == resto.decisione.istituto), Decimal(0))
+        aperto_dopo = not fine and resto.aperto > trattenuto
+    risultato = list(righe)
+    if conguaglio is not None and 0 < conguaglio.importo.valore and capienza < conguaglio.importo.valore:
+        richiesta = registro.vigente_persona(persona, TIPO_RICHIESTA_DIFFERIMENTO, valuta, istante)
+        if richiesta is not None and not finale and aperto_dopo:
+            raise CasoNonModellato(
+                f"Rapporto {rapporto}: caso non modellato, un nuovo resto differito mentre un altro è ancora aperto"
+            )
+        diviso = dividi_conguaglio(conguaglio.importo, capienza, richiesta, finale, valuta, istante)
+        risultato[risultato.index(conguaglio)] = replace(conguaglio, importo=diviso)
+    return (*risultato, *_righe_di_composizione(corpus, nuove, valuta))
+
+
 def _rapporto(
     registro: Registro, corpus: Corpus, rapporto: str, importi: list[Importo], valuta: date, istante: datetime
 ) -> _PerRapporto:
@@ -535,6 +587,7 @@ def _rapporto(
     fiscali = [replace(i, esiti_confrontati=_esiti_con_la_stessa_chiave(registro, i, istante)) for i in fiscali]
 
     righe = _righe_di_composizione(corpus, [*attribuiti, *fiscali, *fiscale.addizionali, *fiscale.benefici, *fiscale.sostitutiva, *contributi], valuta)
+    righe = _con_incapienza(registro, corpus, rapporto, persona, righe, valuta, ultimo, finale, istante)
     netto = sum((riga.sul_netto for riga in righe), Decimal(0))
     if netto < 0:
         raise CasoNonModellato(f"Rapporto {rapporto}: caso non modellato, netto negativo di {netto} nel pagamento del {valuta}")

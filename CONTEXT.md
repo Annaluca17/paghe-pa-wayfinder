@@ -227,7 +227,7 @@ Elemento retributivo o trattenuta definito da norma o contratto, con riferimento
 _Avoid_: Voce, codice voce
 
 **Mappatura esterna**:
-Corrispondenza datata, nel corpus e con riferimento, tra un istituto e un codice di un sistema esterno (codice tributo, causale, SICO, punto CU). Più istituti possono avere lo stesso codice; se un istituto dovrebbe avere due codici, sono due istituti. Se manca, si ferma l'invio dell'output, non il calcolo.
+Corrispondenza datata, nel corpus e con riferimento, tra un istituto e un codice di un sistema esterno (codice tributo, causale, SICO, punto CU). Più istituti possono avere lo stesso codice; se un istituto dovrebbe avere due codici, sono due istituti. Se manca, si ferma l'invio dell'output, non il calcolo. Eccezione: la causale F24EP della gestione separata (C10 o CXX) si sceglie per la posizione previdenziale del rapporto, con una mappatura di fatto (ticket #104); il riferimento A di quelle causali è mese e anno di pagamento (`MMAAAA`), non la competenza.
 _Avoid_: Tabella codici, codice dell'istituto
 
 **Fatto**:
@@ -461,6 +461,10 @@ _Avoid_: Carico, dichiarazione dei carichi
 Detrazione che si applica solo se la persona la chiede con la dichiarazione del sostituito, come quella per lavoro dipendente.
 _Avoid_: Detrazione d'ufficio
 
+**Detrazione per la carica elettiva**:
+Detrazione a richiesta dell'art. 13 c. 5 per chi ha un reddito di carica elettiva. Non si somma a quella per lavoro dipendente: il modello applica la più alta, in ogni ritenuta e al conguaglio, salvo una scelta scritta nella dichiarazione del sostituito. Al conguaglio è intera, non rapportata ai giorni di servizio.
+_Avoid_: Detrazione amministratori, detrazione per altri redditi
+
 **Detrazione automatica**:
 Detrazione che il sostituto riconosce senza richiesta della persona, come l'ulteriore detrazione per i redditi tra 20.000 e 40.000 euro.
 _Avoid_: Bonus, cuneo (che comprende anche la somma esente, che non è una detrazione)
@@ -495,6 +499,16 @@ _Avoid_: Conguaglio (senza dire quale: c'è anche quello contributivo), ricalcol
 
 **Richiesta di differimento**:
 Fatto della persona che chiede di trattenere nei mesi successivi, con interesse, l'imposta del conguaglio che non trova capienza. Senza richiesta la trattenuta si ferma a capienza e il resto va in CU come non trattenuto.
+
+**Incapienza del conguaglio**:
+Parte del conguaglio IRPEF a debito che il netto del pagamento, dopo tutte le altre righe, non copre. Con la richiesta di differimento diventa resto differito; senza, non trattenuto.
+_Avoid_: Capienza (che è quella del fondo), netto negativo
+
+**Resto differito**:
+Incapienza che passa, calcolata, ai pagamenti successivi con l'interesse dello 0,50% mensile, fino all'ultimo pagamento di dicembre dell'anno di trattenuta o alla cessazione. Non è un fatto: ogni pagamento lo ricava dal precedente. Quello che resta alla fine diventa non trattenuto.
+
+**Non trattenuto**:
+Imposta del conguaglio che il sostituto non ha potuto trattenere, per incapienza o cessazione: la CU la riporta e la persona la versa entro il 15 gennaio.
 _Avoid_: Rateizzazione (che è anche quella del 730-4 o dei recuperi oltre i 60 euro)
 
 **Domicilio fiscale**:
