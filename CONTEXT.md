@@ -282,6 +282,14 @@ _Avoid_: Tipo arretrato, flag tassazione separata
 Trattamento fiscale di un importo: ordinario, separato o sostitutivo. Il separato lo ricava una regola datata dalla causa del pagamento tardivo; il sostitutivo vale per gli istituti che dichiarano di rientrare in un'agevolazione, come la sostitutiva sull'accessorio. Si congela nell'esito pagato. Non è una categoria di reddito.
 _Avoid_: Tassazione dell'istituto, categoria (quando si intende il trattamento)
 
+**Sostitutiva sull'accessorio**:
+Imposta del 15% che nel 2026 sostituisce IRPEF e addizionali sugli importi degli istituti accessori del personale non dirigenziale, fino a 800 euro per persona nell'anno e con reddito di lavoro dipendente fino a 50.000 euro (L. 199/2025 c. 237, ADR 0035). Si calcola nella ritenuta del pagamento e si ricalcola al conguaglio. L'importo così tassato esce dall'imponibile fiscale ordinario. Non si applica dopo la rinuncia della persona.
+_Avoid_: Detassazione, flat tax sull'accessorio
+
+**Rinuncia alla sostitutiva**:
+Fatto della persona, con validità e documento di origine, con cui rinuncia per iscritto alla sostitutiva sull'accessorio. Vale per i pagamenti successivi alla sua data.
+_Avoid_: Opzione per l'ordinaria
+
 **Valuta prevista**:
 Data di pagamento ipotizzata dalla versione di proposta, usata solo per calcolare ritenute, contributi e netti della composizione del pagamento. Se la valuta effettiva cade in un altro mese, la differenza si regola sul pagamento successivo; se cambia l'anno d'imposta, il calcolo fiscale della persona si ferma.
 _Avoid_: Data di pagamento (finché il pagamento non è eseguito)

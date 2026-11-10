@@ -586,7 +586,7 @@ def _rapporto(
     fiscali = [fiscale.ritenuta] + ([fiscale.conguaglio] if fiscale.conguaglio is not None else [])
     fiscali = [replace(i, esiti_confrontati=_esiti_con_la_stessa_chiave(registro, i, istante)) for i in fiscali]
 
-    righe = _righe_di_composizione(corpus, [*attribuiti, *fiscali, *fiscale.addizionali, *fiscale.benefici, *contributi], valuta)
+    righe = _righe_di_composizione(corpus, [*attribuiti, *fiscali, *fiscale.addizionali, *fiscale.benefici, *fiscale.sostitutiva, *contributi], valuta)
     righe = _con_incapienza(registro, corpus, rapporto, persona, righe, valuta, ultimo, finale, istante)
     netto = sum((riga.sul_netto for riga in righe), Decimal(0))
     if netto < 0:

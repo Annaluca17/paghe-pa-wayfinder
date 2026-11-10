@@ -100,6 +100,9 @@ TIPO_REDDITO_ANNO_PRECEDENTE = "reddito_anno_precedente"
 # Fatto della persona (ticket #95): la detrazione annua per oneri che la persona comunica nella dichiarazione del
 # sostituito, in euro; la legge il trattamento integrativo tra 15.000 e 28.000 euro di reddito. Senza il fatto vale zero.
 TIPO_ONERI_DETRAIBILI = "oneri_detraibili"
+# Rinuncia alla sostitutiva sull'accessorio (ticket #96, ADR 0035): fatto della persona con validità e documento di origine;
+# dalla sua data l'accessorio va a tassazione ordinaria. Forma e revoca (chiusura della validità) da verificare.
+TIPO_RINUNCIA_SOSTITUTIVA = "rinuncia_sostitutiva"
 # Richiesta di differimento (ticket #99, ADR 0034): fatto datato della persona che chiede per iscritto di trattenere nei
 # mesi successivi, con l'interesse, l'imposta del conguaglio che non trova capienza. Il valore e' un codice: «si».
 TIPO_RICHIESTA_DIFFERIMENTO = "richiesta_differimento"
@@ -362,6 +365,14 @@ class Registro:
         if atto is None:
             raise ErroreRegistro("La dichiarazione del sostituito vuole il documento di origine")
         return self.registra_codice_persona(persona, TIPO_DICHIARAZIONE_SOSTITUITO, detrazioni, valido_dal, valido_al, atto)
+
+    def registra_rinuncia_sostitutiva(
+        self, persona: str, valido_dal: date, valido_al: date | None, atto: Atto | None
+    ) -> Fatto:
+        """Rinuncia alla sostitutiva sull'accessorio (ADR 0035): fatto della persona con validità e documento di origine."""
+        if atto is None:
+            raise ErroreRegistro("La rinuncia alla sostitutiva vuole il documento di origine")
+        return self.registra_codice_persona(persona, TIPO_RINUNCIA_SOSTITUTIVA, "rinuncia", valido_dal, valido_al, atto)
 
     def registra_familiare_a_carico(
         self,

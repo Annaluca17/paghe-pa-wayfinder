@@ -40,8 +40,11 @@ PIANO_DEI_CONTI = re.compile(r"[UE]\.\d\.\d{2}\.\d{2}\.\d{2}\.\d{3}")
 # Dichiarazione di composizione (ADR 0025): valori ammessi.
 NATURE = frozenset({
     "retribuzione", "ritenuta", "addizionale", "contributo_lavoratore", "contributo_ente",
-    "rata_730", "rimborso_730", "credito_sostituto", "trattenuta_terzi", "irap",
+    "rata_730", "rimborso_730", "credito_sostituto", "trattenuta_terzi", "irap", "imponibile_sostitutivo",
 })
+# Quota di reddito tassata con un'imposta sostitutiva (ADR 0035): resta nell'esito pagato, perché il conguaglio la legge,
+# ma non muove denaro: nessun effetto sul netto, nessun destinatario, nessun canale.
+NATURA_IMPONIBILE_SOSTITUTIVO = "imponibile_sostitutivo"
 EFFETTI = frozenset({"piu", "meno", "nessuno"})
 DESTINATARI = frozenset({"beneficiario", "terzo"})
 CANALI = frozenset({"accredito", "f24ep", "bonifico"})
@@ -744,6 +747,65 @@ class RegolaBenefici:
 
 
 @dataclass(frozen=True)
+class DichiarazioneAccessorio:
+    """L'istituto dichiara di essere trattamento accessorio, con date e fonte (ticket #96, ADR 0035)."""
+
+    istituto: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, f"Accessorio {self.istituto}")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"Accessorio {self.istituto}: vigenza invertita")
+
+
+PARAMETRI_SOSTITUTIVA = ("aliquota", "tetto", "limite")
+ISTITUTI_SOSTITUTIVA = ("istituto", "istituto_base")
+
+
+@dataclass(frozen=True)
+class RegolaSostitutiva:
+    """Sostitutiva sull'accessorio (ticket #96, ADR 0035): aliquota, tetto per persona e limite di reddito sono parametri datati.
+
+    `istituto` è l'imposta trattenuta (versata con 179E); `istituto_base` è la quota di accessorio a sostitutiva, che
+    esce dall'imponibile fiscale ordinario (va dichiarato riduttivo con `[[deduzione_fiscale]]`).
+    """
+
+    versione: int
+    dal: date
+    riferimento: str
+    aliquota: str
+    tetto: str
+    limite: str
+    istituto: str
+    istituto_base: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = "Sostitutiva sull'accessorio"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if type(self.versione) is not int or self.versione < 1:
+            raise ErroreCorpus(f"{soggetto}: versione non valida")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        for campo in (*PARAMETRI_SOSTITUTIVA, *ISTITUTI_SOSTITUTIVA):
+            if not isinstance(getattr(self, campo), str) or not getattr(self, campo).strip():
+                raise ErroreCorpus(f"{soggetto}: {campo} obbligatorio")
+        if self.istituto == self.istituto_base:
+            raise ErroreCorpus(f"{soggetto}: l'imposta e la quota a sostitutiva sono istituti diversi")
+
+    @property
+    def istituti(self) -> tuple[str, ...]:
+        return tuple(getattr(self, ruolo) for ruolo in ISTITUTI_SOSTITUTIVA)
+
+    @property
+    def parametri(self) -> tuple[str, ...]:
+        return tuple(getattr(self, nome) for nome in PARAMETRI_SOSTITUTIVA)
+
+
+@dataclass(frozen=True)
 class RegoleFiscali:
     categorie: tuple[CategoriaReddito, ...] = ()
     redditi: tuple[DichiarazioneReddito, ...] = ()
@@ -754,6 +816,8 @@ class RegoleFiscali:
     aliquote: tuple[AliquotaAddizionale, ...] = ()
     addizionali: tuple[RegolaAddizionali, ...] = ()
     benefici: tuple[RegolaBenefici, ...] = ()
+    accessori: tuple[DichiarazioneAccessorio, ...] = ()
+    sostitutive: tuple[RegolaSostitutiva, ...] = ()
 
     def __bool__(self) -> bool:
         return bool(
@@ -766,6 +830,8 @@ class RegoleFiscali:
             or self.aliquote
             or self.addizionali
             or self.benefici
+            or self.accessori
+            or self.sostitutive
         )
 
 
@@ -803,6 +869,10 @@ class DichiarazioneComposizione:
         if self.intermedio:
             if any(valore is not None for valore, _ in campi.values()):
                 raise ErroreCorpus(f"{soggetto}: un istituto intermedio non dichiara natura, effetto, destinatario o canale")
+            return
+        if self.natura == NATURA_IMPONIBILE_SOSTITUTIVO:
+            if self.effetto != "nessuno" or self.destinatario is not None or self.canale is not None:
+                raise ErroreCorpus(f"{soggetto}: un imponibile sostitutivo ha effetto nessuno, senza destinatario né canale")
             return
         for nome, (valore, ammessi) in campi.items():
             if valore not in ammessi:
@@ -1183,6 +1253,8 @@ class Corpus:
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [("Addizionali", a.riferimento) for a in fiscale.addizionali]
         elenco += [("Benefici della persona", b.riferimento) for b in fiscale.benefici]
+        elenco += [(f"Accessorio {a.istituto}", a.riferimento) for a in fiscale.accessori]
+        elenco += [("Sostitutiva sull'accessorio", r.riferimento) for r in fiscale.sostitutive]
         elenco += [(f"Aliquota addizionale {a.ente} {a.codice} {a.anno}", a.riferimento) for a in fiscale.aliquote]
         elenco += [(f"Composizione {c.istituto}", c.riferimento) for c in self._composizioni]
         elenco += [(f"Classificazione {c.istituto}", c.riferimento) for c in self._classificazioni]
@@ -1228,7 +1300,8 @@ class Corpus:
         noti = set(self._regole) | {r.istituto for r in fiscale.ritenute} | {c.istituto for c in fiscale.conguagli}
         noti |= {i for c in fiscale.conguagli for i in (c.istituto_resto, c.istituto_interesse)}
         noti |= {i for regola in fiscale.addizionali for i in regola.istituti}
-        return noti | {i for regola in fiscale.benefici for i in regola.istituti}
+        noti |= {i for regola in fiscale.benefici for i in regola.istituti}
+        return noti | {i for regola in fiscale.sostitutive for i in regola.istituti}
 
     def _convalida_composizione(self) -> None:
         noti = self._istituti_noti()
@@ -1338,6 +1411,23 @@ class Corpus:
             if gia:
                 raise ErroreCorpus(f"{soggetto} {gia[0]}: lo stesso istituto ha anche una regola")
             for altra in fiscale.benefici[indice + 1 :]:
+                _vigenze_sovrapposte([regola, altra], soggetto)
+        for indice, dichiarazione in enumerate(fiscale.accessori):
+            soggetto = f"Accessorio {dichiarazione.istituto}"
+            if dichiarazione.istituto not in self._regole:
+                raise ErroreCorpus(f"{soggetto}: istituto ignoto")
+            for altra in fiscale.accessori[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], soggetto)
+        for indice, regola in enumerate(fiscale.sostitutive):
+            soggetto = "Sostitutiva sull'accessorio"
+            ignoti = set(regola.parametri) - self._parametri.keys()
+            if ignoti:
+                raise ErroreCorpus(f"{soggetto}: parametri ignoti {sorted(ignoti)}")
+            gia = [i for i in regola.istituti if i in self._regole]
+            if gia:
+                raise ErroreCorpus(f"{soggetto} {gia[0]}: lo stesso istituto ha anche una regola")
+            for altra in fiscale.sostitutive[indice + 1 :]:
                 _vigenze_sovrapposte([regola, altra], soggetto)
         for indice, dichiarazione in enumerate(fiscale.fisiologici):
             soggetto = f"Pagamento fisiologico {dichiarazione.istituto}"
@@ -1577,6 +1667,16 @@ class Corpus:
                      sorted(b.categorie_trattamento_integrativo), *b.istituti, *(getattr(b, n) for n in PARAMETRI_BENEFICI)]
                     for b in fiscale.benefici
                 )
+            if fiscale.accessori:
+                contenuto["fiscale"]["accessori"] = sorted(
+                    [a.istituto, a.dal.isoformat(), a.al.isoformat() if a.al else "", a.riferimento]
+                    for a in fiscale.accessori
+                )
+            if fiscale.sostitutive:
+                contenuto["fiscale"]["sostitutive"] = sorted(
+                    [r.versione, r.dal.isoformat(), r.al.isoformat() if r.al else "", r.riferimento, *r.parametri, *r.istituti]
+                    for r in fiscale.sostitutive
+                )
             if fiscale.aliquote:
                 contenuto["fiscale"]["aliquote"] = sorted(
                     [a.ente, a.codice, a.anno, str(a.soglia), a.riferimento,
@@ -1686,6 +1786,18 @@ class Corpus:
     def deduzione_fiscale(self, istituto: str, giorno: date) -> DichiarazioneDeduzione | None:
         """Dichiarazione vigente alla data di pagamento; None se l'importo dell'istituto non riduce l'imponibile fiscale."""
         return _vigente([d for d in self.fiscale.deduzioni if d.istituto == istituto], giorno)
+
+    def accessorio(self, istituto: str, giorno: date) -> DichiarazioneAccessorio | None:
+        """Dichiarazione vigente alla data; None se l'istituto non è trattamento accessorio."""
+        return _vigente([a for a in self.fiscale.accessori if a.istituto == istituto], giorno)
+
+    def regola_sostitutiva(self, giorno: date) -> RegolaSostitutiva | None:
+        """Regola della sostitutiva sull'accessorio vigente alla data; None se il corpus non la calcola."""
+        return _vigente(self.fiscale.sostitutive, giorno)
+
+    def e_quota_sostitutiva(self, istituto: str) -> bool:
+        """L'istituto è la quota di accessorio a sostitutiva di una regola, a qualunque data: esce dall'imponibile ordinario."""
+        return any(regola.istituto_base == istituto for regola in self.fiscale.sostitutive)
 
     def aliquota_addizionale(self, ente: str, codice: str, anno: int) -> AliquotaAddizionale | None:
         """Aliquote dell'addizionale del comune o della regione per l'anno; None se il corpus non le dichiara."""
@@ -2170,7 +2282,28 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
         )
         for voce in dati.get("beneficio", [])
     )
-    return RegoleFiscali(categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote, addizionali, benefici)
+    accessori = tuple(
+        DichiarazioneAccessorio(
+            voce["istituto"],
+            _data(voce["dal"], "dal"),
+            voce["riferimento"],
+            _data(voce["al"], "al") if "al" in voce else None,
+        )
+        for voce in dati.get("accessorio", [])
+    )
+    sostitutive = tuple(
+        RegolaSostitutiva(
+            versione=voce["versione"],
+            dal=_data(voce["dal"], "dal"),
+            riferimento=voce["riferimento"],
+            al=_data(voce["al"], "al") if "al" in voce else None,
+            **{campo: voce[campo] for campo in (*PARAMETRI_SOSTITUTIVA, *ISTITUTI_SOSTITUTIVA)},
+        )
+        for voce in dati.get("sostitutiva", [])
+    )
+    return RegoleFiscali(
+        categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote, addizionali, benefici, accessori, sostitutive
+    )
 
 
 def _concorsi_da_toml(voce: dict) -> list[Concorso]:
