@@ -21,10 +21,10 @@ from enum import StrEnum
 from .blocco_pagamenti import ISTITUTO_SOMMA_SOSPESA, ha_ordine_di_versamento, voci_del_blocco
 from .calcolo import _somma_righe
 from .corpus import Corpus
-from .denuncia import MATURAZIONI_DERIVATE, calcola_denuncia
+from .denuncia import calcola_denuncia
 from .errori import CasoNonModellato, ClassificazioneMancante, ComposizioneMancante, ErroreCalcolo, ErroreRegistro, RedditoMancante
 from .impegni import AUTOMATICO, Abbinamento, DisponibilitaImpegni, registra_cambio_abbinamento
-from .fisco import Avviso, _controlla_competenza, _pagati, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
+from .fisco import Avviso, _controlla_competenza, _e_reddito, _pagati, anno_imposta, attribuisci_reddito, calcola_fiscale, pagamento_finale
 from .incapienza import dividi_conguaglio, fine_del_differimento, resti_aperti, trattieni_resto
 from .modello import TIPO_VERSAMENTO_ESEGUITO, Esito, Evento, Importo, TipoEsito
 from .registro import TIPO_ANNO_IMPOSTA_DIVERSO, TIPO_IBAN, TIPO_RICHIESTA_DIFFERIMENTO, Registro
@@ -291,10 +291,6 @@ class _PerRapporto:
     avvisi: tuple[Avviso, ...]
     anno: int
     ultimo_dell_anno: bool
-
-
-def _e_reddito(importo: Importo) -> bool:
-    return importo.derivazione.maturazione not in MATURAZIONI_DERIVATE
 
 
 def _chiavi_pagate(registro: Registro, istante: datetime) -> set[tuple]:

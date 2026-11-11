@@ -54,6 +54,6 @@ Scelto da Luca il 06/11/2026 nel grilling del ticket #19, domande 1, 8, 9, 12, 1
 
 **Precisazioni ad altri ADR**
 
-- ADR 0010: la riduzione TFR resta senza effetti fiscali, ma il fiscale non è più fuori dal modello.
+- ADR 0010: la riduzione TFR resta senza effetti fiscali, ma il fiscale non è più fuori dal modello. *Corretto dall'ADR 0037: la riduzione è reddito negativo di lavoro dipendente.*
 - ADR 0012: un tipo di fatto entra con un lettore anche per un rapporto senza importi.
 - ADR 0013: l'origine dell'impegno è dichiarata dall'istituto.

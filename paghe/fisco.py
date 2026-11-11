@@ -19,7 +19,7 @@ from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from . import addizionali, benefici, sostitutiva
-from .corpus import Corpus, RegolaConguaglio, RegolaRitenuta
+from .corpus import MATURAZIONI_DI_CASSA, Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
 from .modello import (
@@ -186,15 +186,17 @@ def _controlla_competenza(corpus: Corpus, importo: Importo, anno: int, data_paga
 def attribuisci_reddito(corpus: Corpus, importi, valuta_prevista: date) -> tuple[Importo, ...]:
     """Categoria di reddito e anno d'imposta di ogni importo da pagare, da congelare nell'esito (ADR 0015).
 
-    Gli importi che derivano dal pagato (contributi, ritenute) restano come sono. L'anno si calcola
-    sulla valuta prevista; la dichiarazione dell'istituto si sceglie in base a quell'anno.
+    Gli importi che derivano dal pagato (contributi, ritenute) restano come sono, salvo quello sul periodo che l'istituto
+    dichiara reddito: la riduzione del lordo TFR, retribuzione in meno e quindi reddito negativo (ADR 0037). L'anno si
+    calcola sulla valuta prevista; la dichiarazione dell'istituto si sceglie in base a quell'anno.
     """
     risultato = []
     for importo in importi:
-        if importo.derivazione.maturazione in MATURAZIONI_DERIVATE:
+        dichiarazione = corpus.reddito(importo.istituto, valuta_prevista)
+        maturazione = importo.derivazione.maturazione
+        if maturazione in MATURAZIONI_DERIVATE and (dichiarazione is None or maturazione not in MATURAZIONI_DI_CASSA):
             risultato.append(importo)
             continue
-        dichiarazione = corpus.reddito(importo.istituto, valuta_prevista)
         if dichiarazione is None:
             raise RedditoMancante(
                 f"Rapporto {importo.rapporto}, istituto {importo.istituto}: nessuna categoria di reddito "
@@ -259,7 +261,10 @@ def _anno_della_deduzione(pagata: _Pagata) -> int:
 
 
 def _e_reddito(riga: Importo) -> bool:
-    return riga.derivazione.maturazione not in MATURAZIONI_DERIVATE
+    """Reddito e' ogni importo retributivo e, tra quelli derivati dal pagato, quello sul periodo che l'istituto dichiara
+    reddito: porta la categoria congelata da `attribuisci_reddito` (ADR 0037)."""
+    maturazione = riga.derivazione.maturazione
+    return maturazione not in MATURAZIONI_DERIVATE or (maturazione in MATURAZIONI_DI_CASSA and riga.categoria_reddito is not None)
 
 
 def _controlla_anno(riga: Importo) -> None:

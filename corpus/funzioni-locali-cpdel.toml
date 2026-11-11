@@ -16,7 +16,8 @@
 #   prassi-interpretazione  tabellare mensile, divisore del mese parziale, arrotondamento delle
 #                         quote CPDEL e TFS, 1% sull'ultimo periodo, imponibile TFS all'80%
 #                         arrotondato prima dell'aliquota, riduzione del lordo TFR e sua
-#                         esclusione dalle basi: note di prassi 1, 2, 3, 4 e 5
+#                         esclusione dalle basi: note di prassi 1, 2, 3, 4 e 5; riduzione del
+#                         lordo TFR come reddito negativo: nota di prassi 11 (ADR 0037)
 
 [periodo_dichiarato]
 servizio = "tipo_impiego"
@@ -3678,6 +3679,24 @@ istituto = "tabellare_operatori"
 categoria = "lavoro_dipendente"
 dal = 2027-01-01
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+# Riduzione del lordo TFR (ADR 0037, nota di prassi 11): e' retribuzione in meno, quindi reddito di lavoro dipendente
+# negativo. Il DPCM 20/12/1999 art. 1 c. 2 vuole invariata la retribuzione imponibile ai fini fiscali dopo la soppressione
+# del contributo del 2,50%, che era deducibile; il c. 3 vuole invariata la retribuzione netta. Testo dei commi: norma
+# certa. Che la riduzione scenda dall'imponibile: prassi-interpretazione, manca una circolare che lo scriva.
+
+[[reddito]]
+istituto = "riduzione_tfr"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com2 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49 + prassi:immedia:nota:2026-11-11;11"
+
+[[reddito]]
+istituto = "riduzione_tfr"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com2 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51 + prassi:immedia:nota:2026-11-11;11"
 
 [[reddito]]
 istituto = "comparto_funzionari"
