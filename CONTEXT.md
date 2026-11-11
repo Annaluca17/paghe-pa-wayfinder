@@ -364,7 +364,7 @@ Codice INPS del rapporto: 1 TFR, 2 optante, 3 TFS. Sceglie la contribuzione di f
 _Avoid_: Tipo liquidazione
 
 **Riduzione TFR**:
-Riduzione del lordo di chi è in regime TFR, pari al 2,50% soppresso sull'80% delle voci utili al TFS. Non entra in nessuna base: le basi restano sul lordo intero, che è l'incremento figurativo del DPCM.
+Riduzione del lordo di chi è in regime TFR, pari al 2,50% soppresso sull'80% delle voci utili al TFS. Non entra in nessuna base: le basi restano sul lordo intero, che è l'incremento figurativo del DPCM. Riduce invece l'imponibile fiscale, come reddito negativo di lavoro dipendente.
 _Avoid_: Trattenuta 2,50% (il contributo è soppresso, non trattenuto)
 
 **Ulteriori elementi TFR**:

@@ -16,7 +16,7 @@ import pytest
 from paghe import Corpus, Mese, TipoEsito, attribuisci_reddito, calcola_fiscale, emetti_esito, imponibile_fiscale
 from paghe.errori import ErroreCorpus
 
-from test_fiscale import TESTO, assumi, stipendio
+from test_fiscale import TESTO, assumi, paga, stipendio
 
 CONTRIBUTO = """
 [[regola]]
@@ -89,7 +89,8 @@ def test_il_corpus_reale_rifiuta_il_riferimento_fittizio_della_deduzione():
 def contributo(riga, valore):
     """Un contributo del lavoratore sul pagamento, derivato dal pagato come quelli della denuncia."""
     derivazione = replace(riga.derivazione, istituto="contributo_lavoratore", maturazione="periodo")
-    return replace(riga, istituto="contributo_lavoratore", valore=Decimal(valore), derivazione=derivazione)
+    # Un contributo non ha categoria di reddito, anche se la riga da cui lo si ricava e' gia' attribuita (ADR 0037).
+    return replace(riga, istituto="contributo_lavoratore", valore=Decimal(valore), derivazione=derivazione, categoria_reddito=None)
 
 
 @pytest.fixture
@@ -208,16 +209,60 @@ def test_la_proiezione_del_conguaglio_e_sull_imponibile_al_netto_dei_contributi(
     assert proiezione.valore == Decimal("-54.67")
 
 
-# Riduzione del lordo TFR: senza effetti sull'imponibile fiscale (DPCM 20/12/1999 art. 1 c. 2; ADR 0010, 0015)
+# Riduzione del lordo TFR: e' retribuzione in meno, quindi reddito negativo (DPCM 20/12/1999 art. 1 c. 2-3; ADR 0037)
 
-def test_una_riduzione_tfr_nel_pagamento_non_cambia_la_ritenuta_e_non_porta_avvisi(registro, con_deduzione, orologio):
+RIDUZIONE = """
+[[regola]]
+istituto = "riduzione_tfr"
+versione = 1
+dal = 2020-01-01
+riferimento = "fittizio:riduzione-tfr"
+formula = "-arrotonda(importo.stipendio * parametro.aliquota_1, 2)"
+maturazione = "periodo"
+applica_se = "regime_tfr"
+"""
+
+REDDITO_RIDUZIONE = """
+[[reddito]]
+istituto = "riduzione_tfr"
+categoria = "lavoro_dipendente"
+dal = 2020-01-01
+riferimento = "fittizio:reddito-riduzione-tfr"
+"""
+
+
+def riduzione_tfr(riga, valore="-30"):
+    derivazione = replace(riga.derivazione, istituto="riduzione_tfr", maturazione="periodo")
+    return replace(riga, istituto="riduzione_tfr", valore=Decimal(valore), derivazione=derivazione)
+
+
+def test_la_riduzione_tfr_dichiarata_reddito_riduce_l_imponibile_della_ritenuta(registro, orologio):
+    """1500 di stipendio e 30 di riduzione: imponibile 1470, ritenuta 83,33 + 0,20 * (1470 - 833,33) = 210,67."""
+    corpus = Corpus.da_toml(TESTO + RIDUZIONE + REDDITO_RIDUZIONE)
     assumi(registro)
     giorno = date(2026, 6, 27)
-    (riga,) = stipendio(registro, con_deduzione, Mese(2026, 6))
-    attribuite = attribuisci_reddito(con_deduzione, [riga], giorno)
-    derivazione = replace(riga.derivazione, istituto="riduzione_tfr", maturazione="periodo")
-    riduzione = replace(riga, istituto="riduzione_tfr", valore=Decimal("-30"), derivazione=derivazione)
-    con = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", [*attribuite, riduzione], giorno)
-    senza = calcola_fiscale(registro, con_deduzione, "RAPPORTO-1", attribuite, giorno)
-    assert con.ritenuta.valore == senza.ritenuta.valore == Decimal("216.67")
-    assert [avviso.tipo for avviso in con.avvisi] == [avviso.tipo for avviso in senza.avvisi]
+    (riga,) = stipendio(registro, corpus, Mese(2026, 6))
+    attribuite = attribuisci_reddito(corpus, [riga, riduzione_tfr(riga)], giorno)
+    riduzione = next(r for r in attribuite if r.istituto == "riduzione_tfr")
+    assert (riduzione.categoria_reddito, riduzione.anno_imposta) == (riga.categoria_reddito or "lavoro_dipendente", 2026)
+    fiscale = calcola_fiscale(registro, corpus, "RAPPORTO-1", attribuite, giorno)
+    assert fiscale.ritenuta.valore == Decimal("210.67")
+
+
+def test_la_riduzione_tfr_pagata_riduce_l_imponibile_fiscale_dell_anno(registro, orologio):
+    corpus = Corpus.da_toml(TESTO + RIDUZIONE + REDDITO_RIDUZIONE)
+    assumi(registro)
+    (riga,) = stipendio(registro, corpus, Mese(2026, 6))
+    paga(registro, orologio, corpus, [riga, riduzione_tfr(riga)], date(2026, 6, 27))
+    assert imponibile_fiscale(registro, "PERSONA-1", 2026, corpus=corpus).valore == Decimal("1470")
+
+
+def test_un_importo_derivato_senza_dichiarazione_di_reddito_resta_fuori_dall_imponibile(registro, orologio):
+    """Senza la dichiarazione nel corpus un importo sul periodo non e' reddito: la ritenuta resta 216,67."""
+    corpus = Corpus.da_toml(TESTO + RIDUZIONE)
+    assumi(registro)
+    giorno = date(2026, 6, 27)
+    (riga,) = stipendio(registro, corpus, Mese(2026, 6))
+    attribuite = attribuisci_reddito(corpus, [riga, riduzione_tfr(riga)], giorno)
+    assert next(r for r in attribuite if r.istituto == "riduzione_tfr").categoria_reddito is None
+    assert calcola_fiscale(registro, corpus, "RAPPORTO-1", attribuite, giorno).ritenuta.valore == Decimal("216.67")

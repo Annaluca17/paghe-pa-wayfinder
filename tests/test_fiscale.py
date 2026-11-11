@@ -721,7 +721,7 @@ def test_la_versione_del_corpus_cambia_con_la_dichiarazione_fisiologica():
 def test_la_versione_dei_corpus_senza_dichiarazione_fisiologica_non_cambia():
     """Valori letti prima della modifica: l'impronta tiene conto della dichiarazione solo se c'è."""
     assert Corpus.da_toml(TESTO).versione == "e41b25349377cf4c"
-    assert Corpus.carica(CORPUS_REALE, reale=True).versione == "9cd7e25bb9b4f1f6"
+    assert Corpus.carica(CORPUS_REALE, reale=True).versione == "65c57d84de706171"
 
 
 @pytest.fixture

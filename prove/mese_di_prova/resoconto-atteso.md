@@ -181,13 +181,13 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - netto R03: 2149.36
   - netto R04: 882.99
   - netto R05: 900.91
-  - netto R06: 667.37
+  - netto R06: 713.70
   - netto R07: 1922.00
-  - netto R08: 3559.77
-  - netto R09: 3230.56
+  - netto R08: 3600.91
+  - netto R09: 3267.00
   - netto R10: 2243.33
   - netto R11: 1120.13
-  - netto R12: 749.75
+  - netto R12: 752.49
   - righe di proposta (11): U.1.01.01.01.002 01.01 imp 2026/1 9951.65; U.1.01.01.01.002 01.02 imp 2026/2 12323.33; U.1.01.01.01.004 01.02 imp 2026/4 600.00; U.1.01.02.01.001 01.01 imp 2026/5 2945.33; U.1.01.02.01.001 01.02 imp 2026/6 3732.56; U.1.01.02.01.003 01.01 imp 2026/7 495.55; U.1.01.02.01.003 01.02 imp 2026/8 89.28; U.1.02.01.01.001 01.01 imp 2026/9 1118.15; U.1.02.01.01.001 01.02 imp 2026/10 1229.09; U.1.03.02.01.001 01.01 imp 2026/11 3000.00; U.1.03.02.12.003 01.02 imp 2026/14 1500.00
   - conguaglio fiscale sull'ultimo pagamento: R05 -30.55
 - Fermi: nessuno
@@ -225,13 +225,13 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R03: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OEESP, 10 righe sul netto, netto 2149.36, 4 senza effetto sul netto; consegnato, esito dichiarato 5
   - R04: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OP000, 8 righe sul netto, netto 882.99, 3 senza effetto sul netto; consegnato, esito dichiarato 6
   - R05: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0IR000, 9 righe sul netto, netto 900.91, 3 senza effetto sul netto; consegnato, esito dichiarato 7
-  - R06: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OEESP, 8 righe sul netto, netto 667.37, 3 senza effetto sul netto; consegnato, esito dichiarato 8
+  - R06: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OEESP, 8 righe sul netto, netto 713.70, 3 senza effetto sul netto; consegnato, esito dichiarato 8
   - R07: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0IR000, 8 righe sul netto, netto 1922.00, 3 senza effetto sul netto; consegnato, esito dichiarato 9
-  - R08: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 9 righe sul netto, netto 3559.77, 3 senza effetto sul netto
-  - R09: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 9 righe sul netto, netto 3230.56, 3 senza effetto sul netto
+  - R08: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 9 righe sul netto, netto 3600.91, 3 senza effetto sul netto
+  - R09: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 9 righe sul netto, netto 3267.00, 3 senza effetto sul netto
   - R10: prospetto del pagamento del 2026-03-27 (esito 2), posizione sindaco, 2 righe sul netto, netto 2243.33, 2 senza effetto sul netto; consegnato, esito dichiarato 10
   - R11: prospetto del pagamento del 2026-03-27 (esito 2), posizione -, 4 righe sul netto, netto 1120.13, 2 senza effetto sul netto
-  - R12: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OP000, 8 righe sul netto, netto 749.75, 3 senza effetto sul netto; consegnato, esito dichiarato 11
+  - R12: prospetto del pagamento del 2026-03-27 (esito 2), posizione 0OP000, 8 righe sul netto, netto 752.49, 3 senza effetto sul netto; consegnato, esito dichiarato 11
 - Fermi:
   - R08: dato mancante posizione
   - R09: dato mancante posizione
@@ -307,9 +307,9 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - scadenza 2026-04-16, data di versamento scelta 2026-04-16
-  - riga F 100E: debito 4981.75, credito 0.00
+  - riga F 100E: debito 4886.01, credito 0.00
   - riga F 170E: debito 0.00, credito 500.00
-  - riga F 175E: debito 0.00, credito 1015.91
+  - riga F 175E: debito 0.00, credito 1046.82
   - riga F 179E: debito 80.39, credito 0.00
   - riga R 380E: debito 2347.24, credito 0.00
   - riga S 385E: debito 3.30, credito 0.00
@@ -318,7 +318,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga Q P607: debito 504.55, credito 0.00
   - riga Q P608: debito 584.83, credito 0.00
   - riga Q P909: debito 80.90, credito 0.00
-  - saldo 15675.81
+  - saldo 15549.16
   - delega DELEGA-2026-03 trasmessa il 2026-04-08
 - Fermi: nessuno
 - Su dati fittizi:
@@ -343,7 +343,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 13: 95 righe, 18707.63 versati il 2026-04-16
+  - esito versato 13: 96 righe, 18642.80 versati il 2026-04-16
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:
@@ -380,12 +380,12 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - netto R02: 2653.99
   - netto R03: 1874.04
   - netto R04: 770.48
-  - netto R06: 1420.35
+  - netto R06: 1382.81
   - netto R07: 2219.40
   - netto R10: 2376.67
-  - netto R12: 637.25
+  - netto R12: 639.99
   - righe di proposta (7): U.1.01.01.01.002 01.02 imp 2026/2 12025.05; U.1.01.02.01.001 01.01 imp 2026/5 528.51; U.1.01.02.01.001 01.02 imp 2026/6 3140.61; U.1.01.02.01.003 01.02 imp 2026/8 129.74; U.1.02.01.01.001 01.01 imp 2026/9 255.00; U.1.02.01.01.001 01.02 imp 2026/10 1026.64; U.1.03.02.01.001 01.01 imp 2026/11 3000.00
-  - conguaglio fiscale sull'ultimo pagamento: R01 -301.46, R02 -535.82, R03 -299.37, R04 0.01, R06 0.00, R07 -259.90, R10 -133.34, R12 0.00
+  - conguaglio fiscale sull'ultimo pagamento: R01 -301.46, R02 -535.82, R03 -299.37, R04 0.01, R06 -0.01, R07 -259.90, R10 -133.34, R12 -0.01
 - Fermi:
   - R08: caso non modellato, conguaglio annuo di contributo_aggiuntivo in 2026-12 (già esposto nel periodo 2026-03-01/2026-03-31)
   - R09: caso non modellato, conguaglio annuo di contributo_aggiuntivo in 2026-12 (già esposto nel periodo 2026-03-01/2026-03-31)
@@ -422,10 +422,10 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - R02: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0FZEQF, 9 righe sul netto, netto 2653.99, 3 senza effetto sul netto; consegnato, esito dichiarato 16
   - R03: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OEESP, 10 righe sul netto, netto 1874.04, 3 senza effetto sul netto; consegnato, esito dichiarato 17
   - R04: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OP000, 10 righe sul netto, netto 770.48, 3 senza effetto sul netto; consegnato, esito dichiarato 18
-  - R06: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OEESP, 9 righe sul netto, netto 1420.35, 3 senza effetto sul netto; consegnato, esito dichiarato 19
+  - R06: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OEESP, 9 righe sul netto, netto 1382.81, 3 senza effetto sul netto; consegnato, esito dichiarato 19
   - R07: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0IR000, 11 righe sul netto, netto 2219.40, 3 senza effetto sul netto; consegnato, esito dichiarato 20
   - R10: prospetto del pagamento del 2026-12-18 (esito 14), posizione sindaco, 3 righe sul netto, netto 2376.67, 2 senza effetto sul netto; consegnato, esito dichiarato 21
-  - R12: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OP000, 10 righe sul netto, netto 637.25, 3 senza effetto sul netto; consegnato, esito dichiarato 22
+  - R12: prospetto del pagamento del 2026-12-18 (esito 14), posizione 0OP000, 10 righe sul netto, netto 639.99, 3 senza effetto sul netto; consegnato, esito dichiarato 22
 - Fermi: nessuno
 - Su dati fittizi:
   - la messa a disposizione e' simulata dal percorso (giorno dopo il pagamento, riferimento di canale di fantasia); la posizione di sindaco e collaboratori e la composizione sono dichiarate dal corpus fittizio
@@ -446,10 +446,10 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 
 - Riuscito:
   - scadenza 2027-01-18, data di versamento scelta 2027-01-18
-  - riga F 100E: debito 613.63, credito 0.00
+  - riga F 100E: debito 601.39, credito 0.00
   - riga F 150E: debito 0.00, credito 150.00
   - riga F 170E: debito 62.50, credito 0.00
-  - riga F 175E: debito 0.00, credito 1007.41
+  - riga F 175E: debito 0.00, credito 960.37
   - riga R 380E: debito 1281.64, credito 0.00
   - riga S 161E: debito 0.00, credito 3.30
   - riga Q CXX: debito 528.51, credito 0.00
@@ -457,7 +457,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
   - riga Q P607: debito 450.65, credito 0.00
   - riga Q P608: debito 129.74, credito 0.00
   - riga Q P909: debito 42.27, credito 0.00
-  - saldo 5891.79
+  - saldo 5926.59
   - delega DELEGA-2026-12 trasmessa il 2027-01-12
 - Fermi: nessuno
 - Su dati fittizi:
@@ -482,7 +482,7 @@ Nota: la cessazione di R05 costa 13 scritture a mano. Il nucleo non ha un fatto 
 **Esito versato**
 
 - Riuscito:
-  - esito versato 24: 70 righe, 8213.21 versati il 2027-01-18
+  - esito versato 24: 72 righe, 8153.93 versati il 2027-01-18
   - righe ancora da versare nel mese: 0
 - Fermi: nessuno
 - Su dati fittizi:

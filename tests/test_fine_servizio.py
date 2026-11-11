@@ -314,6 +314,17 @@ def test_tfr_riduzione_del_lordo_per_competenza(registro, reale):
     }
 
 
+def test_tfr_la_riduzione_del_lordo_e_reddito_negativo_di_lavoro_dipendente(registro, reale):
+    """DPCM 20/12/1999 art. 1 c. 2-3, ADR 0037: l'imponibile fiscale e' il lordo meno la riduzione, 2.051,69 - 40,39."""
+    from paghe import attribuisci_reddito
+
+    dipendente(registro, "istruttori", "1")
+    attribuite = attribuisci_reddito(reale, calcola(registro, reale, R, Mese(2026, 11)), date(2026, 11, 27))
+    riduzione = next(riga for riga in attribuite if riga.istituto == "riduzione_tfr")
+    assert (riduzione.categoria_reddito, riduzione.anno_imposta) == ("lavoro_dipendente", 2026)
+    assert sum(riga.valore for riga in attribuite if riga.categoria_reddito == "lavoro_dipendente") == Decimal("2011.30")
+
+
 @pytest.mark.parametrize("regime", ["3", None])
 def test_senza_regime_tfr_nessuna_riduzione(registro, reale, regime):
     dipendente(registro, "istruttori", regime)
