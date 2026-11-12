@@ -335,6 +335,14 @@ def _con_riporto(
     )
 
 
+def _valore_virtuale(importo: Importo) -> Decimal:
+    """Retribuzione virtuale (ADR 0042): la malattia riduce la retribuzione pagata, non quella contributiva."""
+    malattia = importo.derivazione.malattia
+    if malattia is None or importo.derivazione.importi:
+        return importo.valore
+    return malattia.importo_pieno
+
+
 def _base_del_periodo(
     base: Base, righe: list[_RigaPagata], periodo: Periodo, corpus: Corpus, istante: datetime, esclusione=lambda giorno: None
 ) -> Importo | None:
@@ -366,12 +374,16 @@ def _base_del_periodo(
             entrano.append(riga)
     if not entrano:
         return None
+    if base.retribuzione_virtuale:
+        valori = [_valore_virtuale(riga.importo) for riga in entrano]
+    else:
+        valori = [riga.importo.valore for riga in entrano]
     fatti = {riga.fatto.id: riga.fatto for riga in entrano if riga.fatto is not None}
     return Importo(
         rapporto=entrano[0].importo.rapporto,
         istituto=f"base.{base.nome}",
         periodo=periodo,
-        valore=sum((riga.importo.valore for riga in entrano), Decimal(0)),
+        valore=sum(valori, Decimal(0)),
         derivazione=Derivazione(
             istituto=f"base.{base.nome}",
             maturazione="cassa",
