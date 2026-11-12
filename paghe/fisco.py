@@ -58,6 +58,9 @@ AVVISO_PROIEZIONE = "proiezione_conguaglio"
 AVVISO_ACCONTO_SENZA_BASE = "acconto_senza_base"
 AVVISO_TEMPO_DETERMINATO = "tempo_determinato_sotto_soglia"
 AVVISO_FAMILIARE_FUORI_ETA = "familiare_fuori_eta"
+# Mensilità aggiuntiva (ADR 0038): tassata insieme al mese nel pagamento del conguaglio; pagata fuori dalla finestra.
+AVVISO_MENSILITA_AGGIUNTIVA = "mensilita_aggiuntiva_nel_conguaglio"
+AVVISO_MENSILITA_FUORI_FINESTRA = "mensilita_aggiuntiva_fuori_finestra"
 # Carichi di famiglia (ADR 0033): la regola di ritenuta ha una formula annua per gruppo di relazioni. Il figlio in luogo
 # del coniuge usa quella del coniuge ma conta tra i figli dell'aumento della soglia.
 FORMULA_PER_RELAZIONE = {
@@ -926,6 +929,9 @@ def calcola_fiscale(
                 anno,
             )
         )
+    avvisi.extend(
+        _mensilita_aggiuntive(registro, corpus, rapporto, persona, anno, reddito, data_pagamento, ultimo_dell_anno, istante)
+    )
     conguaglio, chiusura, finale = None, (), False
     if ultimo_dell_anno:
         _controlla_ultimo(registro, persona, anno, data_pagamento, istante)
@@ -994,6 +1000,64 @@ def calcola_fiscale(
     return FiscaleDelPagamento(
         ritenuta, conguaglio, tuple(avvisi), (*chiusura, *rate.importi), importi_benefici, quota.importi
     )
+
+
+def _mensilita_aggiuntive(
+    registro: Registro,
+    corpus: Corpus,
+    rapporto: str,
+    persona: str,
+    anno: int,
+    reddito: tuple[Importo, ...],
+    data_pagamento: date,
+    ultimo_dell_anno: bool,
+    istante: datetime,
+) -> list[Avviso]:
+    """Le mensilità aggiuntive del pagamento: fermo senza conguaglio, avvisi con il conguaglio (ADR 0038).
+
+    L'art. 23 c. 2 lett. b) D.P.R. 600/1973 le vuole tassate a parte, con gli scaglioni ragguagliati a mese: non è
+    modellato. Nel pagamento che porta anche il conguaglio la somma di ritenuta e conguaglio è l'imposta dell'anno, quindi
+    il totale trattenuto è esatto; senza conguaglio la ritenuta sarebbe una stima e il calcolo si ferma.
+    """
+    aggiuntive = [
+        (riga, dichiarazione)
+        for riga in reddito
+        if (dichiarazione := corpus.mensilita_aggiuntiva(riga.istituto, data_pagamento)) is not None
+    ]
+    if not aggiuntive:
+        return []
+    nomi = ", ".join(sorted({riga.istituto for riga, _ in aggiuntive}))
+    if not ultimo_dell_anno:
+        raise CasoNonModellato(
+            f"Rapporto {rapporto}: caso non modellato, mensilità aggiuntiva ({nomi}) in un pagamento senza conguaglio: "
+            "la ritenuta a parte con gli scaglioni ragguagliati a mese non è modellata "
+            f"({aggiuntive[0][1].riferimento})"
+        )
+    totale = sum((riga.valore for riga, _ in aggiuntive), Decimal(0))
+    avvisi = [
+        Avviso(
+            AVVISO_MENSILITA_AGGIUNTIVA,
+            f"Persona {persona}: la mensilità aggiuntiva ({nomi}) è tassata insieme alle somme del mese, non a parte; "
+            "il pagamento porta il conguaglio, quindi il totale trattenuto nell'anno è esatto",
+            persona,
+            anno,
+            totale,
+        )
+    ]
+    fuori = [riga.istituto for riga, dichiarazione in aggiuntive if not dichiarazione.nella_finestra(data_pagamento)]
+    if fuori and not pagamento_finale(registro, corpus, persona, anno, data_pagamento, istante):
+        dichiarazione = aggiuntive[0][1]
+        avvisi.append(
+            Avviso(
+                AVVISO_MENSILITA_FUORI_FINESTRA,
+                f"Persona {persona}: la mensilità aggiuntiva ({', '.join(sorted(set(fuori)))}) è pagata il {data_pagamento}, "
+                f"fuori dai giorni {dichiarazione.giorno_dal}-{dichiarazione.giorno_al} del mese {dichiarazione.mese_pagamento} "
+                f"({dichiarazione.riferimento})",
+                persona,
+                anno,
+            )
+        )
+    return avvisi
 
 
 @dataclass(frozen=True)

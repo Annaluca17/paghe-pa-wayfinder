@@ -105,8 +105,9 @@ def test_i_fermi_del_mese_nominano_il_caso_e_il_rapporto(esecuzione):
 def test_il_rimborso_730_di_r07_e_sul_netto_e_credito_nella_delega_di_dicembre(esecuzione, resoconto):
     """Un esito 730-4 vero, la dichiarazione sul netto verso il beneficiario: nessun difetto del rimborso o del debito negativo."""
     assert esecuzione.difetti == []
-    # 1952.50 prima del rimborso, piu' 150.00, piu' somma esente e trattamento integrativo di dicembre (116.90, ticket #95)
-    assert "netto R07: 2219.40" in resoconto
+    # 1952.50 prima del rimborso, piu' 150.00, piu' somma esente e trattamento integrativo di dicembre (116.90, ticket #95);
+    # con la tredicesima di 2.019,63 pagata nello stesso pagamento (ADR 0038) il netto sale a 4.140,15
+    assert "netto R07: 4140.15" in resoconto
     assert "R07: rimborso del 730-4: 150.00, anno dei redditi dichiarati 2025" in resoconto
     assert "riga F 150E: debito 0.00, credito 150.00" in resoconto  # la riga a credito e' nella delega trasmessa
     assert "esito 730-4" in resoconto and "rimborso_irpef_730" not in resoconto
@@ -208,3 +209,22 @@ def test_r12_a_tempo_determinato_ha_la_denuncia_individuale_di_marzo_trasmissibi
     assert 0 < vista.perc_part_time_mese < 10000
     assert (12, "D") in [(s.id, s.copertura) for s in vista.settimane]
     assert {r for (m, r) in esecuzione.denunce_individuali} == {"R12"}  # gli altri non sono a tempo determinato
+
+
+def test_dicembre_paga_la_tredicesima_ai_rapporti_del_comparto_e_marzo_al_cessato(esecuzione, resoconto):
+    """ADR 0038: a dicembre con il pagamento del conguaglio; a chi cessa nel mese, con il pagamento finale."""
+    for riga in (
+        "R01: tredicesima_funzionari dell'anno 2026: 2192.02, 365 giorni su 365",
+        "R02: tredicesima_funzionari dell'anno 2026: 2192.02, 365 giorni su 365",  # progressione: area di dicembre
+        "R03: tredicesima_operatori_esperti dell'anno 2026: 1796.60, 365 giorni su 365",
+        "R04: tredicesima_operatori dell'anno 2026: 1034.53, 365 giorni su 365",  # part-time al 60%
+        "R05: tredicesima_istruttori dell'anno 2026: 403.93, 73 giorni su 365",  # cessato il 14/03
+        "R06: tredicesima_operatori_esperti dell'anno 2026: 1432.36, 291 giorni su 365",  # assunto il 16/03
+        "R06: riduzione_tfr_tredicesima dell'anno 2026: -28.65",  # regime TFR
+        "R07: tredicesima_istruttori dell'anno 2026: 2019.63, 365 giorni su 365",
+        "R12: tredicesima_operatori dell'anno 2026: 862.11, 365 giorni su 365",  # part-time al 50%
+    ):
+        assert riga in resoconto
+    assert "avviso mensilita_aggiuntiva_nel_conguaglio: R01, R02, R03, R04, R06, R07, R12" in resoconto
+    assert not [riga for riga in resoconto.splitlines() if "tredicesima" in riga and ("R08" in riga or "R09" in riga)]
+    assert esecuzione.arrivi[("2026-12", "R01")] == "completo" and esecuzione.arrivi[("2026-03", "R05")] == "completo"

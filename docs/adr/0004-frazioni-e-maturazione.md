@@ -19,4 +19,4 @@ Scelto perché ogni frazione conserva la propria derivazione, e perché nessun t
 - Una nota scritta in `docs/prassi/`, citata come `prassi:immedia:nota:...`, può fondare una regola. Se è l'unica fonte, la spiegazione dell'importo lo segnala.
 - Il divisore e l'indennità di comparto si appoggiano alla nota 1. I cedolini osservati sono in ventiseiesimi da lunedì a sabato, ma sono prassi di un gestionale, non norma.
 - Un'esposizione divisa di giorni nella denuncia, come il «Dividi periodo» di SCAD, è un'altra operazione: se INPS ripartisce in giorni di calendario, può non coincidere con quanto calcolato qui.
-- Restano fuori le assenze con riduzione e la divisione della tredicesima per part-time o cambio di regime: per ora fermano il calcolo o restano da modellare.
+- Restano fuori le assenze con riduzione e la divisione della tredicesima per part-time o cambio di regime: per ora fermano il calcolo o restano da modellare. *Precisato dall'ADR 0038: la tredicesima del comparto è nel corpus, pesata a giorni sul part-time; restano fuori le assenze.*

@@ -21,6 +21,7 @@ from paghe import (
     Registro,
     TipoEsito,
     calcola,
+    calcola_annuale,
     conferma_versione,
     controlla_completezza,
     denuncia_aziendale,
@@ -470,6 +471,15 @@ def _importi_del_mese(c: _Contesto, mese: Mese, tag: str, passo: Passo, arrivi: 
                     f"arretrato su febbraio, differenza rispetto all'esito pagato: {len(arretrato)} righe, netto "
                     f"{_soldi(sum((i.valore for i in arretrato), Decimal(0)))}"
                 )
+            # Tredicesima (ADR 0038): con il pagamento di dicembre, o con l'ultimo pagamento di chi cessa nel mese.
+            cessa_nel_mese = r.al is not None and mese.primo_giorno <= r.al <= mese.ultimo_giorno and r.al < valuta
+            if not _fuori_servizio(r, mese) and (mese.mese == 12 or cessa_nel_mese):
+                annuali = list(calcola_annuale(reg, corpus, r.id, mese.anno))
+                righe += annuali
+                for annuale in annuali:
+                    quota = annuale.derivazione.quota
+                    giorni = f", {quota.giorni} giorni su {quota.divisore}" if quota is not None else ""
+                    dettagli.append(f"{annuale.istituto} dell'anno {mese.anno}: {_soldi(annuale.valore)}{giorni}")
             rimborso = rimborso_730_4(reg, corpus, r.id, valuta)
             if rimborso is not None:
                 righe.append(rimborso)

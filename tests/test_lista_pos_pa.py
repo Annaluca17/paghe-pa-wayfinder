@@ -653,3 +653,20 @@ def test_un_rapporto_senza_persona_collegata_chiede_codice_fiscale_cognome_e_nom
     assert (vista.lavoratore.codice_fiscale, vista.lavoratore.cognome, vista.lavoratore.nome) == (None, None, None)
     assert {"codice_fiscale", "cognome", "nome"} <= {dato.fatto for dato in vista.mancanti}
     assert not vista.trasmissibile
+
+
+def test_la_tredicesima_sta_nell_e0_del_mese_di_pagamento_senza_quadri_giuridici(registro, reale, orologio):
+    """Assunto il 16 novembre, novembre non pagato a parte: la tredicesima (ADR 0038) entra per cassa nell'E0 di dicembre
+    e non apre da sola un V1 causale 5. 46 giorni: 2.019,63 * 46 / 365 = 254,53; dicembre 2.019,63 + 32,06."""
+    from paghe import calcola_annuale
+
+    assumi(registro, dal=date(2026, 11, 16))
+    righe = stipendi(registro, reale, Mese(2026, 12)) + list(calcola_annuale(registro, reale, R, 2026))
+    assert {riga.istituto: riga.valore for riga in righe}["tredicesima_istruttori"] == Decimal("254.53")
+    paga(registro, orologio, righe, date(2026, 12, 18))
+    vista = lista_pos_pa(registro, reale, R, Mese(2026, 12))
+    assert [(quadro.tipo, quadro.causale) for quadro in vista.quadri] == [("E0", None)]
+    (quadro,) = vista.quadri
+    assert quadro.pensionistica.imponibile == Decimal("2306.22")
+    assert quadro.credito.imponibile == Decimal("2306.22")
+    assert quadro.previdenziale.imponibile_tfs == Decimal("1819.33")  # TFS: 80% di tabellare e tredicesima (2.274,16)

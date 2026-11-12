@@ -397,7 +397,9 @@ def test_recupero_su_cessato_in_tfr(registro, reale, orologio):
 
 
 def test_la_riduzione_legge_le_voci_che_concorrono_alla_base_tfs(reale):
-    """La formula elenca gli istituti: deve restare allineata alle dichiarazioni di concorso."""
+    """La formula elenca gli istituti: deve restare allineata alle dichiarazioni di concorso.
+
+    Le tredicesime hanno la loro riduzione annuale, `riduzione_tfr_tredicesima` (ADR 0038)."""
     from paghe.formula import riferimenti
     from paghe.tempo import Periodo
 
@@ -408,7 +410,8 @@ def test_la_riduzione_legge_le_voci_che_concorrono_alla_base_tfs(reale):
         for istituto in reale.istituti()
         if (concorso := reale.concorso(istituto, "tfs", date(2026, 11, 1))) and concorso.misura == "intero"
     }
-    assert letti == interi
+    annuali = riferimenti(reale.regola_per("riduzione_tfr_tredicesima", giorno).formula).importi
+    assert letti == interi - annuali
 
 
 def test_ulteriori_elementi_tfr_al_6_91(reale):
