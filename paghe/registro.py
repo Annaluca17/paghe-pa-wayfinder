@@ -86,6 +86,13 @@ TIPO_DATA_PAGAMENTO = "data_pagamento"
 TIPO_PERSONA = "persona"
 TIPO_DICHIARAZIONE_SOSTITUITO = "dichiarazione_sostituito"
 TIPO_IBAN = "iban"
+# Scelta del dipendente sulle misure del cuneo fiscale (ticket #125, ADR 0040): fatto della persona con validità e documento
+# di origine, come la dichiarazione del sostituito. Vale per somma esente, ulteriore detrazione e trattamento integrativo.
+TIPO_SCELTA_CUNEO = "scelta_cuneo"
+SCELTA_CUNEO_NEL_MESE = "nel_mese"
+SCELTA_CUNEO_SOLO_CONGUAGLIO = "solo_conguaglio"
+SCELTA_CUNEO_NESSUNA = "nessuna"
+SCELTE_CUNEO = (SCELTA_CUNEO_NEL_MESE, SCELTA_CUNEO_SOLO_CONGUAGLIO, SCELTA_CUNEO_NESSUNA)
 # Carichi di famiglia (ticket #98, ADR 0033): un fatto della persona per ogni familiare, valore JSON con relazione,
 # codice fiscale, data di nascita e percentuale. La chiave del familiare è il suo codice fiscale.
 TIPO_FAMILIARE_A_CARICO = "familiare_a_carico"
@@ -365,6 +372,26 @@ class Registro:
         if atto is None:
             raise ErroreRegistro("La dichiarazione del sostituito vuole il documento di origine")
         return self.registra_codice_persona(persona, TIPO_DICHIARAZIONE_SOSTITUITO, detrazioni, valido_dal, valido_al, atto)
+
+    def registra_scelta_cuneo(
+        self, persona: str, scelta: str, valido_dal: date, valido_al: date | None, atto: Atto | None
+    ) -> Fatto:
+        """Scelta del dipendente sulle misure del cuneo fiscale (ADR 0040): nel mese, solo a conguaglio, nessuna.
+
+        Prassi operativa di Paghe PA, non una facoltà scritta nella legge (da verificare). Senza il dato vale «nel mese».
+        """
+        if scelta not in SCELTE_CUNEO:
+            raise ErroreRegistro(f"Scelta sul cuneo fiscale non valida: {scelta!r}; valori ammessi {SCELTE_CUNEO}")
+        if atto is None:
+            raise ErroreRegistro("La scelta sul cuneo fiscale vuole il documento di origine")
+        return self.registra_codice_persona(persona, TIPO_SCELTA_CUNEO, scelta, valido_dal, valido_al, atto)
+
+    def scelta_cuneo(self, persona: str, giorno: date, noto_al: datetime) -> tuple[str, Fatto | None]:
+        """La scelta in vigore nel giorno e il fatto che la porta; senza il dato, «nel mese» e nessun fatto."""
+        fatto = self.vigente_persona(persona, TIPO_SCELTA_CUNEO, giorno, noto_al)
+        if fatto is None or fatto.valore not in SCELTE_CUNEO:
+            return SCELTA_CUNEO_NEL_MESE, None
+        return fatto.valore, fatto
 
     def registra_rinuncia_sostitutiva(
         self, persona: str, valido_dal: date, valido_al: date | None, atto: Atto | None

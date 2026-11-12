@@ -35,6 +35,8 @@ from .modello import (
     TipoEsito,
 )
 from .registro import (
+    SCELTA_CUNEO_NEL_MESE,
+    SCELTA_CUNEO_NESSUNA,
     TIPO_ANNO_IMPOSTA_DIVERSO,
     TIPO_DICHIARAZIONE_SOSTITUITO,
     TIPO_ONERI_DETRAIBILI,
@@ -526,6 +528,8 @@ def _calcola(
     carichi: tuple[_CaricoMese, ...] = (),
     reddito_annuo: Decimal | None = None,
     quota_minimo: Decimal = Decimal(1),
+    ulteriore: bool = True,
+    scelta_cuneo: Fatto | None = None,
 ) -> _Calcolo:
     """Imposta, detrazioni e dovuto del periodo, o dell'anno con un solo periodo.
 
@@ -559,7 +563,11 @@ def _calcola(
     c1 = valuta(regola.detrazione, risolvi) if dichiarazione is not None else Decimal(0)
     c5 = valuta(regola.detrazione_carica_elettiva, risolvi) if dichiarazione is not None else Decimal(0)
     detrazione, art13, motivo_art13 = _detrazione_art13(regola, categorie, dichiarazione, c1, c5)
-    spetta = not regola.categorie_detrazione_automatica or bool(categorie & set(regola.categorie_detrazione_automatica))
+    # La detrazione automatica è l'ulteriore detrazione della L. 207/2024 art. 1 c. 6: la scelta del dipendente (ADR 0040)
+    # decide se questo calcolo la dà.
+    spetta = ulteriore and (
+        not regola.categorie_detrazione_automatica or bool(categorie & set(regola.categorie_detrazione_automatica))
+    )
     automatica = valuta(regola.detrazione_automatica, risolvi) if spetta else Decimal(0)
     somma_carichi = Decimal(0)
     usati: dict[int, Fatto] = {}
@@ -579,7 +587,9 @@ def _calcola(
         automatica,
         max(Decimal(0), imposta - detrazione - automatica - detrazione_carichi),
         tuple(parametri[nome] for nome in sorted(parametri)),
-        ((dichiarazione,) if dichiarazione is not None else ()) + tuple(usati[i] for i in sorted(usati)),
+        ((dichiarazione,) if dichiarazione is not None else ())
+        + tuple(usati[i] for i in sorted(usati))
+        + ((scelta_cuneo,) if scelta_cuneo is not None else ()),
         detrazione_carichi,
         dichiarazione is not None,
         "; ".join(sorted(formule)),
@@ -714,10 +724,13 @@ def _ritenuta(
             reddito_annuo=proiezione.reddito,
             quota_minimo=Decimal(giorni_mese) / giorni_anno,
         )
+    scelta, fatto_scelta = registro.scelta_cuneo(persona, data_pagamento, istante)
     calcolo = _calcola(
         corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione,
         categorie=frozenset(riga.categoria_reddito for riga in (*gia_pagate, *righe)),
         carichi=(carico,),
+        ulteriore=scelta == SCELTA_CUNEO_NEL_MESE,
+        scelta_cuneo=fatto_scelta,
         **proiettato,
     )
     operato = sum((riga.valore for riga in gia_operate), Decimal(0))
@@ -737,7 +750,8 @@ def _ritenuta(
                 f"{proiezione.testo() + '; ' if proiezione else ''}"
                 f"imposta del periodo = {regola.imposta}; detrazione rapportata = "
                 f"{_formula_detrazione(regola.detrazione, regola, calcolo)}; "
-                f"detrazione automatica = {regola.detrazione_automatica}; "
+                f"detrazione automatica = {regola.detrazione_automatica}"
+                f"{'' if scelta == SCELTA_CUNEO_NEL_MESE else f' (non applicata: scelta {scelta} del dipendente)'}; "
                 f"{_formula_carichi(calcolo)}"
                 "ritenuta = imposta meno detrazione meno detrazione automatica meno carichi di famiglia "
                 "meno ritenute già operate nel periodo"
@@ -895,6 +909,8 @@ def _annuale(
         _carichi_del_mese(registro, regola_ritenuta, persona, anno, mese, istante)[0]
         for mese in sorted(_mesi_di_servizio(registro, corpus, persona, anno, istante))
     )
+    # Al conguaglio conta la scelta in vigore alla sua data, per tutto l'anno (ADR 0040).
+    scelta, fatto_scelta = registro.scelta_cuneo(persona, data_pagamento, istante)
     calcolo = _calcola(
         corpus,
         regola_ritenuta,
@@ -906,6 +922,8 @@ def _annuale(
         giorni_anno,
         frozenset(riga.categoria_reddito for riga in reddito),
         carichi,
+        ulteriore=scelta != SCELTA_CUNEO_NESSUNA,
+        scelta_cuneo=fatto_scelta,
     )
     return _Annuale(
         calcolo, sum((riga.valore for riga in operate), Decimal(0)) + scomputata + decisi,
@@ -1450,16 +1468,23 @@ def _benefici_del_pagamento(
             fatti=fatti,
         )
     categorie = frozenset(riga.categoria_reddito for riga in redditi)
+    scelta, fatto_scelta = registro.scelta_cuneo(persona, data_pagamento, istante)
+    if fatto_scelta is not None:
+        contesto = replace(contesto, fatti=(*contesto.fatti, fatto_scelta))
     finale = conguaglio and pagamento_finale(registro, corpus, persona, anno, data_pagamento, istante)
     if conguaglio:
         importi, piani = benefici.al_conguaglio(
             corpus, regola, rapporto, anno, data_pagamento, riferimento, contesto, categorie, dell_anno, finale,
             _ulteriore_in_piu(registro, corpus, persona, anno, data_pagamento, calcolo_ritenuta, annuale, istante), istante,
+            scelta == SCELTA_CUNEO_NESSUNA,
         )
-    else:
+    elif scelta == SCELTA_CUNEO_NEL_MESE:
         importi, piani = benefici.riconosciuti_del_mese(
             corpus, regola, rapporto, anno, data_pagamento, riferimento, contesto, categorie, nel_mese, istante
         ), ()
+    else:
+        # «solo a conguaglio» e «nessuna»: nel pagamento del mese somma esente e integrativo non si danno (ADR 0040)
+        importi, piani = (), ()
     rate = benefici.rate_del_mese(corpus, regola, rapporto, data_pagamento, finale, pagate, istante)
     return (*importi, *rate), piani
 
@@ -1495,9 +1520,11 @@ def _ulteriore_in_piu(
             mesi.setdefault(chiave, []).append(-pagata.riga.valore)
     applicata = calcolo_ritenuta.calcolo.detrazione_automatica
     for chiave, valori in mesi.items():
+        # Nei mesi senza «nel mese» la ritenuta non ha dato l'ulteriore detrazione (ADR 0040).
+        scelta, _ = registro.scelta_cuneo(persona, date(chiave[0], chiave[1], 1), istante)
         calcolo = _calcola(
             corpus, regola, sum(valori, Decimal(0)), PERIODI_MENSILI, calcolo_ritenuta.riferimento, None,
-            categorie=frozenset(categorie.get(chiave, ())),
+            categorie=frozenset(categorie.get(chiave, ())), ulteriore=scelta == SCELTA_CUNEO_NEL_MESE,
         )
         applicata += calcolo.detrazione_automatica
     return max(Decimal(0), annuale.calcolo.detrazione_automatica - applicata)

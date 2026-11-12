@@ -223,6 +223,7 @@ def al_conguaglio(
     finale: bool,
     ulteriore_in_piu: Decimal,
     istante: datetime,
+    nessuna: bool = False,
 ) -> tuple[tuple[Importo, ...], tuple[Importo, ...]]:
     """(importi del pagamento, recuperi a rate da mettere nella derivazione del conguaglio).
 
@@ -230,6 +231,7 @@ def al_conguaglio(
     in questo pagamento; se è inferiore, la differenza si recupera. Un recupero fino alla soglia, o alla cessazione, è
     in unica soluzione; oltre la soglia è a rate dai pagamenti dopo il conguaglio. Per la somma esente la soglia si
     guarda sul recupero meno l'ulteriore detrazione spettante in più (circ. AdE 4/E/2025, prassi).
+    Con la scelta «nessuna» del dipendente lo spettante è zero e si recupera tutto il già riconosciuto (ADR 0040).
     """
     periodo = Periodo(data_pagamento.replace(day=1), _ultimo_del_mese(data_pagamento))
     importi: list[Importo] = []
@@ -239,13 +241,20 @@ def al_conguaglio(
         if not categorie_presenti & set(beneficio.categorie):
             continue
         gia = tuple(riga for riga in riconosciuti if riga.istituto == beneficio.istituto)
-        spettante, parametri = _valuta(corpus, beneficio.formula, contesto, riferimento)
+        if nessuna:
+            spettante, parametri = Decimal(0), ()
+        else:
+            spettante, parametri = _valuta(corpus, beneficio.formula, contesto, riferimento)
         riconosciuto = sum((riga.valore for riga in gia), Decimal(0))
         differenza = spettante - riconosciuto
+        if nessuna:
+            formula_spettante = f"{beneficio.nome} al conguaglio: scelta «nessuna» del dipendente, spettante zero"
+        else:
+            formula_spettante = f"{beneficio.nome} al conguaglio = {beneficio.formula} sull'anno intero; {_letture(contesto)}"
         importi.append(
             _importo(
                 corpus, regola, beneficio.istituto, rapporto, anno, periodo, max(Decimal(0), differenza),
-                f"{beneficio.nome} al conguaglio = {beneficio.formula} sull'anno intero; {_letture(contesto)}; "
+                f"{formula_spettante}; "
                 f"spettante dell'anno = {spettante}; già riconosciuto nell'anno = {riconosciuto}; "
                 "importo = spettante meno già riconosciuto, non sotto zero",
                 parametri, (*contesto.importi, *gia), contesto.fatti, istante,

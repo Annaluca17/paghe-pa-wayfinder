@@ -485,6 +485,10 @@ _Avoid_: Cuneo, bonus, detrazione
 Somma pagata in busta a lavoratori dipendenti e assimilati fino a 28.000 euro di reddito, ripartita fra i pagamenti e ricalcolata al conguaglio. Tra 15.000 e 28.000 euro conta le detrazioni note e gli oneri comunicati dalla persona. Il sostituto la recupera in compensazione nella delega.
 _Avoid_: Bonus Renzi, ex bonus 100 euro
 
+**Scelta sul cuneo fiscale**:
+Fatto della persona, con validità e documento di origine, che dice quando il sostituto dà le tre misure della L. 207/2024 (somma esente, ulteriore detrazione) e del D.L. 3/2020 (trattamento integrativo): «nel mese» (predefinito, anche senza il dato), «solo a conguaglio», «nessuna». Mese per mese vale la scelta del mese di pagamento; al conguaglio quella in vigore alla data del conguaglio, per tutto l'anno. Con «nessuna» il sostituto non dà mai le misure, né nel mese né a conguaglio, e recupera quanto già dato: la persona le chiede nel 730. È una regola operativa di Paghe PA, non una facoltà scritta nella legge (ADR 0040, nota di prassi 14).
+_Avoid_: Rinuncia (quella dell'accessorio è un'altra cosa), opzione cuneo
+
 **Recupero a rate**:
 Restituzione, decisa al conguaglio, di un beneficio pagato e non spettante: oltre 60 euro, otto rate per il trattamento integrativo e dieci per somma esente e ulteriore detrazione insieme, dal primo pagamento dopo il conguaglio. Alla cessazione si recupera tutto sul pagamento finale.
 _Avoid_: Rateizzazione (che è anche quella del 730-4 o della richiesta di differimento)
