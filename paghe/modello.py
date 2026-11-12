@@ -73,6 +73,7 @@ class ParametroLetto:
     valore: Decimal
     dal: date
     riferimento: str
+    applicabile_dal: date | None = None  # ADR 0041: l'importo non si paga prima di questa data
 
 
 @dataclass(frozen=True)

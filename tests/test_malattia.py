@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from paghe import Corpus, Mese, Periodo, calcola, calcola_annuale
+from paghe import Corpus, Mese, Periodo, TipoEsito, calcola, calcola_annuale, calcola_denuncia, emetti_esito
 from paghe.errori import CasoNonModellato
 from paghe.malattia import INFORTUNIO, ORDINARIA, RICOVERO, SALVAVITA, registra_malattia, stati_del_periodo
 
@@ -173,13 +173,45 @@ def test_al_90_per_cento_si_riduce_anche_il_tabellare(registro, reale):
     assert somma(con, "tabellare_istruttori") == (tabellare * Decimal("0.9")).quantize(Decimal("0.01"))
 
 
-def test_i_contributi_restano_sull_intero(registro, reale):
+def _denuncia(registro, orologio, mese, pagamento):
+    registro.registra_codice_persona("PERSONA-1", "codice_fiscale", "RSSMRA80A01H501U", date(1980, 1, 1))
+    registro.collega_rapporto(R, "PERSONA-1", date(2019, 1, 1))
+    righe = calcola(registro, REALE_CORPUS, R, mese)
+    orologio.vai(pagamento.month, pagamento.day, pagamento.year)
+    esito = emetti_esito(registro, TipoEsito.PAGATO, pagamento, righe)
+    registro.registra_pagamento(R, esito.id, pagamento)
+    orologio.avanza()
+    periodo, = calcola_denuncia(registro, REALE_CORPUS, R, mese).periodi
+    return {riga.istituto: riga.valore for riga in (*periodo.basi, *periodo.contributi)}
+
+
+REALE_CORPUS = Corpus.carica(CORPUS_REALE, reale=True)
+
+
+def test_i_contributi_sono_sull_intero_e_la_quota_del_lavoratore_sul_pagato(registro, orologio):
     assumi(registro)
-    base = calcola(registro, reale, R, Mese(2026, 3))
     registra_malattia(registro, R, ORDINARIA, date(2026, 3, 10), date(2026, 3, 24))
-    con = calcola(registro, reale, R, Mese(2026, 3))
-    for istituto in ("cpdel_totale", "fondo_credito", "imponibile_tfs", "tfs_totale"):
-        assert somma(con, istituto) == somma(base, istituto), istituto
+    con = _denuncia(registro, orologio, Mese(2026, 3), date(2026, 3, 27))
+    pagato = somma(calcola(registro, REALE_CORPUS, R, Mese(2026, 3)), "comparto_istruttori")
+    assert con["base.cpdel"] == Decimal("2051.69")  # tabellare + comparto interi
+    assert con["base.fondo_credito"] == Decimal("2051.69")
+    assert con["cpdel_totale"] == Decimal("669.88")  # come il mese senza malattia
+    # il lavoratore versa solo sul pagato; il resto lo integra l'ente
+    tolto = Decimal("32.06") - pagato
+    assert tolto > 0
+    assert con["cpdel_lavoratore"] == (Decimal("2051.69") - tolto).__mul__(Decimal("0.0885")).quantize(Decimal("0.01"), "ROUND_HALF_UP")
+    assert con["cpdel_ente"] == con["cpdel_totale"] - con["cpdel_lavoratore"]
+    assert con["fondo_credito"] == Decimal("7.18")  # a carico del dipendente sull'intero
+
+
+def test_la_quota_tfs_del_lavoratore_e_sul_pagato(registro, orologio):
+    assumi(registro)
+    registra_malattia(registro, R, ORDINARIA, date(2026, 3, 10), date(2026, 3, 24))
+    con = _denuncia(registro, orologio, Mese(2026, 3), date(2026, 3, 27))
+    assert con["base.tfs"] == Decimal("2019.63")  # tabellare, il comparto non concorre al TFS
+    # il tabellare non si decurta e il comparto non concorre al TFS: il pagato coincide con l'intero
+    assert con["tfs_totale"] == Decimal("98.56")
+    assert con["tfs_lavoratore"] == Decimal("40.39")
 
 
 def test_un_istituto_senza_dichiarazione_ferma_il_calcolo(registro, reale):

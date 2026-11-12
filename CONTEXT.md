@@ -282,6 +282,14 @@ _Avoid_: Quadro (quando si intende l'intervallo)
 Periodo dichiarato senza imponibili che dichiara il servizio di un mese pagato in un altro: per il principio di cassa gli importi stanno nel mese di pagamento.
 _Avoid_: Periodo vuoto, mese a zero
 
+**Applicabilità**:
+Data da cui un pagamento usa un importo del CCNL, distinta dalla decorrenza (da quando l'importo spetta). Per il CCNL 28/10/2026 è il 29/10/2026, giorno dopo la firma; la decorrenza è il 01/01 di ogni anno. Un pagamento sceglie le vigenze dei parametri applicabili alla sua data (ADR 0041).
+_Avoid_: Data di firma (la firma è il giorno prima), data di efficacia
+
+**Arretrati del rinnovo**:
+Differenza, per istituto e mese di competenza già pagato, tra il dovuto alla data di pagamento e il pagato negli esiti, portata nel primo pagamento dopo l'applicabilità. Toglie da sé la vacanza contrattuale riassorbita. Per un cessato è un pagamento a parte, con la segnalazione del ricalcolo della base di fine servizio (`arretrati_ccnl`).
+_Avoid_: Conguaglio contrattuale
+
 **Data di pagamento**:
 Giorno in cui la somma esce dalla disponibilità dell'ente per entrare nel patrimonio del dipendente, cioè la valuta dell'accredito, registrato come fatto legato all'esito pagato e letto dall'evento di ritorno del pagamento eseguito. Per un recupero è il giorno in cui la trattenuta è operata o l'incasso è avvenuto. Decide in quale denuncia entrano gli importi di quell'esito.
 _Avoid_: Data di liquidazione (la liquidazione è una fase contabile), valuta prevista

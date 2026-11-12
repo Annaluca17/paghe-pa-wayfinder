@@ -335,6 +335,9 @@ def _con_riporto(
     )
 
 
+SUFFISSO_PAGATO = "_pagato"
+
+
 def _valore_virtuale(importo: Importo) -> Decimal:
     """Retribuzione virtuale (ADR 0042): la malattia riduce la retribuzione pagata, non quella contributiva."""
     malattia = importo.derivazione.malattia
@@ -529,6 +532,13 @@ class _Contributi:
             if origine == "parametro":
                 parametri[nome] = self._parametro(nome)
                 return parametri[nome].valore
+            if origine == "base" and nome.endswith(SUFFISSO_PAGATO):
+                # Base sul pagato (ADR 0042): quanto e' stato pagato davvero, senza la retribuzione virtuale.
+                riga = self.basi.get(nome.removesuffix(SUFFISSO_PAGATO))
+                if riga is None:
+                    return Decimal(0)
+                letti[riga.istituto] = riga
+                return sum((i.valore for i in riga.derivazione.importi), Decimal(0)) if riga.derivazione.importi else riga.valore
             riga = self.basi.get(nome) if origine == "base" else self.importo(nome)
             if riga is None:
                 return Decimal(0)

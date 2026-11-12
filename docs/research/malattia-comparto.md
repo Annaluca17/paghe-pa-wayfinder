@@ -162,5 +162,5 @@ Questa è la regola che il motore dovrebbe applicare. Non la implemento qui: è 
 7. **IVC** e altre voci nuove del CCNL 2022-24: nessuna fonte trovata.
 8. **Convalescenza post-ricovero:** serve il certificato? Il requisito è letto solo per il comparto Sanità.
 9. **Come si leggono i 9+3+6 mesi nella finestra di tre anni:** il testo non dice se si ricalcola a ogni evento. Cercare un orientamento ARAN.
-3 bis. **Rivalsa sul dipendente.** Secondo la Conferenza delle Regioni, la quota CPDEL e TFS/TFR a carico del dipendente sulla parte di retribuzione non pagata è integrata dall'ente (rivalsa solo sul contributo proporzionale al pagato); il Fondo Credito, no. Il motore oggi calcola la quota del lavoratore sulla base intera e la trattiene dal pagato. Serve una scelta di Luca.
+3 bis. **Rivalsa sul dipendente.** Secondo la Conferenza delle Regioni, la quota CPDEL e TFS/TFR a carico del dipendente sulla parte di retribuzione non pagata è integrata dall'ente (rivalsa solo sul contributo proporzionale al pagato); il Fondo Credito, no. Il motore oggi calcola la quota del lavoratore sulla base intera e la trattiene dal pagato. Deciso da Luca il 12/11/2026: a carico dell'ente (ADR 0042, punto 6).
 10. **Sentenze Corte costituzionale 151/2010 e 120/2012** sulla legittimità dell'art. 71: segnalate da fonti secondarie, non lette. Non cambiano il calcolo.

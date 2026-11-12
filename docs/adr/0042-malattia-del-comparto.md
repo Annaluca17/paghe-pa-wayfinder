@@ -10,6 +10,9 @@ Il nucleo calcola la malattia dei dipendenti del comparto Funzioni Locali. L'uff
 4. **Contributi, TFS e TFR sull'intero** (retribuzione virtuale). Le basi CPDEL, Fondo Credito, TFS e TFR ulteriori dichiarano `retribuzione_virtuale = true` e contano l'importo pieno prima della riduzione. IRAP e reddito fiscale seguono il pagato.
 5. **Giorni di calendario.** I 10 giorni partono dal primo giorno dell'episodio. Certificati continui senza giorno lavorato in mezzo sono un solo episodio (sabato, domenica e festivi del corpus fra due certificati non lo spezzano). Comporto: giorni di malattia (ordinaria e ricovero) nei tre anni fino a quel giorno compreso, ricalcolato a ogni giorno.
 
+6. **Quota del lavoratore sulla parte non pagata** (Luca, 12/11/2026). La quota CPDEL e TFS del lavoratore si calcola sul pagato; la parte sul non pagato la integra l'ente (cpdel_ente = totale - quota lavoratore). Il Fondo Credito sulla parte non pagata resta a carico del dipendente. Livello: prassi (Conferenza delle Regioni, altro comparto), coerente con le voci del gestionale dell'ente reale (un «fondo credito figurativo» a carico del dipendente, nessuna ritenuta CPDEL figurativa); **da verificare** sulla circ. INPDAP 13/2009. Nel motore: le formule della quota del lavoratore leggono `base.cpdel_pagato` e `base.tfs_pagato` (suffisso `_pagato`: la somma degli importi realmente pagati nella base).
+7. **Scelte di realizzazione confermate da Luca:** mesi del comporto da 30 giorni (270/90/180); sabato, domenica e festivi non spezzano l'episodio; 90% e 50% anche sulle indennità fisse e continuative.
+
 ## Come funziona
 
 - **Episodio.** Giorni consecutivi `ordinaria` o `ricovero`. La decurtazione tocca solo i giorni `ordinaria` entro il decimo giorno dell'episodio. `salvavita` e `infortunio` non sono decurtati e non contano per il comporto (comporto a parte, art. 29 e 30).
@@ -41,16 +44,17 @@ Il nucleo calcola la malattia dei dipendenti del comparto Funzioni Locali. L'uff
 **Da verificare**
 
 - Testo originale della circolare INPDAP 13/2009 e una seconda fonte sui contributi.
-- Mesi a 30 giorni, fasce 270/90/180 e finestra mobile ricalcolata a ogni giorno (interpretazione).
-- Percentuale 90% e 50% anche sulle indennità fisse e continuative: il testo dice «retribuzione di cui alla lett. a)»; il motore applica la percentuale a tutte le voci dichiarate.
-- Giorni non lavorati fra due certificati: sabato, domenica e festivi (la settimana corta di cinque giorni è un'ipotesi).
+- Mesi a 30 giorni, fasce 270/90/180 e finestra mobile ricalcolata a ogni giorno (interpretazione, scelta di Luca).
+- Percentuale 90% e 50% anche sulle indennità fisse e continuative (scelta di Luca): il testo dice «retribuzione di cui alla lett. a)».
+- Giorni non lavorati fra due certificati: sabato, domenica e festivi (scelta di Luca; la settimana corta di cinque giorni è un'ipotesi).
+- La quota del lavoratore sul pagato e l'integrazione dell'ente (punto 6).
 - IVC ed EQ (interpretazione); convalescenza dopo il ricovero senza certificato (la regola per la Sanità richiede un certificato).
 
 **Limiti nominati**
 
-- **Quota del lavoratore.** La Conferenza delle Regioni dice che l'ente integra, anche per la quota del dipendente, la contribuzione sulla parte non pagata (rivalsa solo sul proporzionale al pagato), tranne il Fondo Credito. Il motore calcola la quota del lavoratore sulla base intera e la trattiene dal pagato: **da decidere con Luca**.
 - Posizione EQ, vigilanza, specifica e gli altri accessori fissi non sono ancora istituti del corpus: quando arriveranno dichiareranno `decurtata`.
 - Dirigenti e segretari non dichiarano il trattamento: la malattia li ferma.
+- Il TFS oggi non mostra la differenza: il comparto non concorre al TFS e il tabellare non si decurta, quindi pagato e intero coincidono; la regola vale per le voci decurtate che concorreranno.
 - La riduzione del lordo TFR del mese (`riduzione_tfr`) legge il tabellare pagato, quindi negli episodi al 90% e al 50% è sul ridotto, non sull'intero.
 - Denuncia UniEmens e ListaPosPA non portano ancora i codici evento di malattia.
 - Il certificato con prognosi più lunga o con ricovero in clinica privata convenzionata non è distinto dal ricovero SSN.

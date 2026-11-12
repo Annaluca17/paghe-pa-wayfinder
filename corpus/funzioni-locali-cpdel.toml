@@ -498,12 +498,16 @@ dal = 2026-01-01
 valore = "26"
 riferimento = "ccnl:S105:2022-11-16~art74-com4 + prassi:immedia:nota:2026-11-06;1"
 
-# Stipendio tabellare annuo, tab. B CCNL 28/10/2026, per 12 mensilità più la tredicesima
+# Stipendio tabellare annuo, tab. B CCNL 28/10/2026, per 12 mensilità più la tredicesima.
+# Due date (ADR 0041): `dal` è la decorrenza (tab. A e B), `applicabile_dal` il 29/10/2026, giorno dopo la firma
+# (art. 2 c. 2), solo per la vigenza 2026: quella 2027 decorre dopo la firma. Un pagamento prima di quella data non ha un tabellare: il corpus non ha ancora il valore del
+# CCNL 23/02/2026 con due fonti (da fornire), quindi il calcolo si ferma invece di usare quello nuovo.
 
 [[parametro]]
 nome = "tabellare_annuo_funzionari"
 [[parametro.vigenza]]
 dal = 2026-01-01
+applicabile_dal = 2026-10-29
 valore = "26304.27"
 riferimento = "ccnl:S105:2026-10-28~tabB"
 [[parametro.vigenza]]
@@ -515,6 +519,7 @@ riferimento = "ccnl:S105:2026-10-28~tabB"
 nome = "tabellare_annuo_istruttori"
 [[parametro.vigenza]]
 dal = 2026-01-01
+applicabile_dal = 2026-10-29
 valore = "24235.55"
 riferimento = "ccnl:S105:2026-10-28~tabB"
 [[parametro.vigenza]]
@@ -526,6 +531,7 @@ riferimento = "ccnl:S105:2026-10-28~tabB"
 nome = "tabellare_annuo_operatori_esperti"
 [[parametro.vigenza]]
 dal = 2026-01-01
+applicabile_dal = 2026-10-29
 valore = "21559.19"
 riferimento = "ccnl:S105:2026-10-28~tabB"
 [[parametro.vigenza]]
@@ -537,6 +543,7 @@ riferimento = "ccnl:S105:2026-10-28~tabB"
 nome = "tabellare_annuo_operatori"
 [[parametro.vigenza]]
 dal = 2026-01-01
+applicabile_dal = 2026-10-29
 valore = "20690.51"
 riferimento = "ccnl:S105:2026-10-28~tabB"
 [[parametro.vigenza]]
@@ -861,7 +868,7 @@ istituto = "cpdel_lavoratore"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:legge:2006-12-27;296~art1-com769 + prassi:immedia:nota:2026-11-06;3"
-formula = "arrotonda(base.cpdel * parametro.aliquota_cpdel_lavoratore / 100, 2)"
+formula = "arrotonda(base.cpdel_pagato * parametro.aliquota_cpdel_lavoratore / 100, 2)"
 maturazione = "periodo"
 
 [[regola]]
@@ -905,8 +912,9 @@ istituto = "tfs_lavoratore"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;3"
-formula = "arrotonda(importo.imponibile_tfs * parametro.aliquota_tfs_lavoratore / 100, 2)"
+formula = "arrotonda(arrotonda(base.tfs_pagato * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
 maturazione = "periodo"
+applica_se = "regime_fine_servizio=3"
 
 [[regola]]
 istituto = "tfs_ente"

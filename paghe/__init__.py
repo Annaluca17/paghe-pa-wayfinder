@@ -1,5 +1,6 @@
 """Nucleo del modello alternativo di elaborazione paghe per Enti Locali (ADR 0001)."""
 
+from .arretrati import ArretratiCcnl, arretrati_ccnl
 from .calcolo import Differenza, calcola, calcola_annuale, differenze, emetti_esito, spiega
 from .corpus import (
     Base,
@@ -91,6 +92,8 @@ from .registro import Registro
 from .tempo import Mese, Periodo
 
 __all__ = [
+    "ArretratiCcnl",
+    "arretrati_ccnl",
     "Assenza",
     "DenunciaAziendale",
     "DenunciaIndividuale",
