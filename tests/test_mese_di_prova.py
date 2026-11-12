@@ -106,8 +106,8 @@ def test_il_rimborso_730_di_r07_e_sul_netto_e_credito_nella_delega_di_dicembre(e
     """Un esito 730-4 vero, la dichiarazione sul netto verso il beneficiario: nessun difetto del rimborso o del debito negativo."""
     assert esecuzione.difetti == []
     # 1952.50 prima del rimborso, piu' 150.00, piu' somma esente e trattamento integrativo di dicembre (116.90, ticket #95);
-    # con la tredicesima di 2.019,63 pagata nello stesso pagamento (ADR 0038) il netto sale a 4.140,15
-    assert "netto R07: 4140.15" in resoconto
+    # con la tredicesima di 2.019,63 pagata nello stesso pagamento (ADR 0038) il netto sale a 4.140,15; con la ritenuta sul reddito annuo proiettato (ADR 0039) la ritenuta di dicembre cresce e il netto è 4.120,20
+    assert "netto R07: 4120.20" in resoconto
     assert "R07: rimborso del 730-4: 150.00, anno dei redditi dichiarati 2025" in resoconto
     assert "riga F 150E: debito 0.00, credito 150.00" in resoconto  # la riga a credito e' nella delega trasmessa
     assert "esito 730-4" in resoconto and "rimborso_irpef_730" not in resoconto

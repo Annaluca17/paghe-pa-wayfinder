@@ -476,7 +476,7 @@ class DichiarazioneDeduzione:
             raise ErroreCorpus(f"Deduzione fiscale {self.istituto}: vigenza invertita")
 
 
-PERIODI_FISCALI = frozenset({"imponibile", "periodi", "giorni", "giorni_anno", "figli"})
+PERIODI_FISCALI = frozenset({"imponibile", "periodi", "giorni", "giorni_anno", "figli", "reddito_annuo", "quota_minimo"})
 
 
 @dataclass(frozen=True)
@@ -488,8 +488,12 @@ class RegolaRitenuta:
     (12 per il mese, 1 per il conguaglio). `detrazione` si applica solo con la dichiarazione del
     sostituito che chiede `detrazione_richiesta`. `detrazione_automatica` si applica sempre (l'ulteriore
     detrazione che il sostituto riconosce in via automatica) e vale 0 se la regola non la dichiara.
-    `fisco.giorni` e `fisco.giorni_anno` servono a rapportare le detrazioni al periodo di lavoro: nella ritenuta
-    del mese valgono entrambi 1, nel conguaglio i giorni di servizio dell'anno e i giorni dell'anno.
+    `fisco.giorni` e `fisco.giorni_anno` servono a rapportare le detrazioni al periodo: nella ritenuta del mese sono i
+    giorni del mese e i giorni dell'anno, nel conguaglio i giorni di servizio dell'anno e i giorni dell'anno.
+    `fisco.reddito_annuo` è il reddito a cui si applicano le fasce delle detrazioni (ADR 0039): nella ritenuta la
+    proiezione dell'anno (pagato, mese, mesi che restano, tredicesima), nel conguaglio l'imponibile dell'anno. Una formula
+    che lo legge non divide per `fisco.periodi`: la quota del periodo è già nei giorni. `fisco.quota_minimo` è la quota
+    da dare a un minimo annuo: 1 al conguaglio, giorni del mese su giorni dell'anno nella ritenuta.
     Carichi di famiglia (ADR 0033): `carichi_coniuge`, `carichi_figlio` e `carichi_ascendente` sono la detrazione ANNUA
     per un familiare a carico al 100%, nelle stesse variabili, più `fisco.figli`, il numero dei figli che danno diritto
     nello stesso mese (aumenta la soglia dei figli). Il coniuge vale anche per il figlio in luogo del coniuge. Il motore
@@ -541,6 +545,17 @@ class RegolaRitenuta:
             ignoti = letti.fisco - PERIODI_FISCALI
             if ignoti:
                 raise ErroreCorpus(f"{soggetto}: fisco ignoto {sorted(ignoti)}; ammessi {sorted(PERIODI_FISCALI)}")
+
+    @property
+    def usa_la_proiezione(self) -> bool:
+        """Una formula delle detrazioni legge `fisco.reddito_annuo`: la ritenuta deve proiettare il reddito dell'anno."""
+        return any(
+            "reddito_annuo" in riferimenti(formula).fisco
+            for formula in (
+                self.detrazione, self.detrazione_automatica, self.carichi_coniuge, self.carichi_figlio,
+                self.carichi_ascendente, self.detrazione_carica_elettiva,
+            )
+        )
 
     @property
     def parametri(self) -> frozenset[str]:

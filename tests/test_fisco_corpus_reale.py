@@ -20,11 +20,13 @@ def reale():
 
 def calcolo(
     reale, imponibile, periodi=1, giorno=date(2026, 6, 1), giorni=365, giorni_anno=365, dichiarazione=True,
-    categorie=("lavoro_dipendente",),
+    categorie=("lavoro_dipendente",), **proiettato,
 ):
     regola = reale.regola_ritenuta(giorno)
     fatto = object() if dichiarazione else None
-    return _calcola(reale, regola, D(imponibile), periodi, giorno, fatto, giorni, giorni_anno, frozenset(categorie))
+    return _calcola(
+        reale, regola, D(imponibile), periodi, giorno, fatto, giorni, giorni_anno, frozenset(categorie), **proiettato
+    )
 
 
 @pytest.mark.parametrize("anno", [2026, 2027])
@@ -76,15 +78,19 @@ def test_ulteriore_detrazione_automatica(reale, reddito, ulteriore):
     assert calcolo(reale, reddito, dichiarazione=False).detrazione_automatica == D(ulteriore)
 
 
+# Il mese a un dodicesimo: 1 giorno su 12, reddito annuo dato (ADR 0039: nella ritenuta lo dà la proiezione).
+UN_DODICESIMO = dict(periodi=12, giorni=1, giorni_anno=12, reddito_annuo=D("24000"), quota_minimo=D(1) / 12)
+
+
 def test_la_ritenuta_del_mese_ragguaglia_scaglioni_e_detrazioni_a_un_dodicesimo(reale):
     # 2.000 al mese: reddito annuo 24.000, imposta 5.520 / 12, art. 13 b) 1.910 + 1.190 x 0,3076 (4.000 / 13.000 troncato) = 2.276,04 / 12
-    c = calcolo(reale, "2000", periodi=12, giorni=1, giorni_anno=1)
+    c = calcolo(reale, "2000", **UN_DODICESIMO)
     assert (c.imposta, c.detrazione, c.detrazione_automatica) == (D("460.00"), D("189.67"), D("83.33"))
     assert c.dovuto == D("460.00") - D("189.67") - D("83.33")
 
 
 def test_senza_dichiarazione_resta_solo_la_detrazione_automatica(reale):
-    c = calcolo(reale, "2000", periodi=12, giorni=1, giorni_anno=1, dichiarazione=False)
+    c = calcolo(reale, "2000", dichiarazione=False, **UN_DODICESIMO)
     assert (c.detrazione, c.dovuto) == (D("0"), D("460.00") - D("83.33"))
 
 
@@ -128,3 +134,13 @@ def test_senza_reddito_di_lavoro_dipendente_niente_ulteriore_detrazione(reale, c
 def test_con_anche_reddito_di_lavoro_dipendente_l_ulteriore_detrazione_spetta(reale):
     risultato = calcolo(reale, "30000", dichiarazione=False, categorie=("collaborazione", "lavoro_dipendente"))
     assert risultato.detrazione_automatica == D("1000.00")
+
+
+def test_la_detrazione_del_mese_e_quella_annua_sul_reddito_proiettato_per_i_giorni_del_mese(reale):
+    # reddito annuo 24.000 come sopra, ma mese di 31 giorni su 365: 2.276,04 x 31 / 365 = 193,31 invece di 189,67
+    c = calcolo(reale, "2000", periodi=12, giorni=31, giorni_anno=365, reddito_annuo=D("24000"), quota_minimo=D(31) / 365)
+    assert c.detrazione == D("193.31")
+    # lo stesso mese con un reddito proiettato più alto (mese 2.000 ma anno a 30.000) ha la detrazione della fascia c)
+    alto = calcolo(reale, "2000", periodi=12, giorni=31, giorni_anno=365, reddito_annuo=D("30000"), quota_minimo=D(31) / 365)
+    assert alto.detrazione < c.detrazione
+    assert alto.imposta == c.imposta  # le fasce dell'imposta lorda restano sul mese ragguagliato

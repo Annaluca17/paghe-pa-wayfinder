@@ -19,6 +19,7 @@ from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from . import addizionali, benefici, sostitutiva
+from .calcolo import calcola_annuale
 from .corpus import MATURAZIONI_DI_CASSA, Corpus, RegolaConguaglio, RegolaRitenuta
 from .errori import CasoNonModellato, ErroreCalcolo, FattoMancante, RedditoMancante
 from .formula import valuta
@@ -339,6 +340,7 @@ class _Calcolo:
     motivo_art13: str = ""
     detrazione_c1: Decimal = Decimal(0)
     detrazione_c5: Decimal = Decimal(0)
+    reddito_annuo: Decimal = Decimal(0)
 
 
 def _mese_assoluto(anno: int, mese: int) -> int:
@@ -353,6 +355,97 @@ def _da_diritto(relazione: str, nascita: date, anno: int, mese: int) -> bool:
     if corrente < _mese_assoluto(nascita.year + ETA_INIZIO_FIGLI, nascita.month):
         return False
     return relazione == "figlio_disabile" or corrente < _mese_assoluto(nascita.year + ETA_FINE_FIGLI, nascita.month)
+
+
+@dataclass(frozen=True)
+class _Proiezione:
+    """Il reddito annuo della ritenuta del mese e le sue parti (ADR 0039)."""
+
+    reddito: Decimal
+    pagato_prima: Decimal
+    del_mese: Decimal
+    ricorrente: Decimal
+    mesi_che_restano: int
+    tredicesima: Decimal
+
+    def testo(self) -> str:
+        return (
+            f"reddito annuo = pagato prima del mese {self.pagato_prima} + imponibile del mese {self.del_mese} + ricorrente "
+            f"{self.ricorrente} per {self.mesi_che_restano} mesi che restano + tredicesima non pagata {self.tredicesima} "
+            f"= {self.reddito}"
+        )
+
+
+MATURAZIONI_ORDINARIE = ("mese", "giorni", "periodo")  # le altre (evento, annuale, onere) non si ripetono ogni mese
+
+
+def _e_ricorrente(riga: Importo, primo_del_mese: date) -> bool:
+    """Importo che si ripete ogni mese: maturazione ordinaria e competenza del mese di paga o successiva (non un arretrato)."""
+    return riga.derivazione.maturazione in MATURAZIONI_ORDINARIE and riga.periodo.al >= primo_del_mese
+
+
+def _tredicesima_non_pagata(
+    registro: Registro, corpus: Corpus, persona: str, anno: int, istante: datetime, pagati: list[Importo]
+) -> Decimal:
+    """Tredicesima attesa dell'anno (`calcola_annuale`) meno quanto ne risulta già pagato, per istituto (ADR 0039)."""
+    dovuto: dict[str, Decimal] = {}
+    for rapporto in registro.rapporti_della_persona(persona, istante):
+        for importo in calcola_annuale(registro, corpus, rapporto, anno, istante):
+            if corpus.reddito(importo.istituto, date(anno, 12, 31)) is not None:
+                dovuto[importo.istituto] = dovuto.get(importo.istituto, Decimal(0)) + importo.valore
+    return sum(
+        (
+            max(Decimal(0), valore - sum((riga.valore for riga in pagati if riga.istituto == istituto), Decimal(0)))
+            for istituto, valore in dovuto.items()
+        ),
+        Decimal(0),
+    )
+
+
+def _proiezione(
+    registro: Registro,
+    corpus: Corpus,
+    persona: str,
+    anno: int,
+    data_pagamento: date,
+    istante: datetime,
+    redditi_del_mese: tuple[Importo, ...],
+    deduzioni_del_mese: tuple[Importo, ...],
+) -> _Proiezione:
+    """Reddito annuo della ritenuta del mese: pagato prima, mese, ricorrente per i mesi che restano, tredicesima (ADR 0039).
+
+    Il pagato prima è l'imponibile fiscale degli esiti della persona pagati prima del mese. Il ricorrente è l'imponibile
+    del mese senza arretrati né importi non ordinari. La tredicesima è quella non ancora pagata, al netto dei contributi
+    nella stessa misura del ricorrente. Un pagamento di gennaio per l'anno prima non ha mesi che restano.
+    """
+    primo = data_pagamento.replace(day=1)
+    prima: list[Importo] = []
+    prima_dedotte: list[Importo] = []
+    for pagata in _pagati(registro, persona, istante):
+        giorno = pagata.data or pagata.valuta
+        if giorno >= primo:
+            continue
+        if _e_reddito(pagata.riga):
+            if pagata.riga.anno_imposta == anno:
+                prima.append(pagata.riga)
+        elif _e_deduzione(corpus, pagata.riga, giorno) and _anno_della_deduzione(pagata) == anno:
+            prima_dedotte.append(pagata.riga)
+    pagato_prima = sum((r.valore for r in prima), Decimal(0)) - sum((r.valore for r in prima_dedotte), Decimal(0))
+    del_mese = sum((r.valore for r in redditi_del_mese), Decimal(0)) - sum((r.valore for r in deduzioni_del_mese), Decimal(0))
+    lordo = sum((r.valore for r in redditi_del_mese if _e_ricorrente(r, primo)), Decimal(0))
+    contributi = sum((r.valore for r in deduzioni_del_mese if _e_ricorrente(r, primo)), Decimal(0))
+    ricorrente = lordo - contributi
+    restano = 0 if data_pagamento.year > anno else PERIODI_MENSILI - data_pagamento.month
+    tredicesima = Decimal(0)
+    if restano:
+        residuo = _tredicesima_non_pagata(registro, corpus, persona, anno, istante, [*prima, *redditi_del_mese])
+        tredicesima = residuo * (1 - contributi / lordo) if lordo > 0 else residuo
+    reddito = pagato_prima + del_mese + ricorrente * restano + tredicesima
+    cent = Decimal("0.01")
+    return _Proiezione(
+        reddito.quantize(cent, ROUND_HALF_UP), pagato_prima.quantize(cent, ROUND_HALF_UP), del_mese.quantize(cent, ROUND_HALF_UP),
+        ricorrente.quantize(cent, ROUND_HALF_UP), restano, tredicesima.quantize(cent, ROUND_HALF_UP),
+    )
 
 
 def _carichi_del_mese(
@@ -431,6 +524,8 @@ def _calcola(
     giorni_anno: int = 1,
     categorie: frozenset[str] = frozenset(),
     carichi: tuple[_CaricoMese, ...] = (),
+    reddito_annuo: Decimal | None = None,
+    quota_minimo: Decimal = Decimal(1),
 ) -> _Calcolo:
     """Imposta, detrazioni e dovuto del periodo, o dell'anno con un solo periodo.
 
@@ -439,6 +534,8 @@ def _calcola(
     mese `giorni` e `giorni_anno` valgono 1: il rapporto è neutro e il periodo è un dodicesimo per pagamento.
     I `carichi` sono i mesi con familiari a carico: la ritenuta ne ha uno, il conguaglio fino a dodici (ADR 0033).
     Ogni familiare dà la formula annua per la sua quota, un dodicesimo per mese; i carichi non seguono i giorni di servizio.
+    `reddito_annuo` è il reddito delle fasce delle detrazioni: la proiezione dell'anno nella ritenuta (ADR 0039); senza,
+    è l'imponibile per i periodi (l'imponibile dell'anno nel conguaglio). `quota_minimo` rapporta il minimo annuo al periodo.
     """
     parametri: dict[str, ParametroLetto] = {}
     valori_fisco = {
@@ -447,6 +544,8 @@ def _calcola(
         "giorni": Decimal(giorni),
         "giorni_anno": Decimal(giorni_anno),
         "figli": Decimal(0),
+        "reddito_annuo": reddito_annuo if reddito_annuo is not None else imponibile * periodi,
+        "quota_minimo": quota_minimo,
     }
 
     def risolvi(origine: str, nome: str) -> Decimal:
@@ -488,6 +587,7 @@ def _calcola(
         motivo_art13,
         c1,
         c5,
+        valori_fisco["reddito_annuo"],
     )
 
 
@@ -495,11 +595,15 @@ def _detrazione_teorica(
     corpus: Corpus, regola: RegolaRitenuta, imponibile: Decimal, periodi: int, riferimento: date, giorni: int, giorni_anno: int
 ) -> Decimal:
     """La detrazione dell'art. 13 del periodo anche senza la dichiarazione del sostituito (per il trattamento integrativo)."""
+    # Resta sul reddito teorico (imponibile per i periodi, ADR 0039 §4): una formula che non divide più per i periodi
+    # riceve la quota del periodo nei giorni dell'anno, così il valore è quello di prima.
     valori_fisco = {
         "imponibile": imponibile,
         "periodi": Decimal(periodi),
         "giorni": Decimal(giorni),
-        "giorni_anno": Decimal(giorni_anno),
+        "giorni_anno": Decimal(giorni_anno * periodi),
+        "reddito_annuo": imponibile * periodi,
+        "quota_minimo": Decimal(1) / periodi,
     }
 
     def risolvi(origine: str, nome: str) -> Decimal:
@@ -596,10 +700,25 @@ def _ritenuta(
     )
     dichiarazione = _dichiarazione(registro, persona, regola, data_pagamento, istante)
     carico, _ = _carichi_del_mese(registro, regola, persona, data_pagamento.year, data_pagamento.month, istante)
+    proiezione = None
+    proiettato: dict = {}
+    if regola.usa_la_proiezione:
+        proiezione = _proiezione(
+            registro, corpus, persona, anno, data_pagamento, istante, (*gia_pagate, *righe), (*gia_dedotte, *deduzioni)
+        )
+        giorni_mese = calendar.monthrange(data_pagamento.year, data_pagamento.month)[1]
+        giorni_anno = 366 if calendar.isleap(data_pagamento.year) else 365
+        proiettato = dict(
+            giorni=giorni_mese,
+            giorni_anno=giorni_anno,
+            reddito_annuo=proiezione.reddito,
+            quota_minimo=Decimal(giorni_mese) / giorni_anno,
+        )
     calcolo = _calcola(
         corpus, regola, imponibile, PERIODI_MENSILI, riferimento, dichiarazione,
         categorie=frozenset(riga.categoria_reddito for riga in (*gia_pagate, *righe)),
         carichi=(carico,),
+        **proiettato,
     )
     operato = sum((riga.valore for riga in gia_operate), Decimal(0))
     importo = Importo(
@@ -615,6 +734,7 @@ def _ritenuta(
             regola_versione=regola.versione,
             riferimento=regola.riferimento,
             formula=(
+                f"{proiezione.testo() + '; ' if proiezione else ''}"
                 f"imposta del periodo = {regola.imposta}; detrazione rapportata = "
                 f"{_formula_detrazione(regola.detrazione, regola, calcolo)}; "
                 f"detrazione automatica = {regola.detrazione_automatica}; "

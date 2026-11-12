@@ -462,7 +462,7 @@ Fatto della persona, con validità e documento di origine, che chiede le detrazi
 _Avoid_: Modulo detrazioni, carichi di famiglia (che sono solo una parte)
 
 **Familiare a carico**:
-Fatto della persona, uno per familiare (chiave: il suo codice fiscale), con relazione, data di nascita, percentuale, validità e documento di origine: è la richiesta delle detrazioni dell'art. 12 per quel familiare, senza passare dalla dichiarazione del sostituito. La detrazione si applica a mese, un dodicesimo della formula annua per ogni familiare a carico nel mese di paga; per i figli l'età si ricava dalla data di nascita e fuori fascia il familiare resta registrato con un avviso. Una variazione è un nuovo fatto datato (ADR 0033).
+Fatto della persona, uno per familiare (chiave: il suo codice fiscale), con relazione, data di nascita, percentuale, validità e documento di origine: è la richiesta delle detrazioni dell'art. 12 per quel familiare, senza passare dalla dichiarazione del sostituito. La detrazione si applica a mese, un dodicesimo della formula annua per ogni familiare a carico nel mese di paga; per i figli l'età si ricava dalla data di nascita e fuori fascia il familiare resta registrato con un avviso. Una variazione è un nuovo fatto datato (ADR 0033). Le fasce della detrazione leggono il reddito annuo proiettato (ADR 0039).
 _Avoid_: Carico, dichiarazione dei carichi
 
 **Detrazione a richiesta**:
@@ -546,6 +546,10 @@ _Avoid_: Aliquota media (che è il risultato della regola), storico redditi
 **Reddito annuo stimato**:
 Pagato dall'inizio dell'anno diviso i giorni di servizio per 365 (circ. 4/E/2025), più i redditi di altri sostituti della dichiarazione del sostituito, usato quando una regola dipende dal reddito dell'anno e il sostituto deve operare prima di conoscerlo (limite della sostitutiva sull'accessorio, fascia della somma esente, soglie del trattamento integrativo). Il conguaglio fiscale la sostituisce con il reddito vero.
 _Avoid_: Reddito presunto, proiezione del conguaglio (che è un avviso, non una base)
+
+**Reddito annuo proiettato**:
+Reddito su cui la ritenuta del mese applica le fasce delle detrazioni (art. 13, ulteriore detrazione, carichi di famiglia): pagato prima del mese, imponibile del mese, imponibile ricorrente del mese per i mesi che restano, tredicesima non ancora pagata al netto dei contributi (ADR 0039, che supera in parte l'ADR 0033). Gli scaglioni dell'imposta lorda restano sul mese ragguagliato; somma esente e trattamento integrativo restano sul reddito annuo stimato. La detrazione del mese è la detrazione annua per giorni del mese su giorni dell'anno (prassi-interpretazione). Il conguaglio la sostituisce con il reddito vero.
+_Avoid_: Reddito annuo stimato (che è un'altra base, per i benefici), mese per dodici
 
 **Reddito dell'anno precedente**:
 Fatto della persona, preso dalla CU, con il reddito imponibile dell'anno prima quando il modello non ha il suo conguaglio. Lo leggono la base e l'esenzione dell'acconto dell'addizionale comunale; senza, l'acconto non si trattiene e tutto passa al saldo.

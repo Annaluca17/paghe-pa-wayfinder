@@ -2988,12 +2988,17 @@ vale = true
 riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art53-com1 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art54-com1"
 
 # --- Ritenuta e conguaglio dell'IRPEF ---
-# Il reddito della fascia e' l'imponibile del periodo per i periodi dell'anno (nel conguaglio, l'imponibile dell'anno).
+# Il reddito delle fasce dell'imposta lorda e' l'imponibile del periodo per i periodi dell'anno (nel conguaglio, l'imponibile dell'anno).
+# Il reddito delle fasce delle detrazioni (art. 13, ulteriore detrazione, carichi) e' `fisco.reddito_annuo`: nella ritenuta la
+# proiezione dell'anno (pagato + mese + ricorrente per i mesi che restano + tredicesima non pagata), nel conguaglio l'imponibile
+# dell'anno (ADR 0039, che supera in parte l'ADR 0033). La detrazione del mese e' l'annua per giorni del mese / giorni dell'anno
+# (prassi-interpretazione, da verificare); il minimo annuo segue la stessa quota (`fisco.quota_minimo`). Somma esente e
+# trattamento integrativo restano sul reddito teorico (circ. AdE 4/E/2025). La detrazione della carica elettiva (c. 5) non cambia.
 # L'imposta e' la somma dei tratti degli scaglioni ragguagliati al periodo, arrotondata al centesimo. La detrazione dell'art. 13
 # c. 1 (con l'aumento del c. 1.1) si applica solo con la dichiarazione del sostituito (art. 23 c. 2 D.P.R. 600/1973); l'ulteriore
 # detrazione si applica sempre (L. 207/2024 c. 7). Rapportate al periodo di lavoro: nel conguaglio giorni di servizio / giorni
 # dell'anno (prassi: circolare AdE 15/E 2007, istruzioni 730/2026; il testo dice solo «rapportata al periodo di lavoro»); il
-# minimo di 690 euro si applica dopo il rapporto e solo con reddito fino a 15.000. Nella ritenuta del mese i giorni non pesano.
+# minimo di 690 euro si applica dopo il rapporto e solo con reddito fino a 15.000. Nella ritenuta del mese i giorni sono quelli del mese.
 # Marcatura: norma certa per scaglioni e importi, prassi per il criterio dei giorni. Il minimo di 1.380 per il tempo determinato
 # non e' applicato: lo segnala un avviso.
 # I rapporti delle fasce b) e c) si troncano alle prime quattro cifre decimali (art. 13 c. 6 TUIR, c. 8 TU; troncamento:
@@ -3026,54 +3031,54 @@ detrazione_carica_elettiva = '''arrotonda(
 # coniuge usa quella del coniuge. R è lo stesso reddito dell'art. 13; `fisco.figli` è il numero dei figli che danno
 # diritto nello stesso mese. Rapporti dell'art. 12 c. 4: coniuge, fascia 1 con rapporto 1 -> 690; rapporti delle
 # fasce 1 e 3 pari a zero -> zero; figli e ascendenti, rapporto zero, negativo o uguale a uno -> zero.
-carichi_coniuge = '''(se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_1,
-       se(tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4) <= 0,
+carichi_coniuge = '''(se(fisco.reddito_annuo <= parametro.carichi_coniuge_soglia_1,
+       se(tronca(fisco.reddito_annuo / parametro.carichi_coniuge_soglia_1, 4) <= 0,
           0,
-          parametro.carichi_coniuge_importo_1 - parametro.carichi_coniuge_riduzione * tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4)),
-       se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_2,
+          parametro.carichi_coniuge_importo_1 - parametro.carichi_coniuge_riduzione * tronca(fisco.reddito_annuo / parametro.carichi_coniuge_soglia_1, 4)),
+       se(fisco.reddito_annuo <= parametro.carichi_coniuge_soglia_2,
           parametro.carichi_coniuge_importo_2,
-          se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_3,
-             parametro.carichi_coniuge_importo_2 * max(0, tronca((parametro.carichi_coniuge_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.carichi_coniuge_divisore_3, 4)),
+          se(fisco.reddito_annuo <= parametro.carichi_coniuge_soglia_3,
+             parametro.carichi_coniuge_importo_2 * max(0, tronca((parametro.carichi_coniuge_soglia_3 - fisco.reddito_annuo) / parametro.carichi_coniuge_divisore_3, 4)),
              0)))
-    + se((fisco.imponibile * fisco.periodi) > parametro.carichi_coniuge_magg_estremo_0,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_1, parametro.carichi_coniuge_magg_importo_1,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_2, parametro.carichi_coniuge_magg_importo_2,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_3, parametro.carichi_coniuge_magg_importo_3,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_4, parametro.carichi_coniuge_magg_importo_4,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_5, parametro.carichi_coniuge_magg_importo_5, 0))))),
+    + se(fisco.reddito_annuo > parametro.carichi_coniuge_magg_estremo_0,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_1, parametro.carichi_coniuge_magg_importo_1,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_2, parametro.carichi_coniuge_magg_importo_2,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_3, parametro.carichi_coniuge_magg_importo_3,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_4, parametro.carichi_coniuge_magg_importo_4,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_5, parametro.carichi_coniuge_magg_importo_5, 0))))),
          0))'''
-carichi_figlio = '''se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) <= 0,
+carichi_figlio = '''se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - fisco.reddito_annuo) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) <= 0,
    0,
-   se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) >= 1,
+   se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - fisco.reddito_annuo) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) >= 1,
       0,
-      parametro.carichi_figlio_importo * tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4)))'''
-carichi_ascendente = '''se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) <= 0,
+      parametro.carichi_figlio_importo * tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - fisco.reddito_annuo) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4)))'''
+carichi_ascendente = '''se(tronca((parametro.carichi_ascendente_soglia - fisco.reddito_annuo) / parametro.carichi_ascendente_soglia, 4) <= 0,
    0,
-   se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) >= 1,
+   se(tronca((parametro.carichi_ascendente_soglia - fisco.reddito_annuo) / parametro.carichi_ascendente_soglia, 4) >= 1,
       0,
-      parametro.carichi_ascendente_importo * tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4)))'''
+      parametro.carichi_ascendente_importo * tronca((parametro.carichi_ascendente_soglia - fisco.reddito_annuo) / parametro.carichi_ascendente_soglia, 4)))'''
 imposta = '''arrotonda(
     (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
      + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
      + parametro.irpef_aliquota_3 * max(0, (fisco.imponibile * fisco.periodi) - parametro.irpef_limite_2)) / fisco.periodi, 2)'''
 detrazione = '''arrotonda(
-    se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_a,
-       max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a),
-       (se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_b,
-           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b, 4),
-           se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_c,
-              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c, 4),
+    se(fisco.reddito_annuo <= parametro.art13_soglia_a,
+       max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a * fisco.quota_minimo),
+       (se(fisco.reddito_annuo <= parametro.art13_soglia_b,
+           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - fisco.reddito_annuo) / parametro.art13_divisore_b, 4),
+           se(fisco.reddito_annuo <= parametro.art13_soglia_c,
+              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - fisco.reddito_annuo) / parametro.art13_divisore_c, 4),
               0))
-        + se((fisco.imponibile * fisco.periodi) > parametro.art13_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
-       * fisco.giorni / fisco.giorni_anno) / fisco.periodi, 2)'''
+        + se(fisco.reddito_annuo > parametro.art13_aumento_da, se(fisco.reddito_annuo <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
+       * fisco.giorni / fisco.giorni_anno), 2)'''
 detrazione_automatica = '''arrotonda(
-    se((fisco.imponibile * fisco.periodi) > parametro.ulteriore_soglia_1,
-       se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_2,
+    se(fisco.reddito_annuo > parametro.ulteriore_soglia_1,
+       se(fisco.reddito_annuo <= parametro.ulteriore_soglia_2,
           parametro.ulteriore_importo,
-          se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_3,
-             parametro.ulteriore_importo * (parametro.ulteriore_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.ulteriore_divisore,
+          se(fisco.reddito_annuo <= parametro.ulteriore_soglia_3,
+             parametro.ulteriore_importo * (parametro.ulteriore_soglia_3 - fisco.reddito_annuo) / parametro.ulteriore_divisore,
              0)),
-       0) * fisco.giorni / fisco.giorni_anno / fisco.periodi, 2)'''
+       0) * fisco.giorni / fisco.giorni_anno, 2)'''
 
 [[conguaglio]]
 istituto = "conguaglio_irpef"
@@ -3108,54 +3113,54 @@ detrazione_carica_elettiva = '''arrotonda(
 # coniuge usa quella del coniuge. R è lo stesso reddito dell'art. 13; `fisco.figli` è il numero dei figli che danno
 # diritto nello stesso mese. Rapporti dell'art. 12 c. 4: coniuge, fascia 1 con rapporto 1 -> 690; rapporti delle
 # fasce 1 e 3 pari a zero -> zero; figli e ascendenti, rapporto zero, negativo o uguale a uno -> zero.
-carichi_coniuge = '''(se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_1,
-       se(tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4) <= 0,
+carichi_coniuge = '''(se(fisco.reddito_annuo <= parametro.carichi_coniuge_soglia_1,
+       se(tronca(fisco.reddito_annuo / parametro.carichi_coniuge_soglia_1, 4) <= 0,
           0,
-          parametro.carichi_coniuge_importo_1 - parametro.carichi_coniuge_riduzione * tronca((fisco.imponibile * fisco.periodi) / parametro.carichi_coniuge_soglia_1, 4)),
-       se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_2,
+          parametro.carichi_coniuge_importo_1 - parametro.carichi_coniuge_riduzione * tronca(fisco.reddito_annuo / parametro.carichi_coniuge_soglia_1, 4)),
+       se(fisco.reddito_annuo <= parametro.carichi_coniuge_soglia_2,
           parametro.carichi_coniuge_importo_2,
-          se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_soglia_3,
-             parametro.carichi_coniuge_importo_2 * max(0, tronca((parametro.carichi_coniuge_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.carichi_coniuge_divisore_3, 4)),
+          se(fisco.reddito_annuo <= parametro.carichi_coniuge_soglia_3,
+             parametro.carichi_coniuge_importo_2 * max(0, tronca((parametro.carichi_coniuge_soglia_3 - fisco.reddito_annuo) / parametro.carichi_coniuge_divisore_3, 4)),
              0)))
-    + se((fisco.imponibile * fisco.periodi) > parametro.carichi_coniuge_magg_estremo_0,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_1, parametro.carichi_coniuge_magg_importo_1,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_2, parametro.carichi_coniuge_magg_importo_2,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_3, parametro.carichi_coniuge_magg_importo_3,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_4, parametro.carichi_coniuge_magg_importo_4,
-         se((fisco.imponibile * fisco.periodi) <= parametro.carichi_coniuge_magg_estremo_5, parametro.carichi_coniuge_magg_importo_5, 0))))),
+    + se(fisco.reddito_annuo > parametro.carichi_coniuge_magg_estremo_0,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_1, parametro.carichi_coniuge_magg_importo_1,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_2, parametro.carichi_coniuge_magg_importo_2,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_3, parametro.carichi_coniuge_magg_importo_3,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_4, parametro.carichi_coniuge_magg_importo_4,
+         se(fisco.reddito_annuo <= parametro.carichi_coniuge_magg_estremo_5, parametro.carichi_coniuge_magg_importo_5, 0))))),
          0))'''
-carichi_figlio = '''se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) <= 0,
+carichi_figlio = '''se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - fisco.reddito_annuo) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) <= 0,
    0,
-   se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) >= 1,
+   se(tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - fisco.reddito_annuo) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4) >= 1,
       0,
-      parametro.carichi_figlio_importo * tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - (fisco.imponibile * fisco.periodi)) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4)))'''
-carichi_ascendente = '''se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) <= 0,
+      parametro.carichi_figlio_importo * tronca(((parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)) - fisco.reddito_annuo) / (parametro.carichi_figlio_soglia + parametro.carichi_figlio_aumento * max(0, fisco.figli - 1)), 4)))'''
+carichi_ascendente = '''se(tronca((parametro.carichi_ascendente_soglia - fisco.reddito_annuo) / parametro.carichi_ascendente_soglia, 4) <= 0,
    0,
-   se(tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4) >= 1,
+   se(tronca((parametro.carichi_ascendente_soglia - fisco.reddito_annuo) / parametro.carichi_ascendente_soglia, 4) >= 1,
       0,
-      parametro.carichi_ascendente_importo * tronca((parametro.carichi_ascendente_soglia - (fisco.imponibile * fisco.periodi)) / parametro.carichi_ascendente_soglia, 4)))'''
+      parametro.carichi_ascendente_importo * tronca((parametro.carichi_ascendente_soglia - fisco.reddito_annuo) / parametro.carichi_ascendente_soglia, 4)))'''
 imposta = '''arrotonda(
     (parametro.irpef_aliquota_1 * min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_1)
      + parametro.irpef_aliquota_2 * max(0, min((fisco.imponibile * fisco.periodi), parametro.irpef_limite_2) - parametro.irpef_limite_1)
      + parametro.irpef_aliquota_3 * max(0, (fisco.imponibile * fisco.periodi) - parametro.irpef_limite_2)) / fisco.periodi, 2)'''
 detrazione = '''arrotonda(
-    se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_a,
-       max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a),
-       (se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_b,
-           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_b, 4),
-           se((fisco.imponibile * fisco.periodi) <= parametro.art13_soglia_c,
-              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - (fisco.imponibile * fisco.periodi)) / parametro.art13_divisore_c, 4),
+    se(fisco.reddito_annuo <= parametro.art13_soglia_a,
+       max(parametro.art13_importo_a * fisco.giorni / fisco.giorni_anno, parametro.art13_minimo_a * fisco.quota_minimo),
+       (se(fisco.reddito_annuo <= parametro.art13_soglia_b,
+           parametro.art13_importo_b_c + parametro.art13_integrazione_b * tronca((parametro.art13_soglia_b - fisco.reddito_annuo) / parametro.art13_divisore_b, 4),
+           se(fisco.reddito_annuo <= parametro.art13_soglia_c,
+              parametro.art13_importo_b_c * tronca((parametro.art13_soglia_c - fisco.reddito_annuo) / parametro.art13_divisore_c, 4),
               0))
-        + se((fisco.imponibile * fisco.periodi) > parametro.art13_aumento_da, se((fisco.imponibile * fisco.periodi) <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
-       * fisco.giorni / fisco.giorni_anno) / fisco.periodi, 2)'''
+        + se(fisco.reddito_annuo > parametro.art13_aumento_da, se(fisco.reddito_annuo <= parametro.art13_aumento_fino_a, parametro.art13_aumento, 0), 0))
+       * fisco.giorni / fisco.giorni_anno), 2)'''
 detrazione_automatica = '''arrotonda(
-    se((fisco.imponibile * fisco.periodi) > parametro.ulteriore_soglia_1,
-       se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_2,
+    se(fisco.reddito_annuo > parametro.ulteriore_soglia_1,
+       se(fisco.reddito_annuo <= parametro.ulteriore_soglia_2,
           parametro.ulteriore_importo,
-          se((fisco.imponibile * fisco.periodi) <= parametro.ulteriore_soglia_3,
-             parametro.ulteriore_importo * (parametro.ulteriore_soglia_3 - (fisco.imponibile * fisco.periodi)) / parametro.ulteriore_divisore,
+          se(fisco.reddito_annuo <= parametro.ulteriore_soglia_3,
+             parametro.ulteriore_importo * (parametro.ulteriore_soglia_3 - fisco.reddito_annuo) / parametro.ulteriore_divisore,
              0)),
-       0) * fisco.giorni / fisco.giorni_anno / fisco.periodi, 2)'''
+       0) * fisco.giorni / fisco.giorni_anno, 2)'''
 
 [[conguaglio]]
 istituto = "conguaglio_irpef"
