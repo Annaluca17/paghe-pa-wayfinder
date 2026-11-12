@@ -144,7 +144,7 @@ def sostituisci_tabellari(corpus_reale: str, annui: dict[str, Decimal]) -> tuple
     cambi = {}
     for area, annuo in annui.items():
         modello = re.compile(
-            rf'(nome = "tabellare_annuo_{area}"\s*\[\[parametro\.vigenza\]\]\s*dal = 2026-01-01\s*valore = ")([\d.]+)(")'
+            rf'(nome = "tabellare_annuo_{area}"\s*\[\[parametro\.vigenza\]\]\s*dal = 2026-01-01\s*(?:applicabile_dal = [\d-]+\s*)?valore = ")([\d.]+)(")'
         )
         trovato = modello.search(corpus_reale)
         if trovato is None:
