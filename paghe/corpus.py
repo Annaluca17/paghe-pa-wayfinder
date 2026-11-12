@@ -59,6 +59,9 @@ LIMITI_CREDITO_F24EP = frozenset({"nessuno", "non_modellato"})
 FONTI_SCADENZA = frozenset({"norma", "prassi"})
 # Trattamento nel part-time (ADR 0026): proporzionale si riduce, intero no, da_integrativo lo fissa l'ente con un input da atto.
 TRATTAMENTI_PART_TIME = frozenset({"proporzionale", "intero", "da_integrativo"})
+# Trattamento di un istituto nella malattia (ADR 0042): `decurtata` si toglie nei primi giorni dell'episodio, `intera` no;
+# in entrambi i casi la percentuale del periodo si applica.
+TRATTAMENTI_MALATTIA = frozenset({"decurtata", "intera"})
 
 
 @dataclass(frozen=True)
@@ -226,6 +229,8 @@ class Base:
     massimale: str | None = None
     esclusione: str | None = None
     motivi_esclusione: tuple[str, ...] = ()
+    # Retribuzione virtuale (ADR 0042): la base conta gli importi come se la malattia non li avesse ridotti.
+    retribuzione_virtuale: bool = False
 
     def __post_init__(self) -> None:
         _riferimento_obbligatorio(self.riferimento, f"Base {self.nome}")
@@ -335,6 +340,65 @@ class DichiarazioneTrattamentoPartTime:
             raise ErroreCorpus(f"{soggetto}: trattamento uno di {sorted(TRATTAMENTI_PART_TIME)}")
         if (self.trattamento == "da_integrativo") != bool(self.fatto):
             raise ErroreCorpus(f"{soggetto}: il fatto di input va indicato se, e solo se, il trattamento è da_integrativo")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+
+@dataclass(frozen=True)
+class RegolaMalattia:
+    """Regole della malattia (ADR 0042): decurtazione dei primi giorni, finestra del comporto e fasce di retribuzione.
+
+    `fasce` sono coppie (giorni di malattia, percentuale) in ordine: oltre l'ultima fascia l'assenza non è retribuita.
+    I mesi del contratto sono contati a 30 giorni (9 mesi = 270 giorni): prassi, da verificare.
+    """
+
+    dal: date
+    riferimento: str
+    giorni_decurtati: int
+    anni_finestra: int
+    fasce: tuple[tuple[int, Decimal], ...]
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        _riferimento_obbligatorio(self.riferimento, "Malattia")
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus("Malattia: vigenza invertita")
+        if self.giorni_decurtati < 0 or self.anni_finestra < 1 or not self.fasce:
+            raise ErroreCorpus("Malattia: giorni decurtati, anni della finestra e fasce non validi")
+        if any(giorni < 1 or not 0 <= percentuale <= 100 for giorni, percentuale in self.fasce):
+            raise ErroreCorpus("Malattia: ogni fascia ha giorni positivi e percentuale tra 0 e 100")
+
+    def copre(self, giorno: date) -> bool:
+        return self.dal <= giorno and (self.al is None or giorno <= self.al)
+
+    def percentuale(self, giorni_comporto: int) -> Decimal:
+        """Percentuale spettante dal giorno di malattia numero `giorni_comporto` nella finestra; 0 oltre le fasce."""
+        limite = 0
+        for giorni, percentuale in self.fasce:
+            limite += giorni
+            if giorni_comporto <= limite:
+                return percentuale
+        return Decimal(0)
+
+
+@dataclass(frozen=True)
+class DichiarazioneMalattia:
+    """L'istituto dichiara come si comporta nella malattia (ADR 0042), con date e fonte."""
+
+    istituto: str
+    trattamento: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Malattia {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        if self.trattamento not in TRATTAMENTI_MALATTIA:
+            raise ErroreCorpus(f"{soggetto}: trattamento uno di {sorted(TRATTAMENTI_MALATTIA)}")
 
     def copre(self, giorno: date) -> bool:
         return self.dal <= giorno and (self.al is None or giorno <= self.al)
@@ -1322,6 +1386,8 @@ class Corpus:
         calendari_festivi: tuple[CalendarioFestivi, ...] = (),
         riferimento_patrono: str | None = None,
         trattamenti_part_time: tuple[DichiarazioneTrattamentoPartTime, ...] = (),
+        regole_malattia: tuple[RegolaMalattia, ...] = (),
+        dichiarazioni_malattia: tuple[DichiarazioneMalattia, ...] = (),
         condizioni_di_proposta: tuple[CondizioneDiProposta, ...] = (),
         soglie_di_verifica: tuple[SogliaVerifica, ...] = (),
         regole_somma_sospesa: tuple[RegolaSommaSospesa, ...] = (),
@@ -1338,6 +1404,8 @@ class Corpus:
         self._soglie_di_verifica = tuple(soglie_di_verifica)
         self._regole_somma_sospesa = tuple(regole_somma_sospesa)
         self._trattamenti_part_time = tuple(trattamenti_part_time)
+        self._regole_malattia = tuple(regole_malattia)
+        self._dichiarazioni_malattia = tuple(dichiarazioni_malattia)
         self._scadenze_f24ep = tuple(scadenze_f24ep)
         self._calendari_festivi = tuple(calendari_festivi)
         self.riferimento_patrono = riferimento_patrono  # voce [patrono]: obbligatoria solo se un rapporto ha il patrono
@@ -1374,6 +1442,7 @@ class Corpus:
         self._convalida_composizione()
         self._convalida_classificazione()
         self._convalida_part_time()
+        self._convalida_malattia()
         self._convalida_massimali_di_base()
         self._convalida_condizioni_di_proposta()
         self._convalida_blocco_pagamenti()
@@ -1411,6 +1480,8 @@ class Corpus:
             for m in self._mappature_di_fatto
         ]
         elenco += [(f"Part-time {t.istituto}", t.riferimento) for t in self._trattamenti_part_time]
+        elenco += [("Malattia", r.riferimento) for r in self._regole_malattia]
+        elenco += [(f"Malattia {d.istituto}", d.riferimento) for d in self._dichiarazioni_malattia]
         elenco += [(f"Condizione di proposta {c.istituto}", c.riferimento) for c in self._condizioni_di_proposta]
         elenco += [(f"Soglia di verifica {t.categoria}", t.riferimento) for t in self._soglie_di_verifica]
         elenco += [("Somma sospesa 48-bis", r.riferimento) for r in self._regole_somma_sospesa]
@@ -1514,6 +1585,18 @@ class Corpus:
             for altra in self._trattamenti_part_time[indice + 1 :]:
                 if altra.istituto == dichiarazione.istituto:
                     _vigenze_sovrapposte([dichiarazione, altra], f"Part-time {dichiarazione.istituto}")
+
+    def _convalida_malattia(self) -> None:
+        noti = self._istituti_noti()
+        _vigenze_sovrapposte(self._regole_malattia, "Malattia")
+        for indice, dichiarazione in enumerate(self._dichiarazioni_malattia):
+            if dichiarazione.istituto not in noti:
+                raise ErroreCorpus(f"Malattia {dichiarazione.istituto}: istituto ignoto")
+            for altra in self._dichiarazioni_malattia[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], f"Malattia {dichiarazione.istituto}")
+        if self._dichiarazioni_malattia and not self._regole_malattia:
+            raise ErroreCorpus("Malattia: gli istituti dichiarano un trattamento ma mancano le regole della malattia")
 
     def _convalida_catalogo_f24ep(self) -> None:
         for indice, voce in enumerate(self._codici_f24ep):
@@ -1655,7 +1738,7 @@ class Corpus:
         for istituto, regole in self._regole.items():
             for regola in regole:
                 basi = riferimenti(regola.formula).basi
-                ignote = basi - self._basi.keys()
+                ignote = {b.removesuffix("_pagato") for b in basi} - self._basi.keys()
                 if ignote:
                     raise ErroreCorpus(f"Istituto {istituto}: basi ignote {sorted(ignote)}")
                 if basi and regola.maturazione not in MATURAZIONI_DI_CASSA:
@@ -1882,6 +1965,20 @@ class Corpus:
                 [t.istituto, t.trattamento, t.dal.isoformat(), t.al.isoformat() if t.al else "", t.fatto or "", t.riferimento]
                 for t in self._trattamenti_part_time
             )
+        if self._regole_malattia or self._dichiarazioni_malattia:
+            contenuto["malattia"] = [
+                sorted(
+                    [r.dal.isoformat(), r.al.isoformat() if r.al else "", r.giorni_decurtati, r.anni_finestra,
+                     [[g, str(p)] for g, p in r.fasce], r.riferimento]
+                    for r in self._regole_malattia
+                ),
+                sorted(
+                    [d.istituto, d.trattamento, d.dal.isoformat(), d.al.isoformat() if d.al else "", d.riferimento]
+                    for d in self._dichiarazioni_malattia
+                ),
+            ]
+        if any(b.retribuzione_virtuale for b in self._basi.values()):
+            contenuto["basi_virtuali"] = sorted(b.nome for b in self._basi.values() if b.retribuzione_virtuale)
         if self._output:
             contenuto["output"] = sorted(
                 [o.vista, sorted(o.basi), sorted(o.istituti), o.dal.isoformat(), o.al.isoformat() if o.al else "", o.riferimento]
@@ -2057,6 +2154,14 @@ class Corpus:
         """Trattamento nel part-time vigente alla data; None se l'istituto non lo dichiara."""
         return _vigente([t for t in self._trattamenti_part_time if t.istituto == istituto], giorno)
 
+    def regola_malattia(self, giorno: date) -> RegolaMalattia | None:
+        """Regole della malattia vigenti alla data; None se il corpus non modella la malattia."""
+        return _vigente(list(self._regole_malattia), giorno)
+
+    def trattamento_malattia(self, istituto: str, giorno: date) -> DichiarazioneMalattia | None:
+        """Trattamento nella malattia vigente alla data; None se l'istituto non lo dichiara."""
+        return _vigente([d for d in self._dichiarazioni_malattia if d.istituto == istituto], giorno)
+
     def mappatura(
         self, istituto: str, sistema: str, data_pagamento: date, anno_imposta: int | None = None
     ) -> MappaturaEsterna | None:
@@ -2100,6 +2205,8 @@ class Corpus:
         """I tipi di fatto che possono dividere il mese in frazioni."""
         tipi = set(self.fatti_periodo_dichiarato) | {FATTO_PART_TIME, FATTO_TIPO_PART_TIME}
         tipi |= {t.fatto for t in self._trattamenti_part_time if t.fatto}
+        if self._regole_malattia:
+            tipi.add("malattia")
         for regole in self._regole.values():
             for regola in regole:
                 tipi |= riferimenti(regola.formula).fatti
@@ -2146,6 +2253,7 @@ class Corpus:
                 Base(
                     voce["nome"], voce["riferimento"], voce.get("massimale"), voce.get("esclusione"),
                     tuple(voce.get("motivi_esclusione", ())),
+                    bool(voce.get("retribuzione_virtuale", False)),
                 )
                 for voce in dati.get("base", [])
             )
@@ -2184,6 +2292,27 @@ class Corpus:
                     fatto=voce.get("fatto"),
                 )
                 for voce in dati.get("part_time", [])
+            )
+            regole_malattia = tuple(
+                RegolaMalattia(
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    giorni_decurtati=voce["giorni_decurtati"],
+                    anni_finestra=voce["anni_finestra"],
+                    fasce=tuple((int(f[0]), Decimal(str(f[1]))) for f in voce["fasce"]),
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                )
+                for voce in dati.get("malattia", [])
+            )
+            dichiarazioni_malattia = tuple(
+                DichiarazioneMalattia(
+                    istituto=voce["istituto"],
+                    trattamento=voce["trattamento"],
+                    dal=_data(voce["dal"], "dal"),
+                    riferimento=voce["riferimento"],
+                    al=_data(voce["al"], "al") if "al" in voce else None,
+                )
+                for voce in dati.get("malattia_istituto", [])
             )
             condizioni_di_proposta = tuple(
                 CondizioneDiProposta(
@@ -2276,6 +2405,8 @@ class Corpus:
             calendari_festivi=calendari_festivi,
             riferimento_patrono=riferimento_patrono,
             trattamenti_part_time=trattamenti_part_time,
+            regole_malattia=regole_malattia,
+            dichiarazioni_malattia=dichiarazioni_malattia,
             condizioni_di_proposta=condizioni_di_proposta,
             soglie_di_verifica=soglie_di_verifica,
             regole_somma_sospesa=regole_somma_sospesa,

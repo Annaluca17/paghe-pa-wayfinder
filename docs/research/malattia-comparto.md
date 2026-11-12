@@ -1,6 +1,6 @@
 # Malattia nel comparto Funzioni Locali: trattenuta dei primi 10 giorni e trattamento economico
 
-Ticket: #120. Data: 2026-11-12.
+Ticket: #120. Data: 2026-11-12. Aggiornata il 12/11/2026 per il ticket #130 (ADR 0042).
 
 ## Domanda
 
@@ -29,7 +29,13 @@ Regola del ticket: importi e percentuali solo con due fonti indipendenti. Qui no
 - **[VAD]** Ministero della Difesa, «Le decurtazioni dell'indennità di amministrazione» (2017). Riguarda il comparto Ministeri, non Funzioni Locali. Usato solo come esempio di prassi sui contributi. https://difesa.it/assets/allegati/32801/vademecum_decurtazioni_malattia.pdf
 - **[PDS]** La Posta del Sindaco, risposta del 25/05/2022 su day hospital e art. 71 (fonte secondaria, nel vault come copia). Usata solo come citazione del testo dell'art. 71.
 
-**Non letti:** il testo consolidato dell'art. 71 su Normattiva; circolare INPDAP 13 del 28/05/2009; parere Funzione Pubblica 2/2009 (30mi); nota Funzione Pubblica 126427 del 16/01/2009; sentenze Corte costituzionale 151/2010 e 120/2012; l'orientamento ARAN più recente sui trentesimi (se esiste). Dove servono, sono nell'elenco «Da verificare».
+**Letture del 12/11/2026 (ticket #130):**
+
+- **Art. 71 c. 1 DL 112/2008, testo vigente su Normattiva** (lettura in sintesi dello strumento, non verbatim): per le assenze per malattia di qualunque durata, nei primi dieci giorni è corrisposto il trattamento economico fondamentale, con esclusione di ogni indennità o emolumento fisso e continuativo o accessorio; sono escluse dalla regola le assenze per ricovero in strutture del SSN che erogano prestazioni LEA (la nota di modifica non è indicata nella pagina). Il comma 1-bis equipara al fondamentale le voci continuative di militari e vigili del fuoco. I commi 2 e 3 sono abrogati dal D.Lgs. 150/2009, il comma 5 dal DL 78/2009; i commi 5-bis e 5-ter sono dichiarati incostituzionali (sent. 207/2010). **Norma certa** sui 10 giorni e sull'esclusione dei ricoveri LEA; nessuna contraddizione con le decisioni del ticket.
+- **Circolare INPDAP 13 del 28/05/2009: il testo non si trova online** (nemmeno sul sito INPS dopo la fusione). Resta riferita da fonti secondarie: un sito di informazione economica («non produce effetti né sull'importo della pensione né sul TFR»), la nota del Ministero della Giustizia e il vademecum Difesa. Una fonte istituzionale diversa dall'INPDAP conferma la regola: il documento della Conferenza delle Regioni e delle Province autonome sull'interpretazione del DL 112/2008 (https://www.regioni.it/download/news/104093/, 2008, per il comparto Sanità/Regioni: letto per intero) dice che la riduzione nei primi dieci giorni «non ha riflessi sui contributi ex CPDEL/CPS», con la regola del comporto a retribuzione ridotta: contributi di datore e dipendente sulla retribuzione piena (art. 24 RDL 680/1938, non letto), **ma** la rivalsa sul dipendente vale solo per il contributo proporzionale all'assegno effettivamente corrisposto, quindi l'amministrazione integra, anche per la quota del dipendente, sulla parte non corrisposta; stesso trattamento per TFS/TFR (ex INADEL); il dipendente versa invece il contributo al Fondo Previdenza e Credito anche sulla quota non percepita. **Prassi-interpretazione**, coerente con la decisione 4 sulla base; **apre un punto non deciso dal ticket**: la quota CPDEL del lavoratore sulla parte non pagata sarebbe a carico dell'ente (n. 3 bis di «Da verificare»).
+- **Seconda fonte sui contributi: il documento della Conferenza delle Regioni** (sopra), di una famiglia diversa dall'INPDAP ma per un altro comparto e di seconda mano rispetto all'art. 24 RDL 680/1938; nessun messaggio INPS. Il messaggio INPS 16603 del 21/07/2008 (letto per intero) riguarda l'INPS come datore di lavoro (certificati, part-time) e non tratta i contributi. Nessun messaggio INPS sulla base contributiva delle decurtazioni art. 71 è emerso dalle ricerche. Resta **da verificare**.
+
+**Non letti:** circolare INPDAP 13 del 28/05/2009 (testo originale); parere Funzione Pubblica 2/2009 (30mi); nota Funzione Pubblica 126427 del 16/01/2009; sentenze Corte costituzionale 151/2010 e 120/2012; l'orientamento ARAN più recente sui trentesimi (se esiste). Dove servono, sono nell'elenco «Da verificare».
 
 ## Esito
 
@@ -156,4 +162,5 @@ Questa è la regola che il motore dovrebbe applicare. Non la implemento qui: è 
 7. **IVC** e altre voci nuove del CCNL 2022-24: nessuna fonte trovata.
 8. **Convalescenza post-ricovero:** serve il certificato? Il requisito è letto solo per il comparto Sanità.
 9. **Come si leggono i 9+3+6 mesi nella finestra di tre anni:** il testo non dice se si ricalcola a ogni evento. Cercare un orientamento ARAN.
+3 bis. **Rivalsa sul dipendente.** Secondo la Conferenza delle Regioni, la quota CPDEL e TFS/TFR a carico del dipendente sulla parte di retribuzione non pagata è integrata dall'ente (rivalsa solo sul contributo proporzionale al pagato); il Fondo Credito, no. Il motore oggi calcola la quota del lavoratore sulla base intera e la trattiene dal pagato. Deciso da Luca il 12/11/2026: a carico dell'ente (ADR 0042, punto 6).
 10. **Sentenze Corte costituzionale 151/2010 e 120/2012** sulla legittimità dell'art. 71: segnalate da fonti secondarie, non lette. Non cambiano il calcolo.

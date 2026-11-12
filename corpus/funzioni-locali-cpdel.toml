@@ -223,21 +223,25 @@ riferimento = "urn:nir:stato:decreto.legislativo:2000-08-18;267~art82-com1 + urn
 
 [[base]]
 nome = "cpdel"
+retribuzione_virtuale = true
 riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par2"
 
 [[base]]
 nome = "fondo_credito"
+retribuzione_virtuale = true
 riferimento = "prassi:inps:circolare:2014-01-16;6~par19"
 
 # Retribuzione contributiva TFS al 100%: l'80% è la regola imponibile_tfs. Nella parte 2 la
 # stessa base darà l'imponibile TFR delle voci comuni (Circ. INPS 185/2021 § 2.2.1).
 [[base]]
 nome = "tfs"
+retribuzione_virtuale = true
 riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:inps:circolare:2021-12-14;185~par2.2.1"
 
 # Ulteriori elementi TFR: voci utili solo al TFR, al 100% (msg INPS 2440/2019).
 [[base]]
 nome = "tfr_ulteriori"
+retribuzione_virtuale = true
 riferimento = "prassi:inps:messaggio:2019-07-01;2440 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com6"
 
 # Gestione separata INPS (ticket #73, PR B): base propria dei compensi di collaborazione. Nessun altro istituto
@@ -864,7 +868,7 @@ istituto = "cpdel_lavoratore"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:legge:2006-12-27;296~art1-com769 + prassi:immedia:nota:2026-11-06;3"
-formula = "arrotonda(base.cpdel * parametro.aliquota_cpdel_lavoratore / 100, 2)"
+formula = "arrotonda(base.cpdel_pagato * parametro.aliquota_cpdel_lavoratore / 100, 2)"
 maturazione = "periodo"
 
 [[regola]]
@@ -908,8 +912,9 @@ istituto = "tfs_lavoratore"
 versione = 1
 dal = 2026-01-01
 riferimento = "urn:nir:stato:legge:1968-03-08;152~art11 + prassi:immedia:nota:2026-11-06;3"
-formula = "arrotonda(importo.imponibile_tfs * parametro.aliquota_tfs_lavoratore / 100, 2)"
+formula = "arrotonda(arrotonda(base.tfs_pagato * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
 maturazione = "periodo"
+applica_se = "regime_fine_servizio=3"
 
 [[regola]]
 istituto = "tfs_ente"
@@ -1691,6 +1696,94 @@ istituto = "comparto_operatori"
 trattamento = "proporzionale"
 dal = 2026-01-01
 riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10"
+
+# Malattia (ADR 0042, ticket #130, nota di prassi 16). Primi 10 giorni di calendario di ogni episodio: solo il trattamento
+# fondamentale (art. 71 c. 1 DL 112/2008, norma certa). Periodi del comporto: 9 mesi al 100%, 3 al 90%, 6 al 50%, poi non
+# retribuito, sui giorni di malattia dei tre anni fino al giorno (art. 48 CCNL 16/11/2022 = art. 36 CCNL 23/02/2026,
+# norma certa); i mesi sono contati a 30 giorni, la finestra mobile ricalcolata a ogni giorno: prassi, da verificare.
+
+[[malattia]]
+dal = 2026-01-01
+giorni_decurtati = 10
+anni_finestra = 3
+fasce = [[270, 100], [90, 90], [180, 50]]
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + ccnl:S105:2022-11-16~art48 + ccnl:S105:2026-02-23~art36 + prassi:immedia:nota:2026-11-12;16"
+
+# Trattamento di ogni istituto nella malattia. Il tabellare (con la quota di comparto conglobata) e la tredicesima restano
+# nei 10 giorni (art. 71: trattamento fondamentale; parere ARAN 795-21C7, prassi-interpretazione); l'indennita' di
+# comparto non conglobata e' accessoria fissa e continuativa e si toglie. Il divisore resta il giornaliero (26).
+
+[[malattia_istituto]]
+istituto = "tabellare_funzionari"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "comparto_funzionari"
+trattamento = "decurtata"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "tredicesima_funzionari"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "tabellare_istruttori"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "comparto_istruttori"
+trattamento = "decurtata"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "tredicesima_istruttori"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "tabellare_operatori_esperti"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "comparto_operatori_esperti"
+trattamento = "decurtata"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "tredicesima_operatori_esperti"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "tabellare_operatori"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "comparto_operatori"
+trattamento = "decurtata"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
+
+[[malattia_istituto]]
+istituto = "tredicesima_operatori"
+trattamento = "intera"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legge:2008-06-25;112~art71-com1 + prassi:immedia:nota:2026-11-12;16"
 
 # Mappature degli elementi della DenunciaIndividuale dei tempi determinati (ADR 0027, ticket #77): il codice
 # dell'elemento per il valore di un fatto del rapporto. Nessun codice sta nel programma.

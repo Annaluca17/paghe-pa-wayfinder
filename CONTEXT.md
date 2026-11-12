@@ -88,6 +88,18 @@ _Avoid_: Quietanza, regolarizzazione (che è un evento contabile successivo)
 Fatto giornaliero o orario su un rapporto, con una causale di assenza e l'atto o il documento di origine (attestato INPS, domanda, autorizzazione). Un solo fatto produce più effetti, ciascuno letto da un lettore diverso: riduzione stipendiale, comporto, adempimenti.
 _Avoid_: Giustificativo, riepilogo presenze
 
+**Episodio di malattia**:
+Giorni consecutivi di malattia ordinaria o di ricovero, dal primo giorno al giorno in cui il dipendente rientra. Certificati continui senza giorno lavorato in mezzo sono un solo episodio. Nei primi 10 giorni di calendario di ogni episodio si tolgono le voci accessorie fisse (art. 71 DL 112/2008); il ricovero, le terapie salvavita e l'infortunio non si decurtano (ADR 0042).
+_Avoid_: Evento di malattia, certificato (che è il documento, non l'episodio)
+
+**Comporto**:
+Giorni di malattia (ordinaria e ricovero) nei tre anni fino a un giorno, compreso quel giorno. Decide la percentuale: 9 mesi al 100%, 3 al 90%, 6 al 50%, poi non retribuito. Salvavita e infortunio hanno un comporto a parte e non contano (ADR 0042).
+_Avoid_: Periodo di conservazione del posto
+
+**Retribuzione virtuale**:
+Importo che una base contributiva (CPDEL, Fondo Credito, TFS, TFR) conta come se la malattia non l'avesse ridotto. La decurtazione toglie retribuzione, non contributi (ADR 0042, circ. INPDAP 13/2009, da verificare sul testo).
+_Avoid_: Retribuzione figurativa (che è la contribuzione accreditata senza servizio)
+
 **Causale di assenza**:
 Elenco del modello, non del fornitore delle presenze, in cui ogni causale ha lettori dichiarati. L'adattatore delle presenze traduce le causali del fornitore in queste.
 _Avoid_: Codice giustificativo

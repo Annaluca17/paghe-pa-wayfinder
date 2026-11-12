@@ -119,6 +119,19 @@ class RiduzionePartTime:
 
 
 @dataclass(frozen=True)
+class RiduzioneMalattia:
+    """La malattia applicata a un importo (ADR 0042): importo pieno prima della riduzione, percentuale e decurtazione.
+
+    `decurtazione` è il rapporto dei giorni decurtati sui giorni della riga (1 se la voce si toglie per tutta la riga).
+    """
+
+    importo_pieno: Decimal
+    percentuale: Decimal
+    decurtata: bool
+    tipo: str
+
+
+@dataclass(frozen=True)
 class Derivazione:
     """Da dove viene un importo, fino a norma, parametri e fatti."""
 
@@ -135,6 +148,7 @@ class Derivazione:
     quota: Quota | None = None
     concorsi: tuple[ConcorsoLetto, ...] = ()
     part_time: RiduzionePartTime | None = None
+    malattia: RiduzioneMalattia | None = None
 
 
 # Importi calcolati sul pagato, non sulla competenza: ritenuta e conguaglio fiscale (ADR 0019).
@@ -229,6 +243,18 @@ class Importo:
                     if d.part_time
                     else {}
                 ),
+                **(
+                    {
+                        "malattia": {
+                            "importo_pieno": str(d.malattia.importo_pieno),
+                            "percentuale": str(d.malattia.percentuale),
+                            "decurtata": d.malattia.decurtata,
+                            "tipo": d.malattia.tipo,
+                        }
+                    }
+                    if d.malattia
+                    else {}
+                ),
             },
         }
 
@@ -282,6 +308,16 @@ class Importo:
                         d["part_time"]["trattamento"],
                     )
                     if d.get("part_time")
+                    else None
+                ),
+                malattia=(
+                    RiduzioneMalattia(
+                        Decimal(d["malattia"]["importo_pieno"]),
+                        Decimal(d["malattia"]["percentuale"]),
+                        d["malattia"]["decurtata"],
+                        d["malattia"]["tipo"],
+                    )
+                    if d.get("malattia")
                     else None
                 ),
             ),

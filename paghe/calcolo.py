@@ -24,9 +24,11 @@ from .modello import (
     Importo,
     ParametroLetto,
     Quota,
+    RiduzioneMalattia,
     RiduzionePartTime,
     TipoEsito,
 )
+from .malattia import StatoMalattia, stati_del_periodo
 from .registro import Registro
 from .riferimento import solo_prassi
 from .tempo import Mese, Periodo, in_utc
@@ -266,12 +268,48 @@ class _Lettore:
         )
 
 
+    def con_malattia(self, regola: Regola, periodo: Periodo, importo: Importo, stato: StatoMalattia) -> Importo:
+        """Giorni di malattia: l'importo della frazione si riduce secondo il trattamento dichiarato (ADR 0042)."""
+        if riferimenti(regola.formula).importi:
+            return importo  # deriva da importi già ridotti
+        dichiarazione = self.corpus.trattamento_malattia(regola.istituto, periodo.dal)
+        if dichiarazione is None or not dichiarazione.copre(periodo.al):
+            raise CasoNonModellato(
+                f"Rapporto {self.rapporto}: caso non modellato, l'istituto {regola.istituto} non dichiara il "
+                f"trattamento nella malattia per {periodo} (fatto malattia {stato.tipo})"
+            )
+        decurtata = dichiarazione.trattamento == "decurtata" and stato.decurtazione
+        coefficiente = Decimal(0) if decurtata else stato.percentuale / 100
+        with localcontext() as contesto:
+            contesto.prec = PRECISIONE
+            valore = _arrotonda(importo.valore * coefficiente, regola.decimali or 2)
+        fatti = {fatto.id: fatto for fatto in importo.derivazione.fatti}
+        for fatto in self.fatti_malattia(periodo):
+            fatti[fatto.id] = fatto
+        return replace(
+            importo,
+            valore=valore,
+            derivazione=replace(
+                importo.derivazione,
+                fatti=tuple(fatti[numero] for numero in sorted(fatti)),
+                malattia=RiduzioneMalattia(importo.valore, stato.percentuale, decurtata, stato.tipo),
+            ),
+        )
+
+    def fatti_malattia(self, periodo: Periodo) -> list[Fatto]:
+        vigenti = self.registro.vigenti_per_giorno(self.rapporto, "malattia", periodo, self.noto_al)
+        return list({fatto.id: fatto for fatto in vigenti if fatto is not None}.values())
+
+
 class _Calcolo:
     def __init__(self, lettore: _Lettore, competenza: Mese):
         self.lettore = lettore
         self.corpus = lettore.corpus
         self.competenza = competenza
         giorni = competenza.giorni()
+        self.stati_malattia = stati_del_periodo(
+            lettore.registro, lettore.corpus, lettore.rapporto, Periodo(giorni[0], giorni[-1]), lettore.noto_al
+        )
         self.frazioni = _raggruppa(giorni, self._firme(giorni, self.corpus.tipi_fatto(), True))
         self.periodi = _raggruppa(giorni, self._firme(giorni, self.corpus.fatti_periodo_dichiarato, False))
         self._righe_frazione: dict[str, dict[int, Importo]] = {}
@@ -291,7 +329,12 @@ class _Calcolo:
                 (colonna[indice].id if con_corpus else colonna[indice].valore) if colonna[indice] else None
                 for colonna in vigenti
             )
-            firme.append((parte_fatti, self.corpus.firma_giorno(giorno, lettore.pagamento) if con_corpus else ()))
+            malattia = self.stati_malattia.get(giorno)
+            firme.append((
+                parte_fatti,
+                self.corpus.firma_giorno(giorno, lettore.pagamento) if con_corpus else (),
+                malattia.firma if con_corpus and malattia else None,
+            ))
         return firme
 
     def _regola_richiesta(self, istituto: str, periodo: Periodo) -> Regola:
@@ -318,6 +361,11 @@ class _Calcolo:
             if importo is not None:
                 righe[indice] = self.lettore.con_part_time(regola, frazione, importo)
         righe = self._applica_quote(istituto, righe)
+        for indice, riga in righe.items():
+            stato = self.stati_malattia.get(self.frazioni[indice].dal)
+            if stato is not None:
+                regola = self._regola_richiesta(istituto, riga.periodo)
+                righe[indice] = self.lettore.con_malattia(regola, riga.periodo, riga, stato)
         self._righe_frazione[istituto] = righe
         return righe
 
@@ -482,6 +530,28 @@ def _part_time_dell_anno(
     return somma / len(giorni), dichiarazione.trattamento, letti
 
 
+def _malattia_dell_anno(
+    lettore: _Lettore, regola: Regola, giorni: list[date], anno: Periodo
+) -> tuple[Decimal, str, tuple[Fatto, ...]] | None:
+    """Percentuale media della malattia sui giorni di maturazione; None senza giorni di malattia nel comporto.
+
+    I giorni al 90% e al 50% pesano la loro percentuale, quelli non retribuiti zero (art. 75 c. 7 e 9 CCNL 16/11/2022).
+    La decurtazione dei primi giorni non tocca la tredicesima, che è voce fondamentale.
+    """
+    stati = stati_del_periodo(lettore.registro, lettore.corpus, lettore.rapporto, anno, lettore.noto_al)
+    nei_giorni = {g: stati[g] for g in giorni if g in stati and stati[g].percentuale != 100}
+    if not nei_giorni:
+        return None
+    dichiarazione = lettore.corpus.trattamento_malattia(regola.istituto, giorni[-1])
+    if dichiarazione is None:
+        raise CasoNonModellato(
+            f"Rapporto {lettore.rapporto}: caso non modellato, l'istituto {regola.istituto} non dichiara il "
+            f"trattamento nella malattia"
+        )
+    somma = sum((nei_giorni[g].percentuale if g in nei_giorni else Decimal(100) for g in giorni), Decimal(0))
+    return somma / len(giorni), dichiarazione.trattamento, tuple(lettore.fatti_malattia(anno))
+
+
 def calcola_annuale(
     registro: Registro,
     corpus: Corpus,
@@ -523,6 +593,7 @@ def calcola_annuale(
         base = lettore.importo(regola, ultimo, lambda _: [])
         letto = lettore.parametro(regola.divisore, ultimo)
         part_time = _part_time_dell_anno(lettore, regola, giorni, considerato)
+        malattia = _malattia_dell_anno(lettore, regola, giorni, considerato)
         with localcontext() as contesto:
             contesto.prec = PRECISIONE
             continuo = len(giorni) == intero_anno.giorni_calendario
@@ -531,12 +602,21 @@ def calcola_annuale(
             valore = pieno
             if part_time is not None and part_time[1] != "intero":
                 valore = _arrotonda(base.valore * quota * part_time[0] / 100, regola.decimali)
+            valore_prima_malattia = valore
+            if malattia is not None:
+                valore = _arrotonda(base.valore * quota * (part_time[0] / 100 if part_time is not None and part_time[1] != "intero" else 1) * malattia[0] / 100, regola.decimali)
         parametri = tuple(sorted((*base.derivazione.parametri, letto), key=lambda p: p.nome))
         fatti = {fatto.id: fatto for fatto in base.derivazione.fatti}
         riduzione = None
         if part_time is not None:
             fatti.update({fatto.id: fatto for fatto in part_time[2]})
             riduzione = RiduzionePartTime(part_time[0].quantize(Decimal("0.000001")), pieno, part_time[1])
+        riduzione_malattia = None
+        if malattia is not None:
+            fatti.update({fatto.id: fatto for fatto in malattia[2]})
+            riduzione_malattia = RiduzioneMalattia(
+                valore_prima_malattia, malattia[0].quantize(Decimal("0.000001")), False, "comporto"
+            )
         calcolati[regola.istituto] = replace(
             base,
             periodo=Periodo(giorni[0], giorni[-1]),
@@ -547,6 +627,7 @@ def calcola_annuale(
                 fatti=tuple(fatti[numero] for numero in sorted(fatti)),
                 quota=Quota(regola.conteggio, len(giorni), letto.valore, quota, base.valore),
                 part_time=riduzione,
+                malattia=riduzione_malattia,
             ),
         )
     for regola, giorni in derivate:
@@ -704,6 +785,12 @@ def spiega(importo: Importo, rientro: int = 0) -> str:
         quota = d.quota
         calcolo = f"mese intero, residuo {quota.quota:.6f}" if quota.divisore is None else f"{quota.giorni}/{quota.divisore}"
         righe.append(f"{margine}  quota ({quota.conteggio}): {calcolo} su base {quota.base}")
+    if d.malattia is not None:
+        riduzione = d.malattia
+        effetto = "voce tolta nei giorni decurtati" if riduzione.decurtata else f"al {riduzione.percentuale}%"
+        righe.append(
+            f"{margine}  malattia ({riduzione.tipo}): {effetto}, importo pieno {riduzione.importo_pieno}"
+        )
     if importo.esiti_confrontati:
         elenco = ", ".join(f"#{numero}" for numero in importo.esiti_confrontati)
         righe.append(f"{margine}  differenza rispetto agli esiti: {elenco}")
