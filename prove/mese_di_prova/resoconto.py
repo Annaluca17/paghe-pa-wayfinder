@@ -217,6 +217,15 @@ def _non_esercitato(esecuzione: Esecuzione) -> list[str]:
             "La tredicesima non e' un istituto del corpus: il pagamento di dicembre non la contiene, anche se il tabellare "
             "annuo del corpus e' per dodici mensilita' piu' la tredicesima."
         )
+    else:
+        voci.append(
+            "La tredicesima del comparto e' calcolata sul solo tabellare dell'area (ADR 0038): differenziali, assegni "
+            "personali, RIA e posizione delle EQ non sono istituti del corpus. La ritenuta a parte delle mensilita' "
+            "aggiuntive (art. 23 c. 2 lett. b D.P.R. 600/1973) non e' modellata: la tredicesima passa solo nel pagamento "
+            "che porta il conguaglio, con un avviso; pagata a parte prima dell'ultimo pagamento fermerebbe il rapporto. "
+            "Le assenze che riducono o tolgono i ratei non sono nel nucleo. Dirigente e segretario hanno il tabellare "
+            "su tredici mensilita' e nessuna tredicesima a parte."
+        )
     voci.append(
         "Le addizionali regionale e comunale sono calcolate al conguaglio di dicembre sul domicilio fiscale delle persone "
         "(comune e regione di fantasia) e trattenute a rate dal 2027: nel mese di prova si vede solo l'acconto comunale di "

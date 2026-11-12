@@ -105,7 +105,7 @@ def test_risultato_e_interim_del_dirigente_fermano_il_calcolo_e_nominano_il_caso
 
 
 def test_la_tredicesima_del_dirigente_non_e_un_importo_a_parte_come_nel_comparto(registro, reale):
-    """Il tabellare e' gia' annuo / 13 e la tredicesima non e' modellata nel comparto (ADR 0004): dicembre non porta altro."""
+    """Il tabellare e' gia' annuo / 13 e nel comparto la tredicesima e' un importo annuale a parte (ADR 0038): qui nemmeno l'annuale porta altro."""
     titolare(registro, "dirigente")
     posizione_dirigente(registro, "20000.00")
     novembre, dicembre = importi(registro, reale, Mese(2026, 11)), importi(registro, reale, Mese(2026, 12))

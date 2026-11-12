@@ -427,6 +427,41 @@ class DichiarazionePagamentoFisiologico:
 
 
 @dataclass(frozen=True)
+class DichiarazioneMensilitaAggiuntiva:
+    """L'istituto dichiara di essere una mensilità aggiuntiva (art. 23 c. 2 lett. b D.P.R. 600/1973), con date e fonte.
+
+    `mese_pagamento`, `giorno_dal` e `giorno_al` sono la finestra in cui la fonte vuole il pagamento per chi è in servizio:
+    fuori dalla finestra la proposta porta un avviso, non un fermo (ADR 0038).
+    """
+
+    istituto: str
+    dal: date
+    riferimento: str
+    al: date | None = None
+    mese_pagamento: int | None = None
+    giorno_dal: int | None = None
+    giorno_al: int | None = None
+
+    def __post_init__(self) -> None:
+        soggetto = f"Mensilità aggiuntiva {self.istituto}"
+        _riferimento_obbligatorio(self.riferimento, soggetto)
+        if self.al is not None and self.al < self.dal:
+            raise ErroreCorpus(f"{soggetto}: vigenza invertita")
+        finestra = (self.mese_pagamento, self.giorno_dal, self.giorno_al)
+        if any(valore is not None for valore in finestra):
+            if any(type(valore) is not int for valore in finestra):
+                raise ErroreCorpus(f"{soggetto}: la finestra di pagamento chiede mese_pagamento, giorno_dal e giorno_al")
+            if not 1 <= self.mese_pagamento <= 12 or not 1 <= self.giorno_dal <= self.giorno_al <= 31:
+                raise ErroreCorpus(f"{soggetto}: finestra di pagamento non valida")
+
+    def nella_finestra(self, giorno: date) -> bool:
+        """Vero se la data cade nella finestra di pagamento, o se la dichiarazione non ne ha una."""
+        if self.mese_pagamento is None:
+            return True
+        return giorno.month == self.mese_pagamento and self.giorno_dal <= giorno.day <= self.giorno_al
+
+
+@dataclass(frozen=True)
 class DichiarazioneDeduzione:
     """L'istituto dichiara che il suo importo riduce l'imponibile fiscale (art. 51 c. 2 lett. a TUIR), con date e fonte."""
 
@@ -818,6 +853,7 @@ class RegoleFiscali:
     benefici: tuple[RegolaBenefici, ...] = ()
     accessori: tuple[DichiarazioneAccessorio, ...] = ()
     sostitutive: tuple[RegolaSostitutiva, ...] = ()
+    aggiuntive: tuple[DichiarazioneMensilitaAggiuntiva, ...] = ()
 
     def __bool__(self) -> bool:
         return bool(
@@ -832,6 +868,7 @@ class RegoleFiscali:
             or self.benefici
             or self.accessori
             or self.sostitutive
+            or self.aggiuntive
         )
 
 
@@ -1333,6 +1370,7 @@ class Corpus:
         elenco += [(f"Reddito {r.istituto}", r.riferimento) for r in fiscale.redditi]
         elenco += [(f"Pagamento fisiologico {f.istituto}", f.riferimento) for f in fiscale.fisiologici]
         elenco += [(f"Deduzione fiscale {d.istituto}", d.riferimento) for d in fiscale.deduzioni]
+        elenco += [(f"Mensilità aggiuntiva {m.istituto}", m.riferimento) for m in fiscale.aggiuntive]
         elenco += [(f"Ritenuta {r.istituto}", r.riferimento) for r in fiscale.ritenute]
         elenco += [(f"Conguaglio {c.istituto}", c.riferimento) for c in fiscale.conguagli]
         elenco += [("Addizionali", a.riferimento) for a in fiscale.addizionali]
@@ -1529,6 +1567,13 @@ class Corpus:
             for altra in fiscale.fisiologici[indice + 1 :]:
                 if altra.istituto == dichiarazione.istituto:
                     _vigenze_sovrapposte([dichiarazione, altra], soggetto)
+        for indice, dichiarazione in enumerate(fiscale.aggiuntive):
+            soggetto = f"Mensilità aggiuntiva {dichiarazione.istituto}"
+            if dichiarazione.istituto not in self._regole:
+                raise ErroreCorpus(f"{soggetto}: istituto ignoto")
+            for altra in fiscale.aggiuntive[indice + 1 :]:
+                if altra.istituto == dichiarazione.istituto:
+                    _vigenze_sovrapposte([dichiarazione, altra], soggetto)
         for indice, dichiarazione in enumerate(fiscale.deduzioni):
             soggetto = f"Deduzione fiscale {dichiarazione.istituto}"
             if dichiarazione.istituto not in self._regole:
@@ -1643,10 +1688,12 @@ class Corpus:
         self.istituti_sul_mese = frozenset(sul_mese)
 
     def _controlla_livelli(self, regola: Regola, importi: frozenset[str]) -> None:
-        """Una frazione non legge il periodo dichiarato, che ne è la somma; l'annuale legge solo fatti e parametri."""
+        """Una frazione non legge il periodo dichiarato, che ne è la somma; l'annuale legge solo importi annuali."""
         for nome in importi:
             if regola.maturazione == "annuale":
-                raise ErroreCorpus(f"Regola {regola.istituto}: una regola annuale non legge importi")
+                if any(dipendenza.maturazione != "annuale" for dipendenza in self._regole[nome]):
+                    raise ErroreCorpus(f"Regola {regola.istituto}: una regola annuale legge solo importi annuali, non {nome}")
+                continue
             for dipendenza in self._regole[nome]:
                 if dipendenza.maturazione == "annuale":
                     raise ErroreCorpus(f"Regola {regola.istituto}: non può leggere l'importo annuale {nome}")
@@ -1776,6 +1823,12 @@ class Corpus:
                      [[str(f.fino_a) if f.fino_a is not None else "", str(f.aliquota)] for f in a.fasce]]
                     for a in fiscale.aliquote
                 )
+            if fiscale.aggiuntive:
+                contenuto["fiscale"]["aggiuntive"] = sorted(
+                    [m.istituto, m.dal.isoformat(), m.al.isoformat() if m.al else "", m.riferimento,
+                     m.mese_pagamento or 0, m.giorno_dal or 0, m.giorno_al or 0]
+                    for m in fiscale.aggiuntive
+                )
             if fiscale.fisiologici:
                 contenuto["fiscale"]["fisiologici"] = sorted(
                     [f.istituto, f.dal.isoformat(), f.al.isoformat() if f.al else "", f.riferimento]
@@ -1888,6 +1941,10 @@ class Corpus:
     def pagamento_fisiologico(self, istituto: str, giorno: date) -> DichiarazionePagamentoFisiologico | None:
         """Dichiarazione vigente alla data di pagamento; None se l'istituto non dichiara il pagamento fisiologico."""
         return _vigente([f for f in self.fiscale.fisiologici if f.istituto == istituto], giorno)
+
+    def mensilita_aggiuntiva(self, istituto: str, giorno: date) -> DichiarazioneMensilitaAggiuntiva | None:
+        """Dichiarazione vigente alla data di pagamento; None se l'istituto non è una mensilità aggiuntiva."""
+        return _vigente([m for m in self.fiscale.aggiuntive if m.istituto == istituto], giorno)
 
     def deduzione_fiscale(self, istituto: str, giorno: date) -> DichiarazioneDeduzione | None:
         """Dichiarazione vigente alla data di pagamento; None se l'importo dell'istituto non riduce l'imponibile fiscale."""
@@ -2447,8 +2504,21 @@ def _fiscale_da_toml(dati: dict) -> RegoleFiscali:
         )
         for voce in dati.get("sostitutiva", [])
     )
+    aggiuntive = tuple(
+        DichiarazioneMensilitaAggiuntiva(
+            voce["istituto"],
+            _data(voce["dal"], "dal"),
+            voce["riferimento"],
+            _data(voce["al"], "al") if "al" in voce else None,
+            voce.get("mese_pagamento"),
+            voce.get("giorno_dal"),
+            voce.get("giorno_al"),
+        )
+        for voce in dati.get("mensilita_aggiuntiva", [])
+    )
     return RegoleFiscali(
-        categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote, addizionali, benefici, accessori, sostitutive
+        categorie, redditi, ritenute, conguagli, fisiologici, deduzioni, aliquote, addizionali, benefici, accessori, sostitutive,
+        aggiuntive,
     )
 
 

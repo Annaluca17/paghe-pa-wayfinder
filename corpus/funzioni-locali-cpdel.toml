@@ -3986,3 +3986,440 @@ codice = "179E"
 dal = 2026-01-01
 al = 2026-12-31
 riferimento = "prassi:ade:risoluzione:2026-01-29;4-E"
+
+# Tredicesima mensilita' del comparto (ADR 0038, ricerca docs/research/tredicesima-comparto.md, nota di prassi 12).
+# Art. 75 CCNL 16/11/2022, ancora vigente dopo i CCNL 23/02/2026 e 28/10/2026 (norma certa): pari alla retribuzione
+# individuale mensile dell'art. 74 c. 2 lett. c) spettante a dicembre o nell'ultimo mese di servizio, matura per 365esimi
+# sui giorni di servizio, intera con servizio continuativo dal 1 gennaio. Oggi la base e' il solo tabellare dell'area:
+# differenziali, assegni personali, RIA e posizione delle EQ non sono ancora istituti del corpus. L'indennita' di comparto
+# non entra (art. 74 c. 2 lett. d). Divisore 365 anche negli anni bisestili e arrotondamento finale al centesimo:
+# prassi-interpretazione. La regola vale per l'area dell'ultimo giorno di servizio su tutti i giorni di servizio dell'anno.
+
+[[parametro]]
+nome = "divisore_tredicesima"
+[[parametro.vigenza]]
+dal = 2026-01-01
+valore = "365"
+riferimento = "ccnl:S105:2022-11-16~art75-com3"
+
+[[regola]]
+istituto = "tredicesima_funzionari"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art75-com2 + ccnl:S105:2022-11-16~art75-com3 + ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-12;12"
+formula = "arrotonda(parametro.tabellare_annuo_funzionari / 12, 2)"
+maturazione = "annuale"
+applica_se = "area=funzionari"
+conteggio = "calendario"
+divisore = "divisore_tredicesima"
+decimali = 2
+
+[[regola]]
+istituto = "tredicesima_istruttori"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art75-com2 + ccnl:S105:2022-11-16~art75-com3 + ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-12;12"
+formula = "arrotonda(parametro.tabellare_annuo_istruttori / 12, 2)"
+maturazione = "annuale"
+applica_se = "area=istruttori"
+conteggio = "calendario"
+divisore = "divisore_tredicesima"
+decimali = 2
+
+[[regola]]
+istituto = "tredicesima_operatori_esperti"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art75-com2 + ccnl:S105:2022-11-16~art75-com3 + ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-12;12"
+formula = "arrotonda(parametro.tabellare_annuo_operatori_esperti / 12, 2)"
+maturazione = "annuale"
+applica_se = "area=operatori_esperti"
+conteggio = "calendario"
+divisore = "divisore_tredicesima"
+decimali = 2
+
+[[regola]]
+istituto = "tredicesima_operatori"
+versione = 1
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art75-com2 + ccnl:S105:2022-11-16~art75-com3 + ccnl:S105:2026-10-28~tabB + prassi:immedia:nota:2026-11-12;12"
+formula = "arrotonda(parametro.tabellare_annuo_operatori / 12, 2)"
+maturazione = "annuale"
+applica_se = "area=operatori"
+conteggio = "calendario"
+divisore = "divisore_tredicesima"
+decimali = 2
+
+# Riduzione del lordo TFR sulla tredicesima: la tredicesima e' voce utile al TFS (L. 152/1968 art. 11), quindi il contributo
+# soppresso del 2,50% sull'80% la comprendeva (DPCM 20/12/1999 art. 1 c. 3; nota di prassi 5). Deriva dalla tredicesima
+# dell'anno e vale per chi e' in regime TFR nell'ultimo giorno di servizio. Fuori da ogni base, come la riduzione del mese
+# (ADR 0010); reddito negativo di lavoro dipendente (ADR 0037).
+
+[[regola]]
+istituto = "riduzione_tfr_tredicesima"
+versione = 1
+dal = 2026-01-01
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + prassi:immedia:nota:2026-11-06;5"
+formula = "-arrotonda(arrotonda((importo.tredicesima_funzionari + importo.tredicesima_istruttori + importo.tredicesima_operatori_esperti + importo.tredicesima_operatori) * parametro.quota_imponibile_tfs / 100, 2) * parametro.aliquota_tfs_lavoratore / 100, 2)"
+maturazione = "annuale"
+applica_se = "regime_fine_servizio=1"
+conteggio = "calendario"
+divisore = "divisore_tredicesima"
+decimali = 2
+
+# Concorsi della tredicesima: come il tabellare. CPDEL e Fondo Credito per intero nel mese di pagamento (ADR 0005); TFS per
+# intero, la legge la nomina (L. 152/1968 art. 11: stipendio «comprensivo ... della tredicesima mensilita'»); non e' un
+# ulteriore elemento TFR (voce comune al TFS); fuori dalla gestione separata; IRAP per intero.
+
+[[concorso]]
+istituto = "tredicesima_funzionari"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tredicesima_funzionari"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11"
+
+[[concorso]]
+istituto = "tredicesima_funzionari"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tredicesima_funzionari"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tredicesima_funzionari"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tredicesima_istruttori"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tredicesima_istruttori"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11"
+
+[[concorso]]
+istituto = "tredicesima_istruttori"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tredicesima_istruttori"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tredicesima_istruttori"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tredicesima_operatori_esperti"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tredicesima_operatori_esperti"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11"
+
+[[concorso]]
+istituto = "tredicesima_operatori_esperti"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tredicesima_operatori_esperti"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tredicesima_operatori_esperti"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "tredicesima_operatori"
+basi = ["cpdel", "fondo_credito"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com9 + prassi:inps:circolare:2014-01-16;6~par3"
+
+[[concorso]]
+istituto = "tredicesima_operatori"
+basi = ["tfs"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1968-03-08;152~art11"
+
+[[concorso]]
+istituto = "tredicesima_operatori"
+basi = ["tfr_ulteriori"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "prassi:inps:circolare:2021-12-14;185~par2.2.1"
+
+[[concorso]]
+istituto = "tredicesima_operatori"
+basi = ["gestione_separata"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:legge:1995-08-08;335~art2-com26 + prassi:immedia:nota:2026-11-07;10"
+
+[[concorso]]
+istituto = "tredicesima_operatori"
+basi = ["irap"]
+misura = "intero"
+dal = 2026-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:1997-12-15;446~art10bis-com1 + prassi:ade:risoluzione:2010-04-15;29-E"
+
+[[concorso]]
+istituto = "riduzione_tfr_tredicesima"
+basi = ["cpdel", "fondo_credito", "tfs", "tfr_ulteriori", "gestione_separata", "irap"]
+misura = "escluso"
+dal = 2026-01-01
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + prassi:immedia:nota:2026-11-06;5"
+
+# Part-time: la tredicesima e' una competenza periodica, proporzionale (art. 62 c. 10 CCNL 16/11/2022, art. 55 c. 10 CCNL
+# 23/02/2026). Se la percentuale cambia nell'anno ogni giorno conta per la sua percentuale: prassi-interpretazione, parere
+# ARAN CFL188 letto di seconda mano, DA VERIFICARE (nota di prassi 12).
+
+[[part_time]]
+istituto = "tredicesima_funzionari"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10 + prassi:immedia:nota:2026-11-12;12"
+
+[[part_time]]
+istituto = "tredicesima_istruttori"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10 + prassi:immedia:nota:2026-11-12;12"
+
+[[part_time]]
+istituto = "tredicesima_operatori_esperti"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10 + prassi:immedia:nota:2026-11-12;12"
+
+[[part_time]]
+istituto = "tredicesima_operatori"
+trattamento = "proporzionale"
+dal = 2026-01-01
+riferimento = "ccnl:S105:2022-11-16~art62-com10 + ccnl:S105:2026-02-23~art55-com10 + prassi:immedia:nota:2026-11-12;12"
+
+# Classificazione: come il tabellare (stessa riserva: DA VERIFICARE sulla versione Arconet vigente).
+
+[[classificazione]]
+istituto = "tredicesima_funzionari"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tredicesima_istruttori"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tredicesima_operatori_esperti"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "tredicesima_operatori"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+[[classificazione]]
+istituto = "riduzione_tfr_tredicesima"
+dal = 2025-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2011-06-23;118~all6.1"
+piano_dei_conti = "U.1.01.01.01.002"
+origine_impegno = "automatico"
+
+# Reddito di lavoro dipendente, come il tabellare; la riduzione TFR e' reddito negativo (ADR 0037, nota di prassi 11).
+
+[[reddito]]
+istituto = "tredicesima_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tredicesima_funzionari"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tredicesima_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tredicesima_istruttori"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tredicesima_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tredicesima_operatori_esperti"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "tredicesima_operatori"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49"
+
+[[reddito]]
+istituto = "tredicesima_operatori"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51"
+
+[[reddito]]
+istituto = "riduzione_tfr_tredicesima"
+categoria = "lavoro_dipendente"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com2 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + urn:nir:stato:decreto.del.presidente.della.repubblica:1986-12-22;917~art49 + prassi:immedia:nota:2026-11-11;11"
+
+[[reddito]]
+istituto = "riduzione_tfr_tredicesima"
+categoria = "lavoro_dipendente"
+dal = 2027-01-01
+riferimento = "urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com2 + urn:nir:presidente.consiglio.ministri:decreto:1999-12-20~art1-com3 + urn:nir:stato:decreto.legislativo:2026-06-19;117:1~art51 + prassi:immedia:nota:2026-11-11;11"
+
+# Mensilita' aggiuntiva: l'art. 23 c. 2 lett. b) D.P.R. 600/1973 la vuole tassata a parte, con gli scaglioni annui
+# ragguagliati a mese (norma certa; circ. AdE 15/E/2007 par. 2.4). La ritenuta a parte NON e' modellata: in un pagamento
+# senza conguaglio il calcolo fiscale si ferma, con il conguaglio procede con un avviso (ADR 0038). La finestra e' quella
+# dell'art. 75 c. 1 CCNL 16/11/2022 (10-18 dicembre): fuori finestra, per chi e' in servizio, un avviso. Dal 2027 l'art. 23
+# diventa l'art. 33 D.Lgs. 33/2025: comma e lettera DA VERIFICARE, il riferimento resta all'articolo.
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_funzionari"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-letb + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_funzionari"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_istruttori"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-letb + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_istruttori"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_operatori_esperti"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-letb + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_operatori_esperti"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_operatori"
+dal = 2026-01-01
+al = 2026-12-31
+riferimento = "urn:nir:stato:decreto.del.presidente.della.repubblica:1973-09-29;600~art23-com2-letb + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18
+
+[[mensilita_aggiuntiva]]
+istituto = "tredicesima_operatori"
+dal = 2027-01-01
+riferimento = "urn:nir:stato:decreto.legislativo:2025-03-24;33:1~art33 + prassi:ade:circolare:2007-03-16;15-E~par2.4 + ccnl:S105:2022-11-16~art75-com1"
+mese_pagamento = 12
+giorno_dal = 10
+giorno_al = 18

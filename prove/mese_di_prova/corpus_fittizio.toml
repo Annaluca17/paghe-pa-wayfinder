@@ -1009,3 +1009,50 @@ dal = 2025-01-01
 riferimento = "fittizio:class-performance"
 piano_dei_conti = "U.1.01.01.01.004"
 origine_impegno = "automatico"
+
+# Tredicesima del comparto e riduzione TFR sulla tredicesima (ADR 0038): composizione ASSUNTA, come il tabellare e la riduzione.
+
+[[composizione]]
+istituto = "tredicesima_funzionari"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tredicesima-funzionari"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tredicesima_istruttori"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tredicesima-istruttori"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tredicesima_operatori_esperti"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tredicesima-operatori-esperti"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "tredicesima_operatori"
+dal = 2025-01-01
+riferimento = "fittizio:comp-tredicesima-operatori"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"
+
+[[composizione]]
+istituto = "riduzione_tfr_tredicesima"
+dal = 2025-01-01
+riferimento = "fittizio:comp-riduzione-tfr-tredicesima"
+natura = "retribuzione"
+effetto = "piu"
+destinatario = "beneficiario"
+canale = "accredito"

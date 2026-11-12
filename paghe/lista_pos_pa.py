@@ -305,7 +305,8 @@ class _Vista:
                 if periodo.in_servizio
                 for base in periodo.basi
                 for riga in base.derivazione.importi
-                if riga.periodo.dal < self.mese.primo_giorno
+                # Un importo annuale (tredicesima) non è un mese di servizio pagato più tardi: sta nel mese di cassa (ADR 0038).
+                if riga.periodo.dal < self.mese.primo_giorno and riga.derivazione.maturazione != "annuale"
             }
         )
         quadri = []
@@ -336,6 +337,7 @@ class _Vista:
             if any(
                 riga.periodo.dal.year == competenza.anno and riga.periodo.dal.month == competenza.mese
                 for riga in righe_pagate(self.registro, self.rapporto, mese, self.istante)
+                if riga.derivazione.maturazione != "annuale"
             ):
                 return True
             mese = _successivo(mese)

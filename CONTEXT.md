@@ -255,8 +255,12 @@ Input da atto del rapporto che fissa per un periodo (mese, trimestre, anno) i gi
 _Avoid_: Turni (quando si intende l'atto), presenze
 
 **Maturazione**:
-Modo, dichiarato dalla regola, in cui un istituto matura: a giorni, a evento, sul periodo dichiarato o annuale.
+Modo, dichiarato dalla regola, in cui un istituto matura: a giorni, a evento, sul periodo dichiarato o annuale. L'annuale con una condizione a codice matura sui giorni di servizio dell'anno e vale se la condizione è vera nell'ultimo.
 _Avoid_: Tipo voce
+
+**Tredicesima**:
+Importo annuale del comparto, un istituto per area: il tabellare mensile dell'area dell'ultimo giorno di servizio, per i giorni di servizio dell'anno diviso 365, pesati sulla percentuale di part-time (ADR 0038). `calcola_annuale` ne dà l'importo atteso a fine anno e, con una data, il maturato. L'Ufficio personale sceglie il pagamento in cui metterla.
+_Avoid_: Rateo mensile, gratifica natalizia
 
 **Periodo dichiarato**:
 Intervallo esposto verso INPS, su cui si calcolano e si arrotondano i contributi; si apre per i cambi che INPS distingue, non per ogni frazione. Comprende gli importi pagati nel mese, a prescindere dalla loro competenza.
@@ -448,6 +452,10 @@ _Avoid_: Imponibile IRPEF del rapporto, imponibile del mese (che è il valore di
 **Ritenuta**:
 Importo sul rapporto del pagamento in cui è operata, calcolato sulle somme di quel periodo di paga con gli scaglioni ragguagliati al periodo; la derivazione risale all'imponibile fiscale della persona.
 _Avoid_: Ritenuta progressiva, trattenuta IRPEF (la trattenuta a terzi è un'altra cosa)
+
+**Mensilità aggiuntiva**:
+Dichiarazione datata dell'istituto, con riferimento e finestra di pagamento: la norma la vuole tassata a parte, con gli scaglioni ragguagliati a mese. La ritenuta a parte non è modellata: senza il conguaglio nello stesso pagamento il calcolo fiscale del rapporto si ferma; con il conguaglio procede con un avviso (ADR 0038).
+_Avoid_: Tredicesima (che è uno degli istituti che la dichiarano), mensilità (senza dire quale)
 
 **Dichiarazione del sostituito**:
 Fatto della persona, con validità e documento di origine, che chiede le detrazioni a richiesta e ne dà le condizioni, e che può indicare un'aliquota più alta o redditi di altri sostituti da conguagliare. Senza dichiarazione le detrazioni a richiesta non si applicano e il modello lo segnala, senza fermarsi; la detrazione automatica si applica comunque.

@@ -421,53 +421,134 @@ def calcola(
     return tuple(sorted(importi, key=lambda i: (i.istituto, i.periodo)))
 
 
+def _giorni_dell_annuale(lettore: _Lettore, regola: Regola, anno: Periodo) -> list[date]:
+    """Giorni dell'anno su cui matura una regola annuale.
+
+    Con una condizione `tipo=codice` e un fatto di servizio nel corpus, i giorni sono quelli di servizio e la condizione
+    vale sull'ultimo: chi cambia codice nell'anno matura tutto l'anno sulla regola dell'ultimo giorno (ADR 0038).
+    Altrimenti i giorni sono quelli in cui il fatto della condizione è presente.
+    """
+    registro, rapporto, istante = lettore.registro, lettore.rapporto, lettore.noto_al
+    servizio = lettore.corpus.fatto_servizio
+    if regola.codice_condizione is None or servizio is None:
+        vigenti = registro.vigenti_per_giorno(rapporto, regola.fatto_condizione, anno, istante)
+        return [g for g, fatto in zip(anno.giorni(), vigenti) if fatto is not None and lettore.soddisfa(regola, fatto)]
+    in_servizio = registro.vigenti_per_giorno(rapporto, servizio, anno, istante)
+    giorni = [g for g, fatto in zip(anno.giorni(), in_servizio) if fatto is not None]
+    if not giorni:
+        return []
+    ultimo = Periodo(giorni[-1], giorni[-1])
+    condizione = lettore.fatto(regola.fatto_condizione, ultimo)
+    if condizione is None or not lettore.soddisfa(regola, condizione):
+        return []
+    return giorni
+
+
+def _part_time_dell_anno(
+    lettore: _Lettore, regola: Regola, giorni: list[date], anno: Periodo
+) -> tuple[Decimal, str, tuple[Fatto, ...]] | None:
+    """Percentuale media del part-time sui giorni di maturazione, trattamento dichiarato e fatti letti; None senza part-time.
+
+    Ogni giorno conta per la sua percentuale, 100 a tempo pieno: i periodi si pesano in 365esimi (nota di prassi 12).
+    """
+    vigenti = lettore.registro.vigenti_per_giorno(lettore.rapporto, FATTO_PART_TIME, anno, lettore.noto_al)
+    per_giorno = dict(zip(anno.giorni(), vigenti))
+    fatti = {per_giorno[g].id: per_giorno[g] for g in giorni if per_giorno[g] is not None}
+    if not fatti:
+        return None
+    primo = min(fatti.values(), key=lambda fatto: fatto.valido_dal)
+    dichiarazione = lettore.corpus.trattamento_part_time(regola.istituto, giorni[-1])
+    if dichiarazione is None:
+        raise CasoNonModellato(
+            f"Rapporto {lettore.rapporto}: caso non modellato, l'istituto {regola.istituto} non dichiara il "
+            f"trattamento nel part-time (fatto {FATTO_PART_TIME} dal {primo.valido_dal})"
+        )
+    if dichiarazione.trattamento == "da_integrativo":
+        raise CasoNonModellato(
+            f"Rapporto {lettore.rapporto}: caso non modellato, il trattamento nel part-time di {regola.istituto} "
+            "è da integrativo e una regola annuale non lo applica"
+        )
+    letti = tuple(fatti[numero] for numero in sorted(fatti))
+    if dichiarazione.trattamento == "intero":
+        return Decimal(100), dichiarazione.trattamento, letti
+    somma = sum((per_giorno[g].valore if per_giorno[g] is not None else Decimal(100) for g in giorni), Decimal(0))
+    return somma / len(giorni), dichiarazione.trattamento, letti
+
+
 def calcola_annuale(
     registro: Registro,
     corpus: Corpus,
     rapporto: str,
     anno: int,
     noto_al: datetime | None = None,
+    fino_al: date | None = None,
 ) -> tuple[Importo, ...]:
-    """Regole annuali: base dell'ultimo giorno di servizio, quota sui giorni di servizio dell'anno."""
+    """Regole annuali: base dell'ultimo giorno di servizio, quota sui giorni di servizio dell'anno.
+
+    Senza `fino_al` è l'importo atteso a fine anno con i fatti noti: un servizio senza fine vale fino al 31 dicembre.
+    Con `fino_al` è il maturato a quella data: contano solo i giorni dal 1° gennaio a quel giorno compreso.
+    Una regola annuale che legge importi (annuali) ne deriva, senza una quota propria (ADR 0038).
+    """
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
     lettore = _Lettore(registro, corpus, rapporto, istante)
     intero_anno = Periodo(date(anno, 1, 1), date(anno, 12, 31))
-    importi = []
-    for regola_tipo in corpus.regole_annuali():
-        lettore.controlla_fermi(intero_anno, {"calcolo"})
-        vigenti = registro.vigenti_per_giorno(rapporto, regola_tipo.fatto_condizione, intero_anno, istante)
-        giorni = [
-            giorno
-            for giorno, fatto in zip(intero_anno.giorni(), vigenti)
-            if fatto is not None and lettore.soddisfa(regola_tipo, fatto)
-        ]
+    considerato = intero_anno
+    if fino_al is not None:
+        if fino_al < intero_anno.dal:
+            return ()
+        considerato = Periodo(intero_anno.dal, min(fino_al, intero_anno.al))
+    calcolati: dict[str, Importo] = {}
+    derivate: list[tuple[Regola, list[date]]] = []
+    annuali = corpus.regole_annuali()
+    if annuali:
+        lettore.controlla_fermi(considerato, {"calcolo"})
+    for regola_tipo in annuali:
+        giorni = _giorni_dell_annuale(lettore, regola_tipo, considerato)
         if not giorni:
             continue
         ultimo = Periodo(giorni[-1], giorni[-1])
         regola = corpus.regola_per(regola_tipo.istituto, ultimo)
         if regola is None or regola.maturazione != "annuale":
             continue
+        if riferimenti(regola.formula).importi:
+            derivate.append((regola, giorni))
+            continue
         base = lettore.importo(regola, ultimo, lambda _: [])
         letto = lettore.parametro(regola.divisore, ultimo)
+        part_time = _part_time_dell_anno(lettore, regola, giorni, considerato)
         with localcontext() as contesto:
             contesto.prec = PRECISIONE
             continuo = len(giorni) == intero_anno.giorni_calendario
             quota = Decimal(1) if continuo else min(Decimal(len(giorni)) / letto.valore, Decimal(1))
-            valore = _arrotonda(base.valore * quota, regola.decimali)
+            pieno = _arrotonda(base.valore * quota, regola.decimali)
+            valore = pieno
+            if part_time is not None and part_time[1] != "intero":
+                valore = _arrotonda(base.valore * quota * part_time[0] / 100, regola.decimali)
         parametri = tuple(sorted((*base.derivazione.parametri, letto), key=lambda p: p.nome))
-        importi.append(
-            replace(
-                base,
-                periodo=Periodo(giorni[0], giorni[-1]),
-                valore=valore,
-                derivazione=replace(
-                    base.derivazione,
-                    parametri=parametri,
-                    quota=Quota(regola.conteggio, len(giorni), letto.valore, quota, base.valore),
-                ),
-            )
+        fatti = {fatto.id: fatto for fatto in base.derivazione.fatti}
+        riduzione = None
+        if part_time is not None:
+            fatti.update({fatto.id: fatto for fatto in part_time[2]})
+            riduzione = RiduzionePartTime(part_time[0].quantize(Decimal("0.000001")), pieno, part_time[1])
+        calcolati[regola.istituto] = replace(
+            base,
+            periodo=Periodo(giorni[0], giorni[-1]),
+            valore=valore,
+            derivazione=replace(
+                base.derivazione,
+                parametri=parametri,
+                fatti=tuple(fatti[numero] for numero in sorted(fatti)),
+                quota=Quota(regola.conteggio, len(giorni), letto.valore, quota, base.valore),
+                part_time=riduzione,
+            ),
         )
-    return tuple(sorted(importi, key=lambda i: i.istituto))
+    for regola, giorni in derivate:
+        ultimo = Periodo(giorni[-1], giorni[-1])
+        importo = lettore.importo(regola, ultimo, lambda nome: [calcolati[nome]] if nome in calcolati else [])
+        if importo is None or not importo.derivazione.importi:
+            continue
+        calcolati[regola.istituto] = replace(importo, periodo=Periodo(giorni[0], giorni[-1]))
+    return tuple(sorted(calcolati.values(), key=lambda i: i.istituto))
 
 
 @dataclass(frozen=True)
