@@ -67,11 +67,16 @@ class VigenzaParametro:
     valore: Decimal
     riferimento: str
     al: date | None = None
+    applicabile_dal: date | None = None  # da quando si paga (ADR 0041); assente = vale dalla decorrenza
 
 
 @dataclass(frozen=True)
 class Parametro:
-    """Un parametro annuale, come una soglia INPS, chiude l'ultima vigenza con `al`: oltre, il calcolo si ferma."""
+    """Un parametro annuale, come una soglia INPS, chiude l'ultima vigenza con `al`: oltre, il calcolo si ferma.
+
+    Un importo del CCNL ha due date (ADR 0041): `dal` è la decorrenza, `applicabile_dal` la data da cui un pagamento lo
+    usa. Una vigenza non ancora applicabile alla data di pagamento si salta e vale la precedente.
+    """
 
     nome: str
     vigenze: tuple[VigenzaParametro, ...]
@@ -83,6 +88,8 @@ class Parametro:
             _riferimento_obbligatorio(vigenza.riferimento, f"Parametro {self.nome}")
             if vigenza.al is not None and vigenza.al < vigenza.dal:
                 raise ErroreCorpus(f"Parametro {self.nome}: vigenza invertita")
+            if vigenza.applicabile_dal is not None and vigenza.applicabile_dal < vigenza.dal:
+                raise ErroreCorpus(f"Parametro {self.nome}: applicabilità prima della decorrenza")
         decorrenze = [vigenza.dal for vigenza in self.vigenze]
         if len(set(decorrenze)) != len(decorrenze):
             raise ErroreCorpus(f"Parametro {self.nome}: decorrenze duplicate")
@@ -91,18 +98,21 @@ class Parametro:
             raise ErroreCorpus(f"Parametro {self.nome}: solo l'ultima vigenza può avere una fine")
         object.__setattr__(self, "vigenze", ordinate)
 
-    def _vigente(self, giorno: date) -> VigenzaParametro | None:
+    def _vigente(self, giorno: date, pagamento: date | None = None) -> VigenzaParametro | None:
+        """La vigenza del giorno; con `pagamento`, solo tra quelle già applicabili a quella data."""
         trovata = None
         for vigenza in self.vigenze:
-            if vigenza.dal <= giorno:
+            if vigenza.dal <= giorno and (
+                pagamento is None or vigenza.applicabile_dal is None or vigenza.applicabile_dal <= pagamento
+            ):
                 trovata = vigenza
         if trovata is not None and trovata.al is not None and giorno > trovata.al:
             return None
         return trovata
 
-    def vigenza_per(self, competenza: Mese) -> VigenzaParametro:
-        inizio = self._vigente(competenza.primo_giorno)
-        fine = self._vigente(competenza.ultimo_giorno)
+    def vigenza_per(self, competenza: Mese, pagamento: date | None = None) -> VigenzaParametro:
+        inizio = self._vigente(competenza.primo_giorno, pagamento)
+        fine = self._vigente(competenza.ultimo_giorno, pagamento)
         if fine is None:
             raise ParametroMancante(f"Parametro {self.nome}: nessuna vigenza per {competenza}")
         if inizio != fine:
@@ -1749,7 +1759,8 @@ class Corpus:
                 {
                     "nome": parametro.nome,
                     "vigenze": [
-                        [v.dal.isoformat(), str(v.valore), v.riferimento, *([v.al.isoformat()] if v.al else [])]
+                        [v.dal.isoformat(), str(v.valore), v.riferimento, *([v.al.isoformat()] if v.al else []),
+                         *(["applicabile", v.applicabile_dal.isoformat()] if v.applicabile_dal else [])]
                         for v in parametro.vigenze
                     ],
                 }
@@ -1930,6 +1941,15 @@ class Corpus:
     def istituti(self) -> list[str]:
         return sorted(self._regole)
 
+    def decorrenze_con_applicabilita(self, pagamento: date) -> tuple[date, ...]:
+        """Le decorrenze degli importi con una data di applicabilità già raggiunta alla data di pagamento (ADR 0041)."""
+        return tuple(sorted({
+            vigenza.dal
+            for parametro in self._parametri.values()
+            for vigenza in parametro.vigenze
+            if vigenza.applicabile_dal is not None and vigenza.applicabile_dal <= pagamento
+        }))
+
     def parametro(self, nome: str) -> Parametro:
         return self._parametri[nome]
 
@@ -2088,11 +2108,11 @@ class Corpus:
                     tipi |= {tipo for tipo, _ in regola.condizioni_aggiuntive}
         return tuple(sorted(tipi))
 
-    def firma_giorno(self, giorno: date) -> tuple:
-        """Regole e parametri vigenti in un giorno: se cambia, il mese si divide."""
+    def firma_giorno(self, giorno: date, pagamento: date | None = None) -> tuple:
+        """Regole e parametri vigenti in un giorno: se cambia, il mese si divide. Con `pagamento` valgono quelli applicabili."""
         parametri = []
         for nome, parametro in sorted(self._parametri.items()):
-            vigenza = parametro._vigente(giorno)
+            vigenza = parametro._vigente(giorno, pagamento)
             parametri.append((nome, vigenza.dal if vigenza else None))
         regole = tuple(
             (regola.istituto, regola.dal)
@@ -2356,7 +2376,8 @@ def _parametro_da_toml(voce: dict) -> Parametro:
         if not valore.is_finite():
             raise ErroreCorpus(f"Parametro {voce['nome']}: valore non finito")
         al = _data(vigenza["al"], "al") if "al" in vigenza else None
-        vigenze.append(VigenzaParametro(_data(vigenza["dal"], "dal"), valore, vigenza["riferimento"], al))
+        applicabile = _data(vigenza["applicabile_dal"], "applicabile_dal") if "applicabile_dal" in vigenza else None
+        vigenze.append(VigenzaParametro(_data(vigenza["dal"], "dal"), valore, vigenza["riferimento"], al, applicabile))
     return Parametro(voce["nome"], tuple(vigenze))
 
 

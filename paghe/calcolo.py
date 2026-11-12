@@ -50,11 +50,14 @@ def _raggruppa(giorni: list[date], firme: list[tuple]) -> list[Periodo]:
 class _Lettore:
     """Valuta una regola su un periodo e raccoglie ciò che ha letto."""
 
-    def __init__(self, registro: Registro, corpus: Corpus, rapporto: str, noto_al: datetime):
+    def __init__(
+        self, registro: Registro, corpus: Corpus, rapporto: str, noto_al: datetime, pagamento: date | None = None
+    ):
         self.registro = registro
         self.corpus = corpus
         self.rapporto = rapporto
         self.noto_al = noto_al
+        self.pagamento = pagamento  # data di pagamento: sceglie la vigenza applicabile dei parametri (ADR 0041)
 
     def fatto(self, tipo: str, periodo: Periodo) -> Fatto | None:
         return self.registro.fatto_nel_periodo(self.rapporto, tipo, periodo, self.noto_al)
@@ -161,8 +164,8 @@ class _Lettore:
                 )
 
     def parametro(self, nome: str, periodo: Periodo) -> ParametroLetto:
-        vigenza = self.corpus.parametro(nome).vigenza_per(periodo)
-        return ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento)
+        vigenza = self.corpus.parametro(nome).vigenza_per(periodo, self.pagamento)
+        return ParametroLetto(nome, vigenza.valore, vigenza.dal, vigenza.riferimento, vigenza.applicabile_dal)
 
     def importo(
         self,
@@ -288,7 +291,7 @@ class _Calcolo:
                 (colonna[indice].id if con_corpus else colonna[indice].valore) if colonna[indice] else None
                 for colonna in vigenti
             )
-            firme.append((parte_fatti, self.corpus.firma_giorno(giorno) if con_corpus else ()))
+            firme.append((parte_fatti, self.corpus.firma_giorno(giorno, lettore.pagamento) if con_corpus else ()))
         return firme
 
     def _regola_richiesta(self, istituto: str, periodo: Periodo) -> Regola:
@@ -408,10 +411,14 @@ def calcola(
     rapporto: str,
     competenza: Mese,
     noto_al: datetime | None = None,
+    pagamento: date | None = None,
 ) -> tuple[Importo, ...]:
-    """Stato completo del mese; funzione pura di registro, corpus e istante. Esclude gli annuali."""
+    """Stato completo del mese; funzione pura di registro, corpus e istante. Esclude gli annuali.
+
+    `pagamento` è la data in cui l'importo si paga: sceglie, tra le vigenze dei parametri, quelle già applicabili
+    (ADR 0041). Senza, l'applicabilità non conta e vale la decorrenza."""
     istante = in_utc(noto_al) if noto_al is not None else registro.adesso()
-    lettore = _Lettore(registro, corpus, rapporto, istante)
+    lettore = _Lettore(registro, corpus, rapporto, istante, pagamento)
     lettore.controlla_fermi(competenza, {"calcolo"})
     calcolo = _Calcolo(lettore, competenza)
     importi: list[Importo] = []
@@ -622,6 +629,7 @@ def differenze(
     competenza: Mese | int,
     tipo: TipoEsito,
     noto_al: datetime | None = None,
+    pagamento: date | None = None,
 ) -> tuple[Differenza, ...]:
     """Dovuto ricalcolato meno quanto risulta dagli esiti, mai da un ricalcolo del passato.
 
@@ -632,7 +640,7 @@ def differenze(
     if isinstance(competenza, int):
         calcolati = calcola_annuale(registro, corpus, rapporto, competenza, istante)
     else:
-        calcolati = calcola(registro, corpus, rapporto, competenza, istante)
+        calcolati = calcola(registro, corpus, rapporto, competenza, istante, pagamento)
     dovuti: dict[str, list[Importo]] = {}
     for importo in calcolati:
         dovuti.setdefault(importo.istituto, []).append(importo)
